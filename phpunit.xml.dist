@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <phpunit backupGlobals="true"
-		 backupStaticAttributes="true"
 		 colors="true"
-		 convertErrorsToExceptions="true"
-		 convertNoticesToExceptions="true"
-		 convertWarningsToExceptions="true"
 		 processIsolation="false"
 		 stopOnFailure="false"
 		 verbose="true"
@@ -26,7 +22,6 @@
 			<directory suffix=".php">./</directory>
 			<exclude>
 				<directory suffix=".php">./language/</directory>
-				<directory suffix=".php">./migrations/</directory>
 				<directory suffix=".php">./tests/</directory>
 			</exclude>
 		</whitelist>
