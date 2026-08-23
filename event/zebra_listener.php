@@ -49,6 +49,12 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var string */
 	protected $php_ext;
 
+	/** @var bool */
+	protected $profile_context_ready = false;
+
+	/** @var bool */
+	protected $profile_hide_native_add = false;
+
 	public function __construct(
 		\anavaro\zebraenhance\service\relationship_manager $relationships,
 		\phpbb\user_loader $user_loader,
@@ -85,6 +91,7 @@ class zebra_listener implements EventSubscriberInterface
 			'core.ucp_display_module_before' => 'module_display',
 			'core.delete_user_before'        => 'delete_users',
 			'core.memberlist_view_profile'   => 'prepare_friends',
+			'core.memberlist_modify_view_profile_template_vars' => 'modify_profile_template_vars',
 		);
 	}
 
@@ -238,22 +245,52 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function prepare_friends($event)
 	{
-		if (!$this->auth->acl_get('u_ze_use'))
+		$member = $event['member'];
+		$owner_id = (int) $member['user_id'];
+		$viewer_id = (int) $this->user->data['user_id'];
+		$viewer_registered = (bool) $this->user->data['is_registered']
+			&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE);
+		$can_use = $this->auth->acl_get('u_ze_use');
+		$this->profile_context_ready = true;
+		$this->profile_hide_native_add = !$can_use || !$viewer_registered;
+
+		if ($can_use && $viewer_registered && $viewer_id !== $owner_id)
+		{
+			$request = $this->relationships->get_pending_request_between($viewer_id, $owner_id);
+			$friend = isset($event['friend']) && (bool) $event['friend'];
+			$foe = isset($event['foe']) && (bool) $event['foe'];
+			if ($request || (!$friend && !$foe))
+			{
+				add_form_key('anavaro_zebraenhance', '_ZE');
+				$is_incoming = $request && (int) $request['recipient_id'] === $viewer_id;
+				$this->profile_hide_native_add = true;
+				$this->template->assign_vars(array(
+					'S_ZE_PROFILE_FRIEND_CONTROL' => true,
+					'S_ZE_PROFILE_CAN_CREATE'     => !$request,
+					'S_ZE_PROFILE_INCOMING'       => $is_incoming,
+					'S_ZE_PROFILE_OUTGOING'       => $request && !$is_incoming,
+					'U_ZE_PROFILE_CREATE'         => !$request ? $this->controller_helper->route('anavaro_zebraenhance_create_request', array(
+						'userid' => $owner_id,
+					)) : '',
+					'U_ZE_PROFILE_ACCEPT'         => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'accept') : '',
+					'U_ZE_PROFILE_DECLINE'        => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline') : '',
+					'U_ZE_PROFILE_CANCEL'         => $request && !$is_incoming ? $this->request_action_url((int) $request['request_id'], 'cancel') : '',
+				));
+			}
+		}
+
+		if (!$can_use)
 		{
 			return;
 		}
 
-		$member = $event['member'];
-		$owner_id = (int) $member['user_id'];
-		$viewer_id = (int) $this->user->data['user_id'];
 		$override = $this->auth->acl_get('a_user') || $this->auth->acl_get('m_ze_view_private_friendlists');
 		$can_view = $this->relationships->can_view_friend_list(
 			$owner_id,
 			$viewer_id,
 			(int) $member['profile_friend_show'],
 			$override,
-			(bool) $this->user->data['is_registered']
-				&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE)
+			$viewer_registered
 		);
 
 		$this->template->assign_vars(array(
@@ -286,6 +323,18 @@ class zebra_listener implements EventSubscriberInterface
 				'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
 			));
 		}
+	}
+
+	public function modify_profile_template_vars($event)
+	{
+		if (!$this->profile_context_ready || !$this->profile_hide_native_add)
+		{
+			return;
+		}
+
+		$template_ary = $event['template_ary'];
+		$template_ary['U_ADD_FRIEND'] = '';
+		$event['template_ary'] = $template_ary;
 	}
 
 	protected function is_zebra_friends_module($event)

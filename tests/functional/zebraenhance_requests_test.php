@@ -72,6 +72,41 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_profile_friend_control_covers_request_states()
+	{
+		$username = "ze'profile";
+		$user_id = $this->create_user($username);
+
+		$this->login();
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
+		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$this->assertStringContainsString("/friend/{$user_id}/request", $create->attr('data-url'));
+		$this->assertStringNotContainsString(rawurlencode($username), $create->attr('data-url'));
+		$this->post_action($create->attr('data-url'), array(), 403);
+		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('created', $response['action']);
+
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
+		$cancel = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
+		$this->logout();
+
+		$this->login($username);
+		$this->add_lang('memberlist');
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$accept = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
+		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('accepted', $response['action']);
+
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter('#ze-friend-controls')->count());
+		$this->assertStringContainsString($this->lang('REMOVE_FRIEND'), $crawler->filter('.zebra')->text());
+		$this->logout();
+	}
+
 	public function test_close_friend_and_profile_visibility()
 	{
 		$close_friend = 'zeclose';

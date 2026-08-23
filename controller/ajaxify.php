@@ -116,6 +116,38 @@ class ajaxify
 		));
 	}
 
+	/**
+	 * Create a friend request from a numeric profile user ID.
+	 */
+	public function create_request($userid)
+	{
+		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
+		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		{
+			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+		}
+
+		if (!check_form_key('anavaro_zebraenhance'))
+		{
+			return $this->error('FORM_INVALID', 403);
+		}
+
+		$result = $this->relationships->request_friendship(
+			(int) $this->user->data['user_id'],
+			(int) $userid
+		);
+		if (!in_array($result, array('created', 'accepted'), true))
+		{
+			return $this->error('ZE_FRIEND_REQUEST_UNCHANGED', 409);
+		}
+
+		return new JsonResponse(array(
+			'success' => true,
+			'action'  => $result,
+			'message' => $this->language->lang($result === 'accepted' ? 'ZE_REQUEST_ACCEPTED' : 'ZE_FRIEND_REQUEST_CREATED'),
+		));
+	}
+
 	protected function error($language_key, $status_code)
 	{
 		return new JsonResponse(array(

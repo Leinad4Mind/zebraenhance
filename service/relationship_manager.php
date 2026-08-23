@@ -138,6 +138,10 @@ class relationship_manager
 		{
 			return 'ignored';
 		}
+		if (!$this->can_receive_friend_request($recipient_id))
+		{
+			return 'ignored';
+		}
 
 		if ($this->are_friends($requester_id, $recipient_id))
 		{
@@ -156,7 +160,7 @@ class relationship_manager
 		}
 
 		// Do not reveal that the recipient has blocked the requester.
-		if ($this->is_foe($recipient_id, $requester_id))
+		if ($this->is_foe($requester_id, $recipient_id) || $this->is_foe($recipient_id, $requester_id))
 		{
 			return 'blocked';
 		}
@@ -615,6 +619,25 @@ class relationship_manager
 		return $count;
 	}
 
+	/**
+	 * Return the stable pending request between two profile users.
+	 */
+	public function get_pending_request_between($user_id, $zebra_id)
+	{
+		$request = $this->get_request_between($user_id, $zebra_id);
+		if (!$request)
+		{
+			return false;
+		}
+
+		return array(
+			'request_id'   => (int) $request['request_id'],
+			'requester_id' => (int) $request['requester_id'],
+			'recipient_id' => (int) $request['recipient_id'],
+			'request_time' => (int) $request['request_time'],
+		);
+	}
+
 	protected function count_pending_requests($user_id)
 	{
 		$sql = 'SELECT COUNT(*) AS total
@@ -626,6 +649,26 @@ class relationship_manager
 		$this->db->sql_freeresult($result);
 
 		return $count;
+	}
+
+	protected function can_receive_friend_request($user_id)
+	{
+		$user_id = (int) $user_id;
+		if (!$user_id || $user_id === ANONYMOUS)
+		{
+			return false;
+		}
+
+		$sql = 'SELECT user_type
+			FROM ' . $this->users_table . '
+			WHERE user_id = ' . (int) $user_id;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$user_type = $this->db->sql_fetchfield('user_type');
+		$this->db->sql_freeresult($result);
+
+		return $user_type !== false
+			&& (int) $user_type !== USER_INACTIVE
+			&& (int) $user_type !== USER_IGNORE;
 	}
 
 	/**

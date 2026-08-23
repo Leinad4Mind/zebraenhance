@@ -31,7 +31,7 @@ class zebra_listener_test extends \phpbb_test_case
 		$user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
 			->getMock();
-		$user->data = array('user_id' => 2, 'profile_friend_show' => 5);
+		$user->data = array('user_id' => 2, 'profile_friend_show' => 5, 'is_registered' => true, 'user_type' => USER_NORMAL);
 
 		$this->listener = new \anavaro\zebraenhance\event\zebra_listener(
 			$this->relationships,
@@ -57,6 +57,7 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.ucp_display_module_before',
 			'core.delete_user_before',
 			'core.memberlist_view_profile',
+			'core.memberlist_modify_view_profile_template_vars',
 		), array_keys(\anavaro\zebraenhance\event\zebra_listener::getSubscribedEvents()));
 	}
 
@@ -103,5 +104,22 @@ class zebra_listener_test extends \phpbb_test_case
 		$event = new \phpbb\event\data(compact('mode', 'user_ids'));
 		$this->listener->zebra_confirm_remove($event);
 		$this->assertSame(array(0), $event['user_ids']);
+	}
+
+	public function test_profile_context_can_hide_native_add_friend_link()
+	{
+		foreach (array('profile_context_ready', 'profile_hide_native_add') as $property_name)
+		{
+			$property = new \ReflectionProperty($this->listener, $property_name);
+			$property->setAccessible(true);
+			$property->setValue($this->listener, true);
+		}
+
+		$template_ary = array('U_ADD_FRIEND' => './ucp.php?add=user3', 'U_ADD_FOE' => './ucp.php?mode=foes');
+		$event = new \phpbb\event\data(compact('template_ary'));
+		$this->listener->modify_profile_template_vars($event);
+
+		$this->assertSame('', $event['template_ary']['U_ADD_FRIEND']);
+		$this->assertSame('./ucp.php?mode=foes', $event['template_ary']['U_ADD_FOE']);
 	}
 }

@@ -243,6 +243,39 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(array('ignored'), $results);
 	}
 
+	public function test_profile_request_context_uses_stable_numeric_identity()
+	{
+		$this->assertSame(array(
+			'request_id' => 1,
+			'requester_id' => 2,
+			'recipient_id' => 3,
+			'request_time' => 100,
+		), $this->relationships->get_pending_request_between(3, 2));
+		$this->assertFalse($this->relationships->get_pending_request_between(3, 4));
+	}
+
+	public function test_inactive_and_bot_recipients_cannot_receive_direct_requests()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET user_type = ' . USER_INACTIVE . ' WHERE user_id = 4');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
+		$this->notifications->expects($this->never())->method('add_notifications');
+
+		$this->assertSame('ignored', $this->relationships->request_friendship(3, 4));
+		$this->db->sql_query('UPDATE phpbb_users SET user_type = ' . USER_IGNORE . ' WHERE user_id = 4');
+		$this->assertSame('ignored', $this->relationships->request_friendship(3, 4));
+	}
+
+	public function test_requester_cannot_request_a_user_on_their_foe_list()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (3, 4, 0, 1, 0)');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
+		$this->notifications->expects($this->never())->method('add_notifications');
+
+		$this->assertSame('blocked', $this->relationships->request_friendship(3, 4));
+	}
+
 	public function test_only_unique_constraint_errors_are_treated_as_request_races()
 	{
 		$method = new \ReflectionMethod($this->relationships, 'is_duplicate_key_error');

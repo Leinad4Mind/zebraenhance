@@ -48,6 +48,7 @@ $lang = array_merge($lang, array(
 	'ZE_AJAX_NOT_FRIEND'     => 'That user is not in your friend list.',
 	'ZE_AJAX_REQUEST_NOT_FOUND' => 'That friend request no longer exists or does not belong to you.',
 	'ZE_REQUEST_ACCEPTED'       => 'Friend request accepted.',
+	'ZE_FRIEND_REQUEST_CREATED' => 'Friend request sent.',
 	'ZE_REQUEST_DECLINED'       => 'Friend request declined.',
 	'ZE_REQUEST_CANCELLED'      => 'Friend request cancelled.',
 	'ZE_CONFIRM_DECLINE_REQUEST' => 'Are you sure you want to decline this friend request?',
