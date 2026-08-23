@@ -4,15 +4,14 @@
 * @package Zebra Enhance Extension
 * @copyright (c) 2014 Lucifer
 * @copyright (c) 2026 Leinad4Mind
-* @license http://opensource.org/licenses/gpl-2.0.php GNU General Public License v2
+* @license GNU General Public License, version 2 (GPL-2.0-only)
 *
 */
 
 namespace anavaro\zebraenhance\notification;
 
 /**
-* Board Rules notifications class
-* This class handles notifications for Board Rules
+* Friend request notification.
 *
 * @package notifications
 */
@@ -34,7 +33,7 @@ class zebraadd extends \phpbb\notification\type\base
 	 * @var bool|array False if the service should use it's default data
 	 * 					Array of data (including keys 'id', 'lang', and 'group')
 	 */
-	static public $notification_option = array(
+	public static $notification_option = array(
 		'lang'	=> 'NOTIFICATION_TYPE_ZEBRA_ADD',
 	);
 
@@ -51,7 +50,7 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function is_available()
 	{
-		return true;
+		return $this->auth->acl_get('u_ze_use');
 	}
 
 	/**
@@ -60,9 +59,9 @@ class zebraadd extends \phpbb\notification\type\base
 	 * @param array $pm The data from the private message
 	 * @return int
 	 */
-	static public function get_item_id($data)
+	public static function get_item_id($data)
 	{
-		return (int) $data['request_id'];
+		return isset($data['request_id']) ? (int) $data['request_id'] : 0;
 	}
 
 	/**
@@ -71,9 +70,9 @@ class zebraadd extends \phpbb\notification\type\base
 	 * @param array $pm The data from the pm
 	 * @return int
 	 */
-	static public function get_item_parent_id($data)
+	public static function get_item_parent_id($data)
 	{
-		return (int) $data['requester_id'];
+		return isset($data['requester_id']) ? (int) $data['requester_id'] : 0;
 	}
 
 	/**
@@ -97,7 +96,8 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function get_avatar()
 	{
-		return $this->user_loader->get_avatar($this->get_data('requester_id'), false, true);
+		$requester_id = (int) $this->get_data('requester_id');
+		return $requester_id ? $this->user_loader->get_avatar($requester_id, false, true) : '';
 	}
 
 	/**
@@ -107,20 +107,11 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function get_title()
 	{
-		$username = $this->user_loader->get_username($this->get_data('requester_id'), 'no_profile');
+		$requester_id = (int) $this->get_data('requester_id');
+		$username = $requester_id ? $this->user_loader->get_username($requester_id, 'no_profile') : $this->language->lang('GUEST');
 
 		return $this->language->lang('NOTIFICATION_ZEBRA_ADD', $username);
 	}
-
-	/**
-	 * Get the HTML formatted reference of the notification
-	 *
-	 * @return string
-
-	public function get_reference()
-	{
-		return true;
-	}*/
 
 	/**
 	 * Get email template
@@ -159,7 +150,8 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function users_to_query()
 	{
-		return array($this->get_data('requester_id'));
+		$requester_id = (int) $this->get_data('requester_id');
+		return $requester_id ? array($requester_id) : array();
 	}
 
 	/**
@@ -168,7 +160,7 @@ class zebraadd extends \phpbb\notification\type\base
 	public function create_insert_array($data, $pre_create_data = array())
 	{
 
-		$this->set_data('requester_id', $data['requester_id']);
+		$this->set_data('requester_id', isset($data['requester_id']) ? (int) $data['requester_id'] : 0);
 		parent::create_insert_array($data, $pre_create_data);
 	}
 }
