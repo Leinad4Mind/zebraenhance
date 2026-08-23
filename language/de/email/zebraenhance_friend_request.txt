@@ -1,0 +1,16 @@
+Subject: Neue Freundschaftsanfrage auf {SITENAME}
+
+Hallo {USERNAME},
+
+{REQUESTER_NAME} hat dir eine Freundschaftsanfrage gesendet.
+
+<!-- IF REQUEST_MESSAGE -->Nachricht:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->Du kannst die Anfrage hier annehmen oder ablehnen:
+{U_FRIEND_REQUESTS}
+
+Hier kannst du die Zustellung dieser Benachrichtigungen ändern:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

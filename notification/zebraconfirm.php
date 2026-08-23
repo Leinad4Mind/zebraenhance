@@ -141,7 +141,7 @@ class zebraconfirm extends \phpbb\notification\type\base
 	*/
 	public function get_email_template()
 	{
-		return false;
+		return 'zebraenhance_friend_confirmed';
 	}
 
 	/**
@@ -151,7 +151,13 @@ class zebraconfirm extends \phpbb\notification\type\base
 	*/
 	public function get_email_template_variables()
 	{
-		return array();
+		$friend_id = (int) $this->get_data('requester_id');
+		$friend = $friend_id ? $this->user_loader->get_user($friend_id) : false;
+
+		return array(
+			'FRIEND_NAME' => $friend ? htmlspecialchars_decode($friend['username'], ENT_QUOTES) : $this->language->lang('GUEST'),
+			'U_FRIENDS'   => generate_board_url() . '/ucp.' . $this->php_ext . '?i=ucp_zebra&mode=friends',
+		);
 	}
 
 	/**

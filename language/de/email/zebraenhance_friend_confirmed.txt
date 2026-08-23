@@ -1,0 +1,13 @@
+Subject: Freundschaftsanfrage auf {SITENAME} angenommen
+
+Hallo {USERNAME},
+
+{FRIEND_NAME} hat deine Freundschaftsanfrage angenommen.
+
+Du kannst deine Freunde hier ansehen:
+{U_FRIENDS}
+
+Hier kannst du die Zustellung dieser Benachrichtigungen ändern:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

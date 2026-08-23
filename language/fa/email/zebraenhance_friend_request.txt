@@ -1,0 +1,16 @@
+Subject: درخواست دوستی جدید در {SITENAME}
+
+سلام {USERNAME}،
+
+{REQUESTER_NAME} برای شما درخواست دوستی فرستاده است.
+
+<!-- IF REQUEST_MESSAGE -->پیام:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->می‌توانید درخواست را در اینجا بپذیرید یا رد کنید:
+{U_FRIEND_REQUESTS}
+
+می‌توانید روش دریافت این اعلان‌ها را در اینجا تغییر دهید:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

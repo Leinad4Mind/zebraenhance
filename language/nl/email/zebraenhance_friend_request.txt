@@ -1,0 +1,16 @@
+Subject: Nieuw vriendschapsverzoek op {SITENAME}
+
+Hallo {USERNAME},
+
+{REQUESTER_NAME} heeft je een vriendschapsverzoek gestuurd.
+
+<!-- IF REQUEST_MESSAGE -->Bericht:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->Je kunt het verzoek hier accepteren of afwijzen:
+{U_FRIEND_REQUESTS}
+
+Je kunt hier wijzigen hoe deze meldingen worden bezorgd:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

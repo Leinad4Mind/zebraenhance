@@ -1,0 +1,13 @@
+Subject: Friend request accepted at {SITENAME}
+
+Hello {USERNAME},
+
+{FRIEND_NAME} accepted your friend request.
+
+You can view your friends here:
+{U_FRIENDS}
+
+You can change how these notifications are delivered here:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

@@ -75,16 +75,20 @@ class zebraenhance_requests_test extends zebraenhance_base
 	public function test_profile_friend_control_covers_request_states()
 	{
 		$username = "ze'profile";
+		$message = 'We met at the phpBB meetup. <b>Hello!</b>';
 		$user_id = $this->create_user($username);
 
 		$this->login();
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
 		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$this->assertSame(1, $crawler->filter('#ze-request-message[maxlength="255"]')->count());
 		$this->assertStringContainsString("/friend/{$user_id}/request", $create->attr('data-url'));
 		$this->assertStringNotContainsString(rawurlencode($username), $create->attr('data-url'));
 		$this->post_action($create->attr('data-url'), array(), 403);
-		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler));
+		$data = $this->form_token($crawler);
+		$data['message'] = $message;
+		$response = $this->post_action($create->attr('data-url'), $data);
 		$this->assertSame('created', $response['action']);
 
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
@@ -96,6 +100,8 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang('memberlist');
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertStringContainsString($message, $crawler->filter('#ze-friend-controls .ze-request-message')->text());
+		$this->assertStringNotContainsString('<b>', $crawler->filter('#ze-friend-controls .ze-request-message')->html());
 		$accept = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
 		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
 		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));
@@ -192,6 +198,24 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$form['ze_max_pending_requests'] = 100;
 		$form['ze_decline_cooldown_days'] = 7;
 		self::submit($form);
+		$this->logout();
+	}
+
+	public function test_email_is_an_opt_in_notification_method()
+	{
+		$this->login();
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "ucp.php?i=ucp_notifications&mode=notification_options&sid={$this->sid}");
+
+		foreach (array('NOTIFICATION_TYPE_ZEBRA_ADD', 'NOTIFICATION_TYPE_ZEBRA_CONFIRM') as $language_key)
+		{
+			$label = $this->lang($language_key);
+			$row = $crawler->filterXPath('//tr[contains(normalize-space(.), "' . $label . '")]');
+			$this->assertSame(1, $row->count());
+			$this->assertGreaterThanOrEqual(2, $row->filter('input:not([disabled])')->count());
+			$this->assertSame(1, $row->filter('input:checked')->count());
+		}
+
 		$this->logout();
 	}
 

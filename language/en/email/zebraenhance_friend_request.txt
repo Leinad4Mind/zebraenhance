@@ -1,0 +1,16 @@
+Subject: New friend request at {SITENAME}
+
+Hello {USERNAME},
+
+{REQUESTER_NAME} sent you a friend request.
+
+<!-- IF REQUEST_MESSAGE -->Message:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->You can accept or decline the request here:
+{U_FRIEND_REQUESTS}
+
+You can change how these notifications are delivered here:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

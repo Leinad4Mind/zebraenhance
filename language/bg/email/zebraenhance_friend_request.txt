@@ -1,0 +1,16 @@
+Subject: Нова покана за приятелство в {SITENAME}
+
+Здравейте {USERNAME},
+
+{REQUESTER_NAME} ви изпрати покана за приятелство.
+
+<!-- IF REQUEST_MESSAGE -->Съобщение:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->Можете да приемете или откажете поканата тук:
+{U_FRIEND_REQUESTS}
+
+Можете да промените начина на получаване на известията тук:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

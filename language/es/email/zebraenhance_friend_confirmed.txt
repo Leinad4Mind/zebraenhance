@@ -1,0 +1,13 @@
+Subject: Solicitud de amistad aceptada en {SITENAME}
+
+Hola {USERNAME},
+
+{FRIEND_NAME} ha aceptado tu solicitud de amistad.
+
+Puedes ver tus amigos aquí:
+{U_FRIENDS}
+
+Puedes cambiar cómo se entregan estas notificaciones aquí:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

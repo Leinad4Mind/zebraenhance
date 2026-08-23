@@ -1,0 +1,13 @@
+Subject: Vriendschapsverzoek geaccepteerd op {SITENAME}
+
+Hallo {USERNAME},
+
+{FRIEND_NAME} heeft je vriendschapsverzoek geaccepteerd.
+
+Je kunt je vrienden hier bekijken:
+{U_FRIENDS}
+
+Je kunt hier wijzigen hoe deze meldingen worden bezorgd:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

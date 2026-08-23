@@ -113,6 +113,11 @@ class zebraadd extends \phpbb\notification\type\base
 		return $this->language->lang('NOTIFICATION_ZEBRA_ADD', $username);
 	}
 
+	public function get_reference()
+	{
+		return (string) $this->get_data('request_message');
+	}
+
 	/**
 	 * Get email template
 	 *
@@ -120,7 +125,7 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function get_email_template()
 	{
-		return false;
+		return 'zebraenhance_friend_request';
 	}
 
 	/**
@@ -130,7 +135,14 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function get_email_template_variables()
 	{
-		return array();
+		$requester_id = (int) $this->get_data('requester_id');
+		$requester = $requester_id ? $this->user_loader->get_user($requester_id) : false;
+
+		return array(
+			'REQUESTER_NAME'    => $requester ? htmlspecialchars_decode($requester['username'], ENT_QUOTES) : $this->language->lang('GUEST'),
+			'REQUEST_MESSAGE'   => (string) $this->get_data('request_message'),
+			'U_FRIEND_REQUESTS' => generate_board_url() . '/ucp.' . $this->php_ext . '?i=ucp_zebra&mode=friends',
+		);
 	}
 
 	/**
@@ -161,6 +173,7 @@ class zebraadd extends \phpbb\notification\type\base
 	{
 
 		$this->set_data('requester_id', isset($data['requester_id']) ? (int) $data['requester_id'] : 0);
+		$this->set_data('request_message', isset($data['request_message']) ? (string) $data['request_message'] : '');
 		parent::create_insert_array($data, $pre_create_data);
 	}
 }

@@ -1,0 +1,13 @@
+Subject: Vänförfrågan accepterad på {SITENAME}
+
+Hej {USERNAME},
+
+{FRIEND_NAME} har accepterat din vänförfrågan.
+
+Du kan se dina vänner här:
+{U_FRIENDS}
+
+Du kan ändra hur dessa aviseringar levereras här:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

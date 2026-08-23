@@ -1,0 +1,16 @@
+Subject: Ny vänförfrågan på {SITENAME}
+
+Hej {USERNAME},
+
+{REQUESTER_NAME} har skickat en vänförfrågan till dig.
+
+<!-- IF REQUEST_MESSAGE -->Meddelande:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->Du kan acceptera eller neka förfrågan här:
+{U_FRIEND_REQUESTS}
+
+Du kan ändra hur dessa aviseringar levereras här:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}

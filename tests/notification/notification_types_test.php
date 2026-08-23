@@ -50,6 +50,36 @@ class notification_types_test extends \phpbb_test_case
 		$this->assertSame(0, $class::get_item_parent_id(array()));
 	}
 
+	public function test_email_templates_are_available()
+	{
+		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
+
+		$this->assertSame(
+			'zebraenhance_friend_request',
+			$this->notification('\anavaro\zebraenhance\notification\zebraadd', $auth)->get_email_template()
+		);
+		$this->assertSame(
+			'zebraenhance_friend_confirmed',
+			$this->notification('\anavaro\zebraenhance\notification\zebraconfirm', $auth)->get_email_template()
+		);
+	}
+
+	public function test_request_message_is_stored_with_notification()
+	{
+		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
+		$notification = $this->notification('\anavaro\zebraenhance\notification\zebraadd', $auth);
+		$notification->create_insert_array(array(
+			'request_id' => 42,
+			'requester_id' => 3,
+			'request_message' => 'Hello there',
+		));
+		$insert = $notification->get_insert_array();
+		$data = unserialize($insert['notification_data']);
+
+		$this->assertSame('Hello there', $data['request_message']);
+		$this->assertSame('Hello there', $notification->get_reference());
+	}
+
 	protected function notification($class, $auth)
 	{
 		return new $class(

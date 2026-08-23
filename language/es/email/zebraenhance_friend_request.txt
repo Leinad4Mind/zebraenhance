@@ -1,0 +1,16 @@
+Subject: Nueva solicitud de amistad en {SITENAME}
+
+Hola {USERNAME},
+
+{REQUESTER_NAME} te ha enviado una solicitud de amistad.
+
+<!-- IF REQUEST_MESSAGE -->Mensaje:
+{REQUEST_MESSAGE}
+
+<!-- ENDIF -->Puedes aceptar o rechazar la solicitud aquí:
+{U_FRIEND_REQUESTS}
+
+Puedes cambiar cómo se entregan estas notificaciones aquí:
+{U_NOTIFICATION_SETTINGS}
+
+{EMAIL_SIG}
