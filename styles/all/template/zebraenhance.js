@@ -24,6 +24,51 @@
 		);
 	}
 
+	function postAndReload($button, payload) {
+		$button.prop('disabled', true);
+		$.ajax({
+			url: $button.attr('data-url'),
+			method: 'POST',
+			data: $.extend(tokenPayload(), payload || {}),
+			dataType: 'json'
+		}).done(function (response) {
+			if (response.success) {
+				window.location.reload();
+				return;
+			}
+			showError(response);
+		}).fail(function (xhr) {
+			showError(xhr.responseJSON || {});
+		}).always(function () {
+			$button.prop('disabled', false);
+		});
+	}
+
+	$(document).on('click', '.js-ze-circle', function () {
+		var $button = $(this);
+		var submit = function () {
+			var input = $button.attr('data-name-input');
+			postAndReload($button, input ? {name: $(input).val()} : {});
+		};
+		var confirmation = $button.attr('data-confirm');
+
+		if (confirmation) {
+			phpbb.confirm(confirmation, function (confirmed) {
+				if (confirmed) {
+					submit();
+				}
+			});
+			return;
+		}
+		submit();
+	});
+
+	$(document).on('click', '.js-ze-save-circles', function () {
+		var $button = $(this);
+		var circleIds = $($button.attr('data-select')).val() || [];
+		postAndReload($button, {circle_ids: circleIds});
+	});
+
 	$(document).on('click', '.js-ze-close-friend', function () {
 		var $button = $(this);
 

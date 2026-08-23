@@ -1,6 +1,6 @@
 # Zebra Enhance
 
-Zebra Enhance adds confirmed friend requests, directional Close Friends, notifications, and profile friend-list privacy controls to phpBB's Zebra module.
+Zebra Enhance adds confirmed friend requests, directional Close Friends, custom friend circles, notifications, and profile friend-list privacy controls to phpBB's Zebra module.
 
 ## Requirements
 
@@ -19,11 +19,12 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Request and acceptance notifications use a unique request ID.
 - Request and acceptance notifications support board alerts and opt-in email through phpBB's notification preferences.
 - Each user can independently mark an accepted friend as a Close Friend.
+- Users can create up to 20 private friend circles and assign accepted friends to several circles.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Friend acceptance/removal is symmetric and transactional.
 - Friend and request lists are paginated. Administrators can configure the maximum pending requests per account.
 - A configurable cooldown prevents an explicitly declined requester from immediately contacting the same user again.
-- Requests and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
+- Requests, circles, circle memberships, and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
 - Vendor-prefixed [integration events](docs/events.md) let other extensions react to relationship changes.
 

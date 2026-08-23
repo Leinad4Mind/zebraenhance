@@ -5,6 +5,24 @@
 <div id="ze-friend-controls" data-error-title="{{ lang('ZE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}">
 	<div id="ze-form-token" class="hidden">{{ S_FORM_TOKEN_ZE }}</div>
 
+<dl>
+	<dt><label for="ze-new-circle-name">{{ lang('ZE_CIRCLES') }}</label><br><span>{{ lang('ZE_CIRCLES_EXPLAIN') }}</span></dt>
+	<dd id="ze-circles" class="ze-circle-manager">
+		<div class="ze-circle-create">
+			<input type="text" id="ze-new-circle-name" class="inputbox autowidth" maxlength="50" placeholder="{{ lang('ZE_CIRCLE_NAME') }}">
+			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ U_CREATE_CIRCLE }}" data-name-input="#ze-new-circle-name">{{ lang('ZE_CREATE_CIRCLE') }}</button>
+		</div>
+	{% for circle in ze_circles %}
+		<div class="ze-circle-row" data-circle-id="{{ circle.ID }}">
+			<input type="text" id="ze-circle-name-{{ circle.ID }}" class="inputbox autowidth" maxlength="50" value="{{ circle.NAME }}">
+			<span class="ze-circle-count">{{ circle.MEMBER_COUNT }} {{ lang('ZE_MEMBERS') }}</span>
+			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ circle.U_RENAME }}" data-name-input="#ze-circle-name-{{ circle.ID }}">{{ lang('ZE_RENAME_CIRCLE') }}</button>
+			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ circle.U_DELETE }}" data-confirm="{{ lang('ZE_CONFIRM_DELETE_CIRCLE') }}">{{ lang('ZE_DELETE_CIRCLE') }}</button>
+		</div>
+	{% endfor %}
+	</dd>
+</dl>
+
 {% if pending_requests|length %}
 <dl>
 	<dt><label>{{ lang('UCP_ZEBRA_PENDING_IN') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_IN_EXP') }}</span></dt>
@@ -37,14 +55,25 @@
 	<dt><label>{{ lang('YOUR_FRIENDS') ~ lang('COLON') }}</label><br><span>{{ lang('YOUR_FRIENDS_EXPLAIN') }}</span></dt>
 	<dd id="ze-friends" class="ze-scroll-list">
 	{% for friend in pretty_zebra %}
-		<div class="ze-list-row" data-user-id="{{ friend.USER_ID }}">
+		<div class="ze-list-row ze-friend-row" data-user-id="{{ friend.USER_ID }}">
 			<span class="ze-actions">
 			{% if S_CAN_CLOSE_FRIENDS %}
 				<button type="button" class="button button-secondary ze-icon-button js-ze-close-friend" data-add-url="{{ friend.U_CLOSE_ADD }}" data-remove-url="{{ friend.U_CLOSE_REMOVE }}" data-url="{{ friend.S_CLOSE ? friend.U_CLOSE_REMOVE : friend.U_CLOSE_ADD }}" aria-pressed="{{ friend.S_CLOSE ? 'true' : 'false' }}" title="{{ friend.L_CLOSE_ACTION }}" aria-label="{{ friend.L_CLOSE_ACTION }}"><i class="icon {{ friend.S_CLOSE ? 'fa-star' : 'fa-star-o' }} fa-fw" aria-hidden="true"></i></button>
 			{% endif %}
 				<a href="{{ friend.U_CANCEL }}" data-ajax="true" data-refresh="true" title="{{ lang('ZE_REMOVE_FRIEND') }}" aria-label="{{ lang('ZE_REMOVE_FRIEND') }}"><i class="icon fa-user-times fa-fw" aria-hidden="true"></i></a>
 			</span>
-			{{ friend.USERNAME_FULL }}
+			<span class="ze-friend-name">{{ friend.USERNAME_FULL }}</span>
+		{% if friend.circles|length %}
+			<span class="ze-circle-assignment">
+				<label class="sr-only" for="ze-friend-circles-{{ friend.USER_ID }}">{{ lang('ZE_CIRCLES') }}</label>
+				<select id="ze-friend-circles-{{ friend.USER_ID }}" class="inputbox js-ze-circle-select" multiple size="{{ friend.circles|length > 3 ? 3 : friend.circles|length }}">
+				{% for circle in friend.circles %}
+					<option value="{{ circle.ID }}"{% if circle.S_SELECTED %} selected{% endif %}>{{ circle.NAME }}</option>
+				{% endfor %}
+				</select>
+				<button type="button" class="button button-secondary js-ze-save-circles" data-url="{{ friend.U_CIRCLES }}" data-select="#ze-friend-circles-{{ friend.USER_ID }}">{{ lang('ZE_SAVE_CIRCLES') }}</button>
+			</span>
+		{% endif %}
 		</div>
 	{% else %}
 		<p>{{ lang('ZE_NO_FRIENDS') }}</p>

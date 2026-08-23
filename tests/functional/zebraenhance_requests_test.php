@@ -149,6 +149,61 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_custom_circle_can_be_created_assigned_renamed_and_deleted()
+	{
+		$username = 'zecircle';
+		$this->create_user($username);
+		$this->send_request_as_admin($username);
+
+		$crawler = $this->open_friends_as($username);
+		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$this->post_action($accept->attr('data-url'), $this->form_token($crawler));
+		$this->logout();
+
+		$crawler = $this->open_friends_as('admin');
+		$create = $crawler->filter('#ze-circles .js-ze-circle')->first();
+		$this->post_action($create->attr('data-url'), array(), 403);
+		$data = $this->form_token($crawler);
+		$data['name'] = 'Gaming';
+		$response = $this->post_action($create->attr('data-url'), $data);
+		$this->assertSame('Gaming', $response['circle']['name']);
+		$circle_id = (int) $response['circle']['id'];
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$circle_row = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']");
+		$this->assertSame(1, $circle_row->count());
+		$friend_row = $crawler->filter('#ze-friends .ze-friend-row')->reduce(function ($node) use ($username)
+		{
+			return strpos($node->text(), $username) !== false;
+		})->first();
+		$save = $friend_row->filter('.js-ze-save-circles');
+		$data = $this->form_token($crawler);
+		$data['circle_ids'] = array($circle_id);
+		$response = $this->post_action($save->attr('data-url'), $data);
+		$this->assertTrue($response['success']);
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$friend_row = $crawler->filter('#ze-friends .ze-friend-row')->reduce(function ($node) use ($username)
+		{
+			return strpos($node->text(), $username) !== false;
+		})->first();
+		$this->assertSame('selected', $friend_row->filter("option[value='{$circle_id}']")->attr('selected'));
+
+		$circle_row = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']");
+		$rename = $circle_row->filter('.js-ze-circle')->first();
+		$data = $this->form_token($crawler);
+		$data['name'] = 'Game night';
+		$this->post_action($rename->attr('data-url'), $data);
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertSame('Game night', $crawler->filter("#ze-circle-name-{$circle_id}")->attr('value'));
+
+		$delete = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}'] .js-ze-circle")->last();
+		$this->post_action($delete->attr('data-url'), $this->form_token($crawler));
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']")->count());
+		$this->logout();
+	}
+
 	public function test_user_can_restrict_new_friend_requests_in_ucp()
 	{
 		$requester = 'zepolicy';

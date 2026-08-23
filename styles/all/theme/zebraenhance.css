@@ -44,6 +44,46 @@
 	padding: 2px 5px;
 }
 
+.ze-circle-manager,
+.ze-circle-create,
+.ze-circle-row,
+.ze-circle-assignment {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .4rem;
+}
+
+.ze-circle-manager {
+	flex-direction: column;
+}
+
+.ze-circle-create,
+.ze-circle-row,
+.ze-circle-assignment {
+	align-items: center;
+}
+
+.ze-circle-count {
+	color: #536482;
+	min-width: 5rem;
+}
+
+.ze-friend-row {
+	flex-wrap: wrap;
+}
+
+.ze-friend-name {
+	min-width: 10rem;
+}
+
+.ze-circle-assignment {
+	margin-left: auto;
+}
+
+.ze-circle-assignment select {
+	min-width: 10rem;
+}
+
 .ze-pagination {
 	float: none;
 	margin: .5rem 0 1rem;

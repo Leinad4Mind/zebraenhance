@@ -181,6 +181,7 @@ class zebra_listener implements EventSubscriberInterface
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
 			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
+			'U_CREATE_CIRCLE'     => $this->controller_helper->route('anavaro_zebraenhance_create_circle'),
 		));
 
 		$page_size = \anavaro\zebraenhance\service\relationship_manager::PAGE_SIZE;
@@ -193,6 +194,23 @@ class zebra_listener implements EventSubscriberInterface
 		$incoming = $this->relationships->get_requests($user_id, true, $page_size, $incoming_start);
 		$outgoing = $this->relationships->get_requests($user_id, false, $page_size, $outgoing_start);
 		$friends = $this->relationships->get_friends($user_id, $page_size, $friends_start);
+		$circles = $this->relationships->get_circles($user_id);
+		foreach ($circles as $circle)
+		{
+			$this->template->assign_block_vars('ze_circles', array(
+				'ID'           => (int) $circle['circle_id'],
+				'NAME'         => (string) $circle['circle_name'],
+				'MEMBER_COUNT' => (int) $circle['member_count'],
+				'U_RENAME'     => $this->controller_helper->route('anavaro_zebraenhance_manage_circle', array(
+					'circleid' => (int) $circle['circle_id'],
+					'action'   => 'rename',
+				)),
+				'U_DELETE'     => $this->controller_helper->route('anavaro_zebraenhance_manage_circle', array(
+					'circleid' => (int) $circle['circle_id'],
+					'action'   => 'delete',
+				)),
+			));
+		}
 		$base_url = $this->ucp_friend_url('');
 		$this->pagination->generate_template_pagination($base_url, 'ze_in_pagination', 'ze_in_start', $incoming_count, $page_size, $incoming_start);
 		$this->pagination->generate_template_pagination($base_url, 'ze_out_pagination', 'ze_out_start', $outgoing_count, $page_size, $outgoing_start);
@@ -211,6 +229,11 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			$this->user_loader->load_users($identity_ids);
 		}
+		$friend_ids = array_map(function ($row)
+		{
+			return (int) $row['zebra_id'];
+		}, $friends);
+		$circle_memberships = $this->relationships->get_circle_memberships($user_id, $friend_ids);
 
 		foreach ($incoming as $row)
 		{
@@ -253,7 +276,19 @@ class zebra_listener implements EventSubscriberInterface
 				)),
 				'S_CLOSE'       => $is_close,
 				'L_CLOSE_ACTION' => $this->language->lang($is_close ? 'ZE_REMOVE_CLOSE_FRIEND' : 'ZE_ADD_CLOSE_FRIEND'),
+				'U_CIRCLES'      => $this->controller_helper->route('anavaro_zebraenhance_friend_circles', array(
+					'userid' => $friend_id,
+				)),
 			));
+			$selected_circle_ids = isset($circle_memberships[$friend_id]) ? $circle_memberships[$friend_id] : array();
+			foreach ($circles as $circle)
+			{
+				$this->template->assign_block_vars('pretty_zebra.circles', array(
+					'ID'         => (int) $circle['circle_id'],
+					'NAME'       => (string) $circle['circle_name'],
+					'S_SELECTED' => in_array((int) $circle['circle_id'], $selected_circle_ids, true),
+				));
+			}
 		}
 	}
 

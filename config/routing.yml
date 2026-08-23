@@ -20,3 +20,23 @@ anavaro_zebraenhance_create_request:
     methods: [POST]
     requirements:
         userid: \d+
+
+anavaro_zebraenhance_create_circle:
+    path: /zebraenhance/circle
+    defaults: { _controller: anavaro.zebraenhance.controller:create_circle }
+    methods: [POST]
+
+anavaro_zebraenhance_manage_circle:
+    path: /zebraenhance/circle/{circleid}/{action}
+    defaults: { _controller: anavaro.zebraenhance.controller:manage_circle }
+    methods: [POST]
+    requirements:
+        circleid: \d+
+        action: rename|delete
+
+anavaro_zebraenhance_friend_circles:
+    path: /zebraenhance/friend/{userid}/circles
+    defaults: { _controller: anavaro.zebraenhance.controller:set_friend_circles }
+    methods: [POST]
+    requirements:
+        userid: \d+
