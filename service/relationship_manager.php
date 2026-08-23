@@ -15,6 +15,13 @@ class relationship_manager
 {
 	const REQUEST_NOTIFICATION = 'anavaro.zebraenhance.notification.zebraadd';
 	const CONFIRM_NOTIFICATION = 'anavaro.zebraenhance.notification.zebraconfirm';
+	const EVENT_REQUEST_CREATED = 'anavaro.zebraenhance.friend_request_created';
+	const EVENT_REQUEST_ACCEPTED = 'anavaro.zebraenhance.friend_request_accepted';
+	const EVENT_REQUEST_DECLINED = 'anavaro.zebraenhance.friend_request_declined';
+	const EVENT_REQUEST_CANCELLED = 'anavaro.zebraenhance.friend_request_cancelled';
+	const EVENT_FRIENDSHIP_REMOVED = 'anavaro.zebraenhance.friendship_removed';
+	const EVENT_CLOSE_FRIEND_CHANGED = 'anavaro.zebraenhance.close_friend_changed';
+	const EVENT_VISIBILITY_CHANGED = 'anavaro.zebraenhance.friend_list_visibility_changed';
 	const PAGE_SIZE = 25;
 	const MAX_PENDING_REQUESTS = 100;
 
@@ -23,6 +30,9 @@ class relationship_manager
 
 	/** @var \phpbb\notification\manager */
 	protected $notification_manager;
+
+	/** @var \phpbb\event\dispatcher_interface */
+	protected $dispatcher;
 
 	/** @var \phpbb\db\tools\tools_interface */
 	protected $db_tools;
@@ -52,6 +62,7 @@ class relationship_manager
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\db\tools\tools_interface $db_tools,
 		\phpbb\notification\manager $notification_manager,
+		\phpbb\event\dispatcher_interface $dispatcher,
 		$requests_table,
 		$legacy_requests_table,
 		$zebra_table,
@@ -64,6 +75,7 @@ class relationship_manager
 		$this->db = $db;
 		$this->db_tools = $db_tools;
 		$this->notification_manager = $notification_manager;
+		$this->dispatcher = $dispatcher;
 		$this->requests_table = $requests_table;
 		$this->legacy_requests_table = $legacy_requests_table;
 		$this->zebra_table = $zebra_table;
@@ -106,7 +118,7 @@ class relationship_manager
 			}
 			foreach ($relationships as $user_id => $zebra_ids)
 			{
-				$this->remove_relationships($user_id, $zebra_ids);
+				$this->remove_relationships_with_reason($user_id, $zebra_ids, 'foe');
 			}
 		}
 
@@ -189,6 +201,9 @@ class relationship_manager
 			'requester_id' => $requester_id,
 			'user_id'      => array($recipient_id => 'notification.method.board'),
 		));
+		$request = $sql_ary;
+		$request['request_id'] = $request_id;
+		$this->dispatch_request_event(self::EVENT_REQUEST_CREATED, $request, $requester_id);
 
 		return 'created';
 	}
@@ -218,6 +233,11 @@ class relationship_manager
 	 */
 	public function remove_relationships($user_id, array $zebra_ids)
 	{
+		$this->remove_relationships_with_reason($user_id, $zebra_ids, 'relationship_removed');
+	}
+
+	protected function remove_relationships_with_reason($user_id, array $zebra_ids, $reason)
+	{
 		$user_id = (int) $user_id;
 		$zebra_ids = array_values(array_unique(array_filter(array_map('intval', $zebra_ids), function ($zebra_id) use ($user_id)
 		{
@@ -231,7 +251,7 @@ class relationship_manager
 		$this->db->sql_transaction('begin');
 		try
 		{
-			$sql = 'SELECT request_id, requester_id, recipient_id
+			$sql = 'SELECT request_id, requester_id, recipient_id, request_time
 				FROM ' . $this->requests_table . '
 				WHERE (requester_id = ' . (int) $user_id . '
 						AND ' . $this->db->sql_in_set('recipient_id', $zebra_ids) . ')
@@ -242,6 +262,23 @@ class relationship_manager
 			while ($row = $this->db->sql_fetchrow($result))
 			{
 				$requests[] = $row;
+			}
+			$this->db->sql_freeresult($result);
+
+			$sql = 'SELECT user_id, zebra_id
+				FROM ' . $this->zebra_table . '
+				WHERE friend = 1
+					AND foe = 0
+					AND ((user_id = ' . (int) $user_id . '
+							AND ' . $this->db->sql_in_set('zebra_id', $zebra_ids) . ')
+						OR (zebra_id = ' . (int) $user_id . '
+							AND ' . $this->db->sql_in_set('user_id', $zebra_ids) . '))';
+			$result = $this->db->sql_query($sql);
+			$removed_friend_ids = array();
+			while ($row = $this->db->sql_fetchrow($result))
+			{
+				$friend_id = (int) $row['user_id'] === $user_id ? (int) $row['zebra_id'] : (int) $row['user_id'];
+				$removed_friend_ids[$friend_id] = true;
 			}
 			$this->db->sql_freeresult($result);
 
@@ -270,6 +307,21 @@ class relationship_manager
 		}
 
 		$this->delete_request_notifications($requests);
+		foreach ($requests as $request)
+		{
+			$event_name = (int) $request['requester_id'] === $user_id
+				? self::EVENT_REQUEST_CANCELLED
+				: self::EVENT_REQUEST_DECLINED;
+			$this->dispatch_request_event($event_name, $request, $user_id, $reason);
+		}
+		foreach (array_keys($removed_friend_ids) as $friend_id)
+		{
+			$this->dispatch_event(self::EVENT_FRIENDSHIP_REMOVED, array(
+				'user_id'   => $user_id,
+				'friend_id' => (int) $friend_id,
+				'reason'    => (string) $reason,
+			));
+		}
 	}
 
 	/**
@@ -320,15 +372,34 @@ class relationship_manager
 		}
 
 		$this->delete_request_notifications(array($request));
+		$event_name = $action === 'decline' ? self::EVENT_REQUEST_DECLINED : self::EVENT_REQUEST_CANCELLED;
+		$this->dispatch_request_event($event_name, $request, $actor_id, 'user');
 		return $action === 'decline' ? 'declined' : 'cancelled';
 	}
 
 	public function set_friend_list_visibility($user_id, $visibility)
 	{
+		$user_id = (int) $user_id;
 		$visibility = max(0, min(5, (int) $visibility));
+		$sql = 'SELECT profile_friend_show
+			FROM ' . $this->users_table . '
+			WHERE user_id = ' . (int) $user_id;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$previous_visibility = $this->db->sql_fetchfield('profile_friend_show');
+		$this->db->sql_freeresult($result);
+		if ($previous_visibility === false || (int) $previous_visibility === $visibility)
+		{
+			return $visibility;
+		}
+
 		$this->db->sql_query('UPDATE ' . $this->users_table . '
 			SET profile_friend_show = ' . (int) $visibility . '
 			WHERE user_id = ' . (int) $user_id);
+		$this->dispatch_event(self::EVENT_VISIBILITY_CHANGED, array(
+			'user_id'        => $user_id,
+			'old_visibility' => (int) $previous_visibility,
+			'new_visibility' => $visibility,
+		));
 
 		return $visibility;
 	}
@@ -346,20 +417,40 @@ class relationship_manager
 		{
 			return false;
 		}
+		$is_close = (bool) $is_close;
+		$sql = 'SELECT bff
+			FROM ' . $this->zebra_table . '
+			WHERE user_id = ' . (int) $owner_id . '
+				AND zebra_id = ' . (int) $friend_id . '
+				AND friend = 1
+				AND foe = 0';
+		$result = $this->db->sql_query_limit($sql, 1);
+		$old_state = $this->db->sql_fetchfield('bff');
+		$this->db->sql_freeresult($result);
+		if ($old_state === false)
+		{
+			return false;
+		}
+		$old_state = (bool) $old_state;
+		if ($old_state === $is_close)
+		{
+			return true;
+		}
 
 		$sql = 'UPDATE ' . $this->zebra_table . '
-			SET bff = ' . ((bool) $is_close ? 1 : 0) . '
+			SET bff = ' . ($is_close ? 1 : 0) . '
 			WHERE user_id = ' . (int) $owner_id . '
 				AND zebra_id = ' . (int) $friend_id . '
 				AND friend = 1
 				AND foe = 0';
 		$this->db->sql_query($sql);
-		if (!$this->db->sql_affectedrows())
-		{
-			return false;
-		}
-
 		$this->mark_changed(array($owner_id));
+		$this->dispatch_event(self::EVENT_CLOSE_FRIEND_CHANGED, array(
+			'owner_id'  => $owner_id,
+			'friend_id' => $friend_id,
+			'old_state' => $old_state,
+			'new_state' => $is_close,
+		));
 		return true;
 	}
 
@@ -611,43 +702,53 @@ class relationship_manager
 		$request_id = (int) $request['request_id'];
 		$requester_id = (int) $request['requester_id'];
 		$acceptor_id = (int) $acceptor_id;
+		$blocked_requests = array();
 		$this->db->sql_transaction('begin');
 		try
 		{
 			if ($this->is_foe($requester_id, $acceptor_id) || $this->is_foe($acceptor_id, $requester_id))
 			{
-				$requests = $this->get_requests_between($requester_id, $acceptor_id);
-				$this->delete_request_rows($requests);
+				$blocked_requests = $this->get_requests_between($requester_id, $acceptor_id);
+				$this->delete_request_rows($blocked_requests);
 				$this->delete_legacy_between($requester_id, $acceptor_id);
 				$this->db->sql_transaction('commit');
-				$this->delete_request_notifications($requests);
-				return false;
 			}
-
-			$sql = 'DELETE FROM ' . $this->requests_table . '
+			else
+			{
+				$sql = 'DELETE FROM ' . $this->requests_table . '
 				WHERE request_id = ' . (int) $request_id . '
 					AND requester_id = ' . (int) $requester_id . '
 					AND recipient_id = ' . (int) $acceptor_id;
-			$this->db->sql_query($sql);
-			if ((int) $this->db->sql_affectedrows() !== 1)
-			{
-				$this->db->sql_transaction('commit');
-				return false;
-			}
+				$this->db->sql_query($sql);
+				if ((int) $this->db->sql_affectedrows() !== 1)
+				{
+					$this->db->sql_transaction('commit');
+					return false;
+				}
 
-			$this->delete_zebra_between($requester_id, $acceptor_id);
-			$this->delete_legacy_between($requester_id, $acceptor_id);
-			$this->db->sql_multi_insert($this->zebra_table, array(
-				array('user_id' => $requester_id, 'zebra_id' => $acceptor_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
-				array('user_id' => $acceptor_id, 'zebra_id' => $requester_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
-			));
-			$this->mark_changed(array($requester_id, $acceptor_id));
-			$this->db->sql_transaction('commit');
+				$this->delete_zebra_between($requester_id, $acceptor_id);
+				$this->delete_legacy_between($requester_id, $acceptor_id);
+				$this->db->sql_multi_insert($this->zebra_table, array(
+					array('user_id' => $requester_id, 'zebra_id' => $acceptor_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+					array('user_id' => $acceptor_id, 'zebra_id' => $requester_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+				));
+				$this->mark_changed(array($requester_id, $acceptor_id));
+				$this->db->sql_transaction('commit');
+			}
 		}
 		catch (\Throwable $e)
 		{
 			$this->db->sql_transaction('rollback');
 			throw $e;
+		}
+		if ($blocked_requests)
+		{
+			$this->delete_request_notifications($blocked_requests);
+			foreach ($blocked_requests as $blocked_request)
+			{
+				$this->dispatch_request_event(self::EVENT_REQUEST_DECLINED, $blocked_request, $acceptor_id, 'foe');
+			}
+			return false;
 		}
 
 		$this->notification_manager->delete_notifications(self::REQUEST_NOTIFICATION, $request_id, false, $acceptor_id);
@@ -656,6 +757,7 @@ class relationship_manager
 			'requester_id' => $acceptor_id,
 			'user_id'      => array($requester_id => 'notification.method.board'),
 		));
+		$this->dispatch_request_event(self::EVENT_REQUEST_ACCEPTED, $request, $acceptor_id);
 
 		return true;
 	}
@@ -744,5 +846,27 @@ class relationship_manager
 				SET zebra_changed = 1
 				WHERE ' . $this->db->sql_in_set('user_id', $user_ids));
 		}
+	}
+
+	protected function dispatch_request_event($event_name, array $request, $actor_id, $reason = null)
+	{
+		$data = array(
+			'request_id'   => (int) $request['request_id'],
+			'requester_id' => (int) $request['requester_id'],
+			'recipient_id' => (int) $request['recipient_id'],
+			'actor_id'     => (int) $actor_id,
+			'request_time' => isset($request['request_time']) ? (int) $request['request_time'] : 0,
+		);
+		if ($reason !== null)
+		{
+			$data['reason'] = (string) $reason;
+		}
+
+		$this->dispatch_event($event_name, $data);
+	}
+
+	protected function dispatch_event($event_name, array $data)
+	{
+		$this->dispatcher->trigger_event($event_name, $data);
 	}
 }

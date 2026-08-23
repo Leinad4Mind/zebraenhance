@@ -5,6 +5,7 @@ services:
             - '@dbal.conn'
             - '@dbal.tools'
             - '@notification_manager'
+            - '@dispatcher'
             - '%core.table_prefix%zebra_requests'
             - '%core.table_prefix%zebra_confirm'
             - '%core.table_prefix%zebra'

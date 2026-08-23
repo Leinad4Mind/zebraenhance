@@ -16,6 +16,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 	protected $db;
 	protected $db_tools;
 	protected $notifications;
+	protected $dispatcher;
 	protected $relationships;
 
 	static protected function setup_extensions()
@@ -40,10 +41,12 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->notifications = $this->getMockBuilder('\phpbb\notification\manager')
 			->disableOriginalConstructor()
 			->getMock();
+		$this->dispatcher = $this->getMockBuilder('\phpbb\event\dispatcher_interface')->getMock();
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
 			$this->db_tools,
 			$this->notifications,
+			$this->dispatcher,
 			'phpbb_zebra_requests',
 			'phpbb_zebra_confirm',
 			'phpbb_zebra',
@@ -77,12 +80,27 @@ class relationship_manager_test extends \phpbb_database_test_case
 	public function test_same_direction_request_is_idempotent()
 	{
 		$this->notifications->expects($this->never())->method('add_notifications');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
 		$this->assertSame('ignored', $this->relationships->request_friendship(2, 3));
 		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
 	}
 
 	public function test_new_request_has_unique_identity_and_notification()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CREATED,
+				$this->callback(function ($data)
+				{
+					return $data['request_id'] > 2
+						&& $data['requester_id'] === 3
+						&& $data['recipient_id'] === 4
+						&& $data['actor_id'] === 3
+						&& $data['request_time'] > 0
+						&& !isset($data['reason']);
+				})
+			);
 		$this->notifications->expects($this->once())
 			->method('add_notifications')
 			->with(
@@ -102,6 +120,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 	public function test_blocked_request_is_silently_discarded()
 	{
 		$this->notifications->expects($this->never())->method('add_notifications');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
 		$this->assertSame('blocked', $this->relationships->request_friendship(5, 4));
 		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
 	}
@@ -133,6 +152,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_removal_cleans_new_and_legacy_pending_rows()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CANCELLED,
+				array(
+					'request_id' => 2,
+					'requester_id' => 2,
+					'recipient_id' => 52,
+					'actor_id' => 2,
+					'request_time' => 101,
+					'reason' => 'relationship_removed',
+				)
+			);
 		$this->notifications->expects($this->once())
 			->method('delete_notifications')
 			->with('anavaro.zebraenhance.notification.zebraadd', 2, false, 52);
@@ -160,6 +192,12 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_removal_preserves_foe_owned_by_other_user()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_FRIENDSHIP_REMOVED,
+				array('user_id' => 3, 'friend_id' => 2, 'reason' => 'relationship_removed')
+			);
 		$this->db->sql_query('DELETE FROM phpbb_zebra_requests WHERE user_low = 2 AND user_high = 3');
 		$this->db->sql_query('INSERT INTO phpbb_zebra
 			(user_id, zebra_id, friend, foe, bff)
@@ -176,6 +214,12 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_foe_addition_removes_friendship_but_preserves_existing_foes()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_FRIENDSHIP_REMOVED,
+				array('user_id' => 3, 'friend_id' => 5, 'reason' => 'foe')
+			);
 		$this->db->sql_query('INSERT INTO phpbb_zebra
 			(user_id, zebra_id, friend, foe, bff)
 			VALUES (3, 5, 1, 0, 1)');
@@ -212,6 +256,18 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_request_is_accepted_by_stable_id_and_recipient()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_ACCEPTED,
+				array(
+					'request_id' => 1,
+					'requester_id' => 2,
+					'recipient_id' => 3,
+					'actor_id' => 3,
+					'request_time' => 100,
+				)
+			);
 		$this->notifications->expects($this->once())
 			->method('delete_notifications')
 			->with('anavaro.zebraenhance.notification.zebraadd', 1, false, 3);
@@ -241,8 +297,47 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
 	}
 
+	public function test_foe_prevents_acceptance_and_dispatches_decline()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (3, 2, 0, 1, 0)');
+		$this->notifications->expects($this->once())
+			->method('delete_notifications')
+			->with('anavaro.zebraenhance.notification.zebraadd', 1, false, 3);
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_DECLINED,
+				array(
+					'request_id' => 1,
+					'requester_id' => 2,
+					'recipient_id' => 3,
+					'actor_id' => 3,
+					'request_time' => 100,
+					'reason' => 'foe',
+				)
+			);
+
+		$this->assertFalse($this->relationships->manage_request(1, 3, 'accept'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
+	}
+
 	public function test_recipient_can_decline_request_by_id()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_DECLINED,
+				array(
+					'request_id' => 1,
+					'requester_id' => 2,
+					'recipient_id' => 3,
+					'actor_id' => 3,
+					'request_time' => 100,
+					'reason' => 'user',
+				)
+			);
 		$this->notifications->expects($this->once())
 			->method('delete_notifications')
 			->with('anavaro.zebraenhance.notification.zebraadd', 1, false, 3);
@@ -253,6 +348,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_requester_can_cancel_request_by_id()
 	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CANCELLED,
+				array(
+					'request_id' => 2,
+					'requester_id' => 2,
+					'recipient_id' => 52,
+					'actor_id' => 2,
+					'request_time' => 101,
+					'reason' => 'user',
+				)
+			);
 		$this->notifications->expects($this->once())
 			->method('delete_notifications')
 			->with('anavaro.zebraenhance.notification.zebraadd', 2, false, 52);
@@ -267,6 +375,51 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$result = $this->db->sql_query('SELECT profile_friend_show FROM phpbb_users WHERE user_id = 2');
 		$this->assertSame(5, (int) $this->db->sql_fetchfield('profile_friend_show'));
 		$this->db->sql_freeresult($result);
+	}
+
+	public function test_friend_list_visibility_change_dispatches_event()
+	{
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_VISIBILITY_CHANGED,
+				array('user_id' => 2, 'old_visibility' => 5, 'new_visibility' => 3)
+			);
+
+		$this->assertSame(3, $this->relationships->set_friend_list_visibility(2, 3));
+	}
+
+	public function test_close_friend_change_dispatches_directional_event()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, 3, 1, 0, 0)');
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_CLOSE_FRIEND_CHANGED,
+				array('owner_id' => 2, 'friend_id' => 3, 'old_state' => false, 'new_state' => true)
+			);
+
+		$this->assertTrue($this->relationships->set_close_friend(2, 3, true));
+		$this->assertTrue($this->relationships->set_close_friend(2, 3, true));
+	}
+
+	public function test_integration_event_names_are_vendor_prefixed()
+	{
+		$events = array(
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CREATED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_ACCEPTED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_DECLINED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CANCELLED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_FRIENDSHIP_REMOVED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_CLOSE_FRIEND_CHANGED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_VISIBILITY_CHANGED,
+		);
+		foreach ($events as $event_name)
+		{
+			$this->assertStringStartsWith('anavaro.zebraenhance.', $event_name);
+		}
 	}
 
 	public function test_friend_list_visibility_rules()

@@ -20,6 +20,7 @@ The 2.0 line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Friend and request lists are paginated, and pending requests are capped at 100 per account.
 - Requests and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
+- Vendor-prefixed [integration events](docs/events.md) let other extensions react to relationship changes.
 
 ## Permissions
 
