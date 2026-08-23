@@ -1,227 +1,102 @@
 <?php
-
 /**
- * Created by PhpStorm.
- * User: lucifer
- * Date: 21.6.2017 г.
- * Time: 23:25
- */
-
-/**
- * @group event
- */
-
+*
+* Zebra Enhance extension for phpBB.
+*
+* @copyright (c) 2013-2026 Stanislav Atanasov
+* @license GNU General Public License, version 2 (GPL-2.0-only)
+*
+*/
 
 namespace anavaro\zebraenhance\tests\event;
 
-class zebra_listener_test extends \phpbb_database_test_case
+class zebra_listener_test extends \phpbb_test_case
 {
-	protected $user_loader;
+	protected $relationships;
 	protected $auth;
-	protected $config;
-	protected $db;
-	protected $request;
-	protected $template;
-	protected $user;
-	protected $language;
-	protected $notifications_helper;
+	protected $listener;
 
-	/**
-	 * Define the extensions to be tested
-	 *
-	 * @return array vendor/name of extension(s) to test
-	 */
-	static protected function setup_extensions()
+	// phpcs:ignore PhpbbCodingStandard.NamingConventions.LowercaseUnderscoredFunctions.NotAllowed -- PHPUnit API
+	public function setUp(): void
 	{
-		return array('anavaro/zebraenhance');
-	}
-
-	/**
-	 * Get data set fixtures
-	 */
-	public function getDataSet()
-	{
-		return $this->createXMLDataSet(dirname(__FILE__) . '/fixtures/fixture.xml');
-	}
-
-	/**
-	 * Setup test environment
-	 */
-	public function setUp() : void
-	{
-		global $phpbb_root_path, $phpEx;
-
 		parent::setUp();
 
-		$this->user_loader = $this->getMockBuilder('\phpbb\user_loader')
+		$this->relationships = $this->getMockBuilder('\anavaro\zebraenhance\service\relationship_manager')
 			->disableOriginalConstructor()
 			->getMock();
-
 		$this->auth = $this->getMockBuilder('\phpbb\auth\auth')
 			->disableOriginalConstructor()
 			->getMock();
-
-		$this->config = new \phpbb\config\config(array(
-			'zebra_module_id'	=> 'none',
-		));
-
-		$this->db = $this->new_dbal();
-
-		$this->request = $this->getMockBuilder('\phpbb\request\request')
-			->disableOriginalConstructor()
-			->getMock();;
-
-		$this->template = $this->getMockBuilder('\phpbb\template\template')
-			->getMock();
-
-		$this->user = $this->getMockBuilder('\phpbb\user')
-			->setConstructorArgs(array(
-				new \phpbb\language\language(new \phpbb\language\language_file_loader($phpbb_root_path, $phpEx)),
-				'\phpbb\datetime'
-			))
-			->getMock();
-
-		$this->language = $this->getMockBuilder('\phpbb\language\language')
+		$user = $this->getMockBuilder('\phpbb\user')
 			->disableOriginalConstructor()
 			->getMock();
-		$this->language->method('lang')
-			->will($this->returnArgument(0));
+		$user->data = array('user_id' => 2, 'profile_friend_show' => 5);
 
-		$this->notifications_helper = $this->getMockBuilder('\anavaro\zebraenhance\controller\notifyhelper')
-			->disableOriginalConstructor()
-			->getMock();
-		/*$this->notifications_helper->method('notify')
-			->will($this->returnArgument(0));*/
-	}
-
-	/**
-	 * Create our controller
-	 */
-	protected function set_listener()
-	{
 		$this->listener = new \anavaro\zebraenhance\event\zebra_listener(
-			$this->user_loader,
+			$this->relationships,
+			$this->getMockBuilder('\phpbb\user_loader')->disableOriginalConstructor()->getMock(),
 			$this->auth,
-			$this->config,
-			$this->db,
-			$this->request,
-			$this->template,
-			$this->user,
-			$this->language,
-			$this->notifications_helper,
-			'phpbb_'
+			$this->getMockBuilder('\phpbb\db\driver\driver_interface')->getMock(),
+			$this->getMockBuilder('\phpbb\request\request_interface')->getMock(),
+			$this->getMockBuilder('\phpbb\template\template')->getMock(),
+			$user,
+			$this->getMockBuilder('\phpbb\language\language')->disableOriginalConstructor()->getMock(),
+			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
+			'./',
+			'php',
+			'phpbb_users'
 		);
 	}
 
-	/**
-	 * Test the event listener is subscribing events
-	 */
-	public function test_getSubscribedEvents()
+	public function test_subscribed_events_are_scoped()
 	{
-		$this->assertEquals(array(
+		$this->assertSame(array(
 			'core.user_setup',
 			'core.ucp_add_zebra',
 			'core.ucp_remove_zebra',
 			'core.ucp_display_module_before',
 			'core.delete_user_before',
-			'core.memberlist_prepare_profile_data',
+			'core.memberlist_view_profile',
 		), array_keys(\anavaro\zebraenhance\event\zebra_listener::getSubscribedEvents()));
 	}
 
-	/**
-	 * Test detect module
-	 */
-	public function test_get_ucp_module_id()
+	public function test_language_is_registered_through_user_setup_event()
 	{
-		$this->set_listener();
-		$dispatcher = new \Symfony\Component\EventDispatcher\EventDispatcher();
-		$dispatcher->addListener('core.user_setup', array($this->listener, 'load_language_on_setup'));
-		$dispatcher->dispatch('core.user_setup');
+		$lang_set_ext = array();
+		$event = new \phpbb\event\data(compact('lang_set_ext'));
+		$this->listener->load_language_on_setup($event);
 
-		$this->assertEquals(200, $this->config['zebra_module_id']);
+		$this->assertSame(array(array(
+			'ext_name' => 'anavaro/zebraenhance',
+			'lang_set' => 'zebra_enchance',
+		)), $event['lang_set_ext']);
 	}
 
-	public function zebra_confirm_add_data()
+	public function test_friend_addition_is_delegated_and_core_insert_is_suppressed()
 	{
-		return array(
-			'norm'	=> array(
-				'friends', // Mode
-				array( // actions
-					'user_id'	=> 1,
-					'zebra_id'	=> 2
-				),
-				array(//asserts phpbb_zebra_confirm
-					array(
-						'user_id'	=> 1,
-						'zebra_id'	=> 2,
-						'friend'	=> 1,
-						'foe'		=> 0
-					),
-					array(
-						'user_id'	=> 2,
-						'zebra_id'	=> 3,
-						'friend'	=> 1,
-						'foe'		=> 0
-					),
-					array(
-						 'user_id'	=> 2,
-						'zebra_id'	=> 52,
-						'friend'	=> 1,
-						'foe'		=> 0
-					),
-				),
-			),
-			'foe_requests_friendship'	=> array(
-				'friends', // Mode
-				array( // actions
-					   'user_id'	=> 5,
-					   'zebra_id'	=> 4
-				),
-				array(//asserts phpbb_zebra_confirm
-					array(
-						'user_id'	=> 2,
-						'zebra_id'	=> 3,
-						'friend'	=> 1,
-						'foe'		=> 0
-					),
-					array(
-						'user_id'	=> 2,
-						'zebra_id'	=> 52,
-						'friend'	=> 1,
-						'foe'		=> 0
-					),
-				),
-			),
-		);
+		$mode = 'friends';
+		$sql_ary = array(array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1));
+		$this->auth->expects($this->once())->method('acl_get')->with('u_ze_use')->willReturn(true);
+		$this->relationships->expects($this->once())
+			->method('process_additions')
+			->with($mode, $sql_ary)
+			->willReturn(array());
+
+		$event = new \phpbb\event\data(compact('mode', 'sql_ary'));
+		$this->listener->zebra_confirm_add($event);
+		$this->assertSame(array(), $event['sql_ary']);
 	}
 
-	/**
-	 * Test zebra_confirm_add function
-	 *
-	 * @dataProvider zebra_confirm_add_data
-	 */
-	public function test_zebra_confirm_add($mode, $actions, $asserts)
+	public function test_friend_removal_is_symmetric_and_core_delete_is_suppressed()
 	{
-		$mode = $mode;
-		$sql_ary = array(
-			$actions
-		);
-		$asserts;
-		$event_data = array('mode', 'sql_ary');
-		$event = new \phpbb\event\data(compact($event_data));
-		$this->set_listener();
-		$dispatcher = new \Symfony\Component\EventDispatcher\EventDispatcher();
-		$dispatcher->addListener('core.ucp_add_zebra', array($this->listener, 'zebra_confirm_add'));
-		$dispatcher->dispatch('core.ucp_add_zebra', $event);
+		$mode = 'friends';
+		$user_ids = array(3, 4);
+		$this->relationships->expects($this->exactly(2))
+			->method('remove_relationship')
+			->withConsecutive(array(2, 3), array(2, 4));
 
-		$sql = 'SELECT * FROM phpbb_zebra_confirm ORDER BY user_id ASC, zebra_id ASC';
-		$result = $this->db->sql_query($sql);
-		$cnt = 0;
-		while ($row = $this->db->sql_fetchrow($result))
-		{
-			$this->assertEquals($asserts[$cnt], $row);
-			$cnt++;
-		}
-		$this->assertEquals(count($asserts), $cnt);
+		$event = new \phpbb\event\data(compact('mode', 'user_ids'));
+		$this->listener->zebra_confirm_remove($event);
+		$this->assertSame(array(0), $event['user_ids']);
 	}
 }

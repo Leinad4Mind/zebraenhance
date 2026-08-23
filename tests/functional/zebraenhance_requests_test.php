@@ -63,7 +63,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->assertContains('testuser', $crawler->filter('html')->text());
 
 		//get request URL
-		$link = $crawler->filter('#ze_slef_req')->filter('span')->filter('a')->first()->link()->getUri();
+		$link = $crawler->filter('#ze-outgoing-requests')->filter('a')->first()->link()->getUri();
 
 		//cancel friend request
 		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
@@ -97,7 +97,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 
-		$link = $crawler->filter('#ze_other_req')->filter('span')->filter('a')->eq(1)->link()->getUri();
+		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(1)->link()->getUri();
 
 		$this->assertContains('2', $link);
 
@@ -128,7 +128,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
 
-		$link = $crawler->filter('#ze_other_req')->filter('span')->filter('a')->eq(0)->link()->getUri();
+		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
 
 		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
 		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
@@ -137,7 +137,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertNotContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$this->assertContains('admin', $crawler->filter('#ze_ajaxify')->text());
+		$this->assertContains('admin', $crawler->filter('#ze-friends')->text());
 	}
 	public function test_remove_friend()
 	{
@@ -145,7 +145,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang('ucp');
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$link = $crawler->filter('#ze_ajaxify')->filter('a')->eq(2)->link()->getUri();
+		$link = $crawler->filter('#ze-friends')->filter('a')->first()->link()->getUri();
 
 		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
 		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
@@ -154,18 +154,18 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertNotContains('testuser', $crawler->filter('.cp-main')->text());
-		$this->assertEquals(0, $crawler->filter('#ze_ajaxify')->count());
+		$this->assertEquals(0, $crawler->filter('#ze-friends .ze-list-row')->count());
 
 		$this->logout();
 
 		$this->login('testuser');
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertNotContains('admin', $crawler->filter('.cp-main')->text());
-		$this->assertEquals(0, $crawler->filter('#ze_ajaxify')->count());
+		$this->assertEquals(0, $crawler->filter('#ze-friends .ze-list-row')->count());
 		$this->logout();
 	}
 
-	public function test_togle_bff()
+	public function test_toggle_close_friends_is_post_only_and_csrf_protected()
 	{
 		$this->login();
 		//we create friends
@@ -178,31 +178,48 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$link = $crawler->filter('#ze_other_req')->filter('span')->filter('a')->eq(0)->link()->getUri();
+		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
 		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
 		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
 		$form = $crawler->selectButton($this->lang('YES'))->form();
 		$crawler = self::submit($form);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$link = $crawler->filter('#ze_ajaxify')->filter('a')->eq(0)->attr('href');
+		$button = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
+		$link = $button->attr('data-url');
+		$path = substr($link, strpos($link, 'app.'));
+		$form_values = $crawler->selectButton($this->lang('SUBMIT'))->form()->getValues();
 
-		//togle bff
-		$crw1 = self::request('GET', substr($link, strpos($link, 'app.')), array(), array(), array('CONTENT_TYPE'	=> 'application/json'));
+		self::request('GET', $path, array(), false);
+		$this->assertSame(405, self::$client->getResponse()->getStatus());
+		self::request('POST', $path, array(), false);
+		$this->assertSame(403, self::$client->getResponse()->getStatus());
+		self::request('POST', $path, array(
+			'creation_time' => $form_values['creation_time'],
+			'form_token' => $form_values['form_token'],
+		), false);
+		$this->assertSame(200, self::$client->getResponse()->getStatus());
+		$response = json_decode(self::get_content(), true);
+		$this->assertTrue($response['success']);
+		$this->assertTrue($response['is_close']);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('favorite_remove.png', $crawler->filter('#ze_ajaxify')->filter('a')->eq(0)->filter('img')->attr('src'));
+		$this->assertSame('true', $crawler->filter('#ze-friends .js-ze-close-friend')->first()->attr('aria-pressed'));
 		$this->logout();
 
 		$this->login();
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$link = $crawler->filter('#ze_ajaxify')->filter('a')->eq(0)->attr('href');
-
-		//togle bff
-		$crw1 = self::request('GET', substr($link, strpos($link, 'app.')), array(), array(), array('CONTENT_TYPE'	=> 'application/json'));
+		$button = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
+		$path = substr($button->attr('data-url'), strpos($button->attr('data-url'), 'app.'));
+		$form_values = $crawler->selectButton($this->lang('SUBMIT'))->form()->getValues();
+		self::request('POST', $path, array(
+			'creation_time' => $form_values['creation_time'],
+			'form_token' => $form_values['form_token'],
+		), false);
+		$this->assertSame(200, self::$client->getResponse()->getStatus());
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('favorite_remove.png', $crawler->filter('#ze_ajaxify')->filter('a')->eq(0)->filter('img')->attr('src'));
+		$this->assertSame('true', $crawler->filter('#ze-friends .js-ze-close-friend')->first()->attr('aria-pressed'));
 		$this->logout();
 
 		$this->login();
@@ -215,7 +232,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login('testuser1');
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$link = $crawler->filter('#ze_other_req')->filter('span')->filter('a')->eq(0)->link()->getUri();
+		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
 		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
 		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
 		$form = $crawler->selectButton($this->lang('YES'))->form();
@@ -293,7 +310,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($user);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertContains($expected, $crawler->filter('html')->filter('div#ze_container')->text());
+		$this->assertContains($expected, $crawler->filter('div#ze-friend-list')->text());
 		$this->logout();
 	}
 }

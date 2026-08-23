@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <dataset>
+    <table name="phpbb_users">
+        <column>user_id</column>
+        <column>user_type</column>
+        <column>group_id</column>
+        <column>username</column>
+        <column>username_clean</column>
+        <row>
+            <value>2</value><value>3</value><value>5</value><value>admin</value><value>admin</value>
+        </row>
+        <row>
+            <value>3</value><value>0</value><value>2</value><value>user3</value><value>user3</value>
+        </row>
+        <row>
+            <value>4</value><value>0</value><value>2</value><value>user4</value><value>user4</value>
+        </row>
+        <row>
+            <value>5</value><value>0</value><value>2</value><value>user5</value><value>user5</value>
+        </row>
+        <row>
+            <value>52</value><value>0</value><value>2</value><value>user52</value><value>user52</value>
+        </row>
+    </table>
     <table name="phpbb_modules">
         <column>module_id</column>
         <column>module_basename</column>
@@ -56,6 +78,93 @@
             <value>3</value>
             <value>1</value>
             <value>0</value>
+        </row>
+    </table>
+    <table name="phpbb_zebra_requests">
+        <column>request_id</column>
+        <column>requester_id</column>
+        <column>recipient_id</column>
+        <column>user_low</column>
+        <column>user_high</column>
+        <column>request_time</column>
+        <row>
+            <value>1</value>
+            <value>2</value>
+            <value>3</value>
+            <value>2</value>
+            <value>3</value>
+            <value>100</value>
+        </row>
+        <row>
+            <value>2</value>
+            <value>2</value>
+            <value>52</value>
+            <value>2</value>
+            <value>52</value>
+            <value>101</value>
+        </row>
+    </table>
+    <table name="phpbb_notification_types">
+        <column>notification_type_id</column>
+        <column>notification_type_name</column>
+        <column>notification_type_enabled</column>
+        <row>
+            <value>90</value>
+            <value>anavaro.zebraenhance.notification.zebraadd</value>
+            <value>1</value>
+        </row>
+        <row>
+            <value>91</value>
+            <value>anavaro.zebraenhance.notification.zebraconfirm</value>
+            <value>1</value>
+        </row>
+    </table>
+    <table name="phpbb_notifications">
+        <column>notification_id</column>
+        <column>notification_type_id</column>
+        <column>item_id</column>
+        <column>item_parent_id</column>
+        <column>user_id</column>
+        <column>notification_read</column>
+        <column>notification_time</column>
+        <column>notification_data</column>
+        <row>
+            <value>90</value>
+            <value>91</value>
+            <value>40</value>
+            <value>3</value>
+            <value>2</value>
+            <value>0</value>
+            <value>100</value>
+            <value>a:1:{s:12:"requester_id";i:3;}</value>
+        </row>
+        <row>
+            <value>91</value>
+            <value>90</value>
+            <value>41</value>
+            <value>2</value>
+            <value>3</value>
+            <value>0</value>
+            <value>101</value>
+            <value>a:1:{s:12:"requester_id";i:2;}</value>
+        </row>
+    </table>
+    <table name="phpbb_notification_emails">
+        <column>notification_type_id</column>
+        <column>item_id</column>
+        <column>item_parent_id</column>
+        <column>user_id</column>
+        <row>
+            <value>91</value>
+            <value>40</value>
+            <value>3</value>
+            <value>2</value>
+        </row>
+        <row>
+            <value>90</value>
+            <value>41</value>
+            <value>2</value>
+            <value>3</value>
         </row>
     </table>
 </dataset>
