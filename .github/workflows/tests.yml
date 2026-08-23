@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php-compatibility:
+    name: PHP ${{ matrix.php }} syntax
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint PHP files
+        run: find . -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  coding-standard:
+    name: phpBB coding standard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - name: Run phpBB coding standard
+        run: vendor/bin/phpcs --standard=vendor/senky/phpbb-coding-standard/ruleset.xml --exclude=Generic.Functions.CallTimePassByReference --extensions=php .
+
+  phpbb-tests:
+    name: phpBB 3.3.17 database and event tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: sqlite3
+          coverage: none
+      - name: Prepare phpBB 3.3.17
+        run: |
+          git clone --depth 1 --branch release-3.3.17 https://github.com/phpbb/phpbb.git phpbb
+          composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
+          mkdir -p phpbb/phpBB/ext/anavaro
+          ln -s "$GITHUB_WORKSPACE" phpbb/phpBB/ext/anavaro/zebraenhance
+      - name: Run extension tests
+        working-directory: phpbb
+        run: phpBB/vendor/bin/phpunit -c phpBB/ext/anavaro/zebraenhance/phpunit.xml.dist --testsuite 'Extension Test Suite' --colors=always

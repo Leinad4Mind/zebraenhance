@@ -1,50 +1,55 @@
-[![Build Status](https://travis-ci.org/satanasov/zebraenhance.svg?branch=master)](https://travis-ci.org/satanasov/zebraenhance) [![Code Coverage](https://scrutinizer-ci.com/g/satanasov/zebraenhance/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/satanasov/zebraenhance/?branch=master)  [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/satanasov/zebraenhance/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/satanasov/zebraenhance/?branch=master)
+# Zebra Enhance
 
-Friend list enchance
-============
+Zebra Enhance adds confirmed friend requests, directional Close Friends, notifications, and profile friend-list privacy controls to phpBB's Zebra module.
 
-Zebra enhance
+## Requirements
 
-  Description:
+- phpBB 3.3.17
+- PHP 7.4 or newer
 
-    Enhances PhpBB Zebra module adding additional ACL level.
-    Adds support for friend request need to be approved.
-    Adds addition level of friends - hidden mark for special friends.
-    Adds beautiful friend control.
+The 2.0 line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 
-  Features:
+## Features
 
-    System:
-      - Make sure AJAX Callback function is loaded only in UCP -> Zebra
-      - Add notifications for new requests.
+- Friend requests must be accepted before phpBB creates the mutual friendship.
+- Incoming and outgoing requests appear in UCP > Friends.
+- Request and acceptance notifications use a unique request ID.
+- Each user can independently mark an accepted friend as a Close Friend.
+- Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
+- Friend acceptance/removal is symmetric and transactional.
+- Requests and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
+- Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
 
-    UCP:
-      - Show pending and awaiting confirmation requests
-      - Show beautiful friend control (using AJAX)
-      - Add option for selecting "Close Friends" with additional access*
-      - Dynamically locate which is the zebra module
-      - Cancel request use AJAXed "confirm_box"
-      - See if when user is deleted zebra cleans the remains (if not - make the extension do it)
-      - Add ACL who can view friendlist
+## Permissions
 
-    Profile:
-      - Add friend list in profile
+The 2.0 migration adds these ACP permissions:
 
-  Installation:
+- `u_ze_use` — use friend requests and enhanced friend lists
+- `u_ze_close_friends` — manage Close Friends
+- `m_ze_view_private_friendlists` — view private profile friend lists
 
-    - create $phpbb_root/ext/anavaro folder
-    - cd $phpbb_root/ext/anavaro
-    - git clone https://github.com/lucifer4o/zebraenhance.git
-    - Go to admin panel -> customize -> extensions -> Enable Friendlist Enhance
+The two user permissions are granted to the standard registered-user groups during upgrade. The moderator override is granted to Global Moderators.
 
-  Credits:
+## Install
 
-    @phpbb-es aka Raul [ThE KuKa]
-    Meis2M
-    @David-NF aka watisnf.nl
+Copy the extension to `ext/anavaro/zebraenhance`, then enable **Zebra Enhance** in ACP > Customise > Manage extensions.
 
-    
-  Submitting translations/functions
-    
-    Please fork the repo and submit every translation/patch as Pull Request.
+## Upgrade from 1.x
 
+1. Back up the forum database and extension files.
+2. Disable Zebra Enhance in the ACP. Do **not** purge or delete its data.
+3. Replace the files in `ext/anavaro/zebraenhance` with the 2.0 files.
+4. Enable the extension again and let phpBB run its migrations.
+5. Purge phpBB's cache.
+
+The migration copies valid rows from the legacy `zebra_confirm` table into the new uniquely keyed request table. The legacy table remains available for downgrade safety and is removed only when the extension is purged. Existing 1.x notifications are discarded because their user-based item IDs are incompatible with the unique request IDs used by 2.0.
+
+## Development
+
+The test suite targets the official phpBB 3.3.17 source tree. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
+
+The complete local verification also exercises the functional suite with phpBB served by PHP 7.4 and PHP 8.4.
+
+## License
+
+GNU General Public License, version 2. See [license.txt](license.txt).

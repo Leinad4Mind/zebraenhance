@@ -1,11 +1,10 @@
 {
 	"name": "anavaro/zebraenhance",
 	"type": "phpbb-extension",
-	"description": "Enchance ZEBRA function adding confimation and special friends",
+	"description": "Adds confirmed friend requests, Close Friends, and friend-list privacy controls to phpBB Zebra.",
 	"homepage": "https://github.com/lucifer4o/zebraenhance",
-	"version": "1.0.4",
-	"time": "2017-02-12",
-	"license": "GPL-2.0",
+	"version": "2.0.0",
+	"license": "GPL-2.0-only",
 	"authors": [
 		{
 			"name": "Stanislav Atanasov",
@@ -15,20 +14,15 @@
 		}
 	],
 	"require": {
-		"php": ">=5.4"
+		"php": ">=7.4"
 	},
 	"require-dev": {
-		"satooshi/php-coveralls": "^2.2"
+		"senky/phpbb-coding-standard": "dev-master"
 	},
 	"extra": {
-		"display-name": "phpBB 3.2 Friendlist Enhance",
-		"version-check": {
-			"host": "lab.anavaro.com",
-			"directory": "/phpbb-ext/3.2.x",
-			"filename": "zebraenhance.json"
-		},
+		"display-name": "Zebra Enhance",
 		"soft-require": {
-			"phpbb/phpbb": "3.2.*@dev"
+			"phpbb/phpbb": ">=3.3.17,<4.0.0@dev"
 		}
 	}
 }
