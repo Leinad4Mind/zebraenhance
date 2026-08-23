@@ -42,6 +42,7 @@ class zebra_listener_test extends \phpbb_test_case
 			$user,
 			$this->getMockBuilder('\phpbb\language\language')->disableOriginalConstructor()->getMock(),
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
+			$this->getMockBuilder('\phpbb\pagination')->disableOriginalConstructor()->getMock(),
 			'./',
 			'php'
 		);
@@ -95,9 +96,9 @@ class zebra_listener_test extends \phpbb_test_case
 	{
 		$mode = 'friends';
 		$user_ids = array(3, 4);
-		$this->relationships->expects($this->exactly(2))
-			->method('remove_relationship')
-			->withConsecutive(array(2, 3), array(2, 4));
+		$this->relationships->expects($this->once())
+			->method('remove_relationships')
+			->with(2, array(3, 4));
 
 		$event = new \phpbb\event\data(compact('mode', 'user_ids'));
 		$this->listener->zebra_confirm_remove($event);

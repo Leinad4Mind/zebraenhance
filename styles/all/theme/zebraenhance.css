@@ -27,6 +27,11 @@
 	padding: 2px 5px;
 }
 
+.ze-pagination {
+	float: none;
+	margin: .5rem 0 1rem;
+}
+
 .ze-profile-friends {
 	display: grid;
 	gap: .75rem;

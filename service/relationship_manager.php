@@ -15,6 +15,8 @@ class relationship_manager
 {
 	const REQUEST_NOTIFICATION = 'anavaro.zebraenhance.notification.zebraadd';
 	const CONFIRM_NOTIFICATION = 'anavaro.zebraenhance.notification.zebraconfirm';
+	const PAGE_SIZE = 25;
+	const MAX_PENDING_REQUESTS = 100;
 
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
@@ -97,9 +99,14 @@ class relationship_manager
 
 		if ($mode === 'foes')
 		{
+			$relationships = array();
 			foreach ($rows as $row)
 			{
-				$this->prepare_foe_addition((int) $row['user_id'], (int) $row['zebra_id']);
+				$relationships[(int) $row['user_id']][] = (int) $row['zebra_id'];
+			}
+			foreach ($relationships as $user_id => $zebra_ids)
+			{
+				$this->remove_relationships($user_id, $zebra_ids);
 			}
 		}
 
@@ -109,7 +116,7 @@ class relationship_manager
 	/**
 	 * Create a request or accept the reverse request.
 	 *
-	 * @return string created, accepted, ignored, or blocked
+	 * @return string created, accepted, ignored, blocked, or limited
 	 */
 	public function request_friendship($requester_id, $recipient_id)
 	{
@@ -140,6 +147,11 @@ class relationship_manager
 		if ($this->is_foe($recipient_id, $requester_id))
 		{
 			return 'blocked';
+		}
+		if ($this->count_pending_requests($requester_id) >= self::MAX_PENDING_REQUESTS
+			|| $this->count_pending_requests($recipient_id) >= self::MAX_PENDING_REQUESTS)
+		{
+			return 'limited';
 		}
 
 		$sql_ary = array(
@@ -198,21 +210,57 @@ class relationship_manager
 	 */
 	public function remove_relationship($user_id, $zebra_id)
 	{
+		$this->remove_relationships($user_id, array($zebra_id));
+	}
+
+	/**
+	 * Remove friendships and requests for several users in one transaction.
+	 */
+	public function remove_relationships($user_id, array $zebra_ids)
+	{
 		$user_id = (int) $user_id;
-		$zebra_id = (int) $zebra_id;
-		if (!$user_id || !$zebra_id || $user_id === $zebra_id)
+		$zebra_ids = array_values(array_unique(array_filter(array_map('intval', $zebra_ids), function ($zebra_id) use ($user_id)
+		{
+			return $zebra_id && $zebra_id !== $user_id;
+		})));
+		if (!$user_id || !$zebra_ids)
 		{
 			return;
 		}
 
-		$requests = $this->get_requests_between($user_id, $zebra_id);
 		$this->db->sql_transaction('begin');
 		try
 		{
-			$this->delete_friendship_between($user_id, $zebra_id);
+			$sql = 'SELECT request_id, requester_id, recipient_id
+				FROM ' . $this->requests_table . '
+				WHERE (requester_id = ' . (int) $user_id . '
+						AND ' . $this->db->sql_in_set('recipient_id', $zebra_ids) . ')
+					OR (recipient_id = ' . (int) $user_id . '
+						AND ' . $this->db->sql_in_set('requester_id', $zebra_ids) . ')';
+			$result = $this->db->sql_query($sql);
+			$requests = array();
+			while ($row = $this->db->sql_fetchrow($result))
+			{
+				$requests[] = $row;
+			}
+			$this->db->sql_freeresult($result);
+
+			$sql = 'DELETE FROM ' . $this->zebra_table . '
+				WHERE friend = 1
+					AND foe = 0
+					AND ((user_id = ' . (int) $user_id . '
+							AND ' . $this->db->sql_in_set('zebra_id', $zebra_ids) . ')
+						OR (zebra_id = ' . (int) $user_id . '
+							AND ' . $this->db->sql_in_set('user_id', $zebra_ids) . '))';
+			$this->db->sql_query($sql);
 			$this->delete_request_rows($requests);
-			$this->delete_legacy_between($user_id, $zebra_id);
-			$this->mark_changed(array($user_id, $zebra_id));
+			$sql = 'DELETE FROM ' . $this->legacy_requests_table . '
+				WHERE (user_id = ' . (int) $user_id . '
+						AND ' . $this->db->sql_in_set('zebra_id', $zebra_ids) . ')
+					OR (zebra_id = ' . (int) $user_id . '
+						AND ' . $this->db->sql_in_set('user_id', $zebra_ids) . ')';
+			$this->db->sql_query($sql);
+			$this->mark_changed(array_merge(array($user_id), $zebra_ids));
 			$this->db->sql_transaction('commit');
 		}
 		catch (\Throwable $e)
@@ -283,34 +331,6 @@ class relationship_manager
 			WHERE user_id = ' . (int) $user_id);
 
 		return $visibility;
-	}
-
-	/**
-	 * Remove extension-owned relationship state before phpBB inserts a foe.
-	 *
-	 * Existing foe rows are deliberately preserved. This makes the service safe
-	 * for legacy one-sided friendships and for integrations that dispatch the
-	 * Zebra event without going through the stock UCP checks.
-	 */
-	protected function prepare_foe_addition($user_id, $zebra_id)
-	{
-		$requests = $this->get_requests_between($user_id, $zebra_id);
-		$this->db->sql_transaction('begin');
-		try
-		{
-			$this->delete_friendship_between($user_id, $zebra_id);
-			$this->delete_request_rows($requests);
-			$this->delete_legacy_between($user_id, $zebra_id);
-			$this->mark_changed(array($user_id, $zebra_id));
-			$this->db->sql_transaction('commit');
-		}
-		catch (\Throwable $e)
-		{
-			$this->db->sql_transaction('rollback');
-			throw $e;
-		}
-
-		$this->delete_request_notifications($requests);
 	}
 
 	/**
@@ -431,7 +451,7 @@ class relationship_manager
 	/**
 	 * Return friend rows for UCP or profile display.
 	 */
-	public function get_friends($owner_id, $limit = 0)
+	public function get_friends($owner_id, $limit = 0, $offset = 0)
 	{
 		$sql = 'SELECT z.zebra_id, z.bff, u.username, u.user_colour
 			FROM ' . $this->zebra_table . ' z
@@ -441,7 +461,7 @@ class relationship_manager
 				AND z.friend = 1
 				AND z.foe = 0
 			ORDER BY u.username_clean ASC';
-		$result = $limit ? $this->db->sql_query_limit($sql, (int) $limit) : $this->db->sql_query($sql);
+		$result = $limit ? $this->db->sql_query_limit($sql, (int) $limit, max(0, (int) $offset)) : $this->db->sql_query($sql);
 		$rows = array();
 		while ($row = $this->db->sql_fetchrow($result))
 		{
@@ -452,10 +472,24 @@ class relationship_manager
 		return $rows;
 	}
 
+	public function count_friends($owner_id)
+	{
+		$sql = 'SELECT COUNT(*) AS total
+			FROM ' . $this->zebra_table . '
+			WHERE user_id = ' . (int) $owner_id . '
+				AND friend = 1
+				AND foe = 0';
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+
+		return $count;
+	}
+
 	/**
 	 * Return requests with the other user's public identity fields.
 	 */
-	public function get_requests($user_id, $incoming)
+	public function get_requests($user_id, $incoming, $limit = 0, $offset = 0)
 	{
 		$user_column = $incoming ? 'r.requester_id' : 'r.recipient_id';
 		$match_column = $incoming ? 'r.recipient_id' : 'r.requester_id';
@@ -466,7 +500,7 @@ class relationship_manager
 				ON u.user_id = ' . $user_column . '
 			WHERE ' . $match_column . ' = ' . (int) $user_id . '
 			ORDER BY r.request_time ASC, r.request_id ASC';
-		$result = $this->db->sql_query($sql);
+		$result = $limit ? $this->db->sql_query_limit($sql, (int) $limit, max(0, (int) $offset)) : $this->db->sql_query($sql);
 		$rows = array();
 		while ($row = $this->db->sql_fetchrow($result))
 		{
@@ -475,6 +509,32 @@ class relationship_manager
 		$this->db->sql_freeresult($result);
 
 		return $rows;
+	}
+
+	public function count_requests($user_id, $incoming)
+	{
+		$column = $incoming ? 'recipient_id' : 'requester_id';
+		$sql = 'SELECT COUNT(*) AS total
+			FROM ' . $this->requests_table . '
+			WHERE ' . $column . ' = ' . (int) $user_id;
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+
+		return $count;
+	}
+
+	protected function count_pending_requests($user_id)
+	{
+		$sql = 'SELECT COUNT(*) AS total
+			FROM ' . $this->requests_table . '
+			WHERE requester_id = ' . (int) $user_id . '
+				OR recipient_id = ' . (int) $user_id;
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+
+		return $count;
 	}
 
 	/**
@@ -551,15 +611,19 @@ class relationship_manager
 		$request_id = (int) $request['request_id'];
 		$requester_id = (int) $request['requester_id'];
 		$acceptor_id = (int) $acceptor_id;
-		if ($this->is_foe($requester_id, $acceptor_id) || $this->is_foe($acceptor_id, $requester_id))
-		{
-			$this->cancel_requests_between($requester_id, $acceptor_id);
-			return false;
-		}
-
 		$this->db->sql_transaction('begin');
 		try
 		{
+			if ($this->is_foe($requester_id, $acceptor_id) || $this->is_foe($acceptor_id, $requester_id))
+			{
+				$requests = $this->get_requests_between($requester_id, $acceptor_id);
+				$this->delete_request_rows($requests);
+				$this->delete_legacy_between($requester_id, $acceptor_id);
+				$this->db->sql_transaction('commit');
+				$this->delete_request_notifications($requests);
+				return false;
+			}
+
 			$sql = 'DELETE FROM ' . $this->requests_table . '
 				WHERE request_id = ' . (int) $request_id . '
 					AND requester_id = ' . (int) $requester_id . '
@@ -627,14 +691,6 @@ class relationship_manager
 		return $request ? array($request) : array();
 	}
 
-	protected function cancel_requests_between($user_id, $zebra_id)
-	{
-		$requests = $this->get_requests_between($user_id, $zebra_id);
-		$this->delete_request_rows($requests);
-		$this->delete_legacy_between($user_id, $zebra_id);
-		$this->delete_request_notifications($requests);
-	}
-
 	protected function delete_request_rows(array $requests)
 	{
 		if (!$requests)
@@ -668,16 +724,6 @@ class relationship_manager
 		$sql = 'DELETE FROM ' . $this->zebra_table . '
 			WHERE (user_id = ' . (int) $user_id . ' AND zebra_id = ' . (int) $zebra_id . ')
 				OR (user_id = ' . (int) $zebra_id . ' AND zebra_id = ' . (int) $user_id . ')';
-		$this->db->sql_query($sql);
-	}
-
-	protected function delete_friendship_between($user_id, $zebra_id)
-	{
-		$sql = 'DELETE FROM ' . $this->zebra_table . '
-			WHERE friend = 1
-				AND foe = 0
-				AND ((user_id = ' . (int) $user_id . ' AND zebra_id = ' . (int) $zebra_id . ')
-					OR (user_id = ' . (int) $zebra_id . ' AND zebra_id = ' . (int) $user_id . '))';
 		$this->db->sql_query($sql);
 	}
 

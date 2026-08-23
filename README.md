@@ -17,6 +17,7 @@ The 2.0 line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Each user can independently mark an accepted friend as a Close Friend.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Friend acceptance/removal is symmetric and transactional.
+- Friend and request lists are paginated, and pending requests are capped at 100 per account.
 - Requests and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
 
@@ -48,7 +49,7 @@ The migration copies valid rows from the legacy `zebra_confirm` table into the n
 
 The test suite targets both the first and latest supported phpBB 3.3 releases. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
 
-The complete local verification also exercises the functional suite with phpBB served by PHP 7.4 and PHP 8.4.
+The complete local verification also exercises the functional suite with phpBB served by PHP 7.4 and PHP 8.4. phpBB 3.3's bundled PHPUnit is run with PHP 7.4 because that legacy test runner cannot start on PHP 8.4; this does not affect the PHP 8.4 web-runtime test.
 
 ## License
 

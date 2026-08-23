@@ -148,6 +148,16 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 	}
 
+	public function test_batch_removal_cleans_all_selected_relationships()
+	{
+		$this->notifications->expects($this->exactly(2))->method('delete_notifications');
+
+		$this->relationships->remove_relationships(2, array(3, 52, 52, 2, 0));
+
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_requests'));
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_confirm'));
+	}
+
 	public function test_removal_preserves_foe_owned_by_other_user()
 	{
 		$this->db->sql_query('DELETE FROM phpbb_zebra_requests WHERE user_low = 2 AND user_high = 3');
@@ -267,6 +277,42 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertFalse($this->relationships->can_view_friend_list(4, 5, 2));
 		$this->assertTrue($this->relationships->can_view_friend_list(4, 3, 2));
 		$this->assertTrue($this->relationships->can_view_friend_list(4, 5, 5, true));
+	}
+
+	public function test_relationship_lists_support_counts_limits_and_offsets()
+	{
+		$this->assertSame(2, $this->relationships->count_requests(2, false));
+		$this->assertSame(0, $this->relationships->count_requests(2, true));
+		$this->assertSame(1, count($this->relationships->get_requests(2, false, 1, 1)));
+
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, 3, 1, 0, 0)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, 4, 1, 0, 0)');
+		$this->assertSame(2, $this->relationships->count_friends(2));
+		$this->assertSame(1, count($this->relationships->get_friends(2, 1, 1)));
+	}
+
+	public function test_pending_request_limit_prevents_unbounded_spam()
+	{
+		$rows = array();
+		for ($i = 0; $i < \anavaro\zebraenhance\service\relationship_manager::MAX_PENDING_REQUESTS; $i++)
+		{
+			$other_id = 1000 + $i;
+			$rows[] = array(
+				'requester_id' => $other_id,
+				'recipient_id' => 4,
+				'user_low'     => 4,
+				'user_high'    => $other_id,
+				'request_time' => 200 + $i,
+			);
+		}
+		$this->db->sql_multi_insert('phpbb_zebra_requests', $rows);
+		$this->notifications->expects($this->never())->method('add_notifications');
+
+		$this->assertSame('limited', $this->relationships->request_friendship(3, 4));
 	}
 
 	public function test_user_deletion_cleans_requests_and_all_custom_notifications()

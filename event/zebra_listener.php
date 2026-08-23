@@ -40,6 +40,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var \phpbb\controller\helper */
 	protected $controller_helper;
 
+	/** @var \phpbb\pagination */
+	protected $pagination;
+
 	/** @var string */
 	protected $root_path;
 
@@ -55,6 +58,7 @@ class zebra_listener implements EventSubscriberInterface
 		\phpbb\user $user,
 		\phpbb\language\language $language,
 		\phpbb\controller\helper $controller_helper,
+		\phpbb\pagination $pagination,
 		$root_path,
 		$php_ext
 	)
@@ -67,6 +71,7 @@ class zebra_listener implements EventSubscriberInterface
 		$this->user = $user;
 		$this->language = $language;
 		$this->controller_helper = $controller_helper;
+		$this->pagination = $pagination;
 		$this->root_path = $root_path;
 		$this->php_ext = $php_ext;
 	}
@@ -119,10 +124,7 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		foreach ($event['user_ids'] as $zebra_id)
-		{
-			$this->relationships->remove_relationship((int) $this->user->data['user_id'], (int) $zebra_id);
-		}
+		$this->relationships->remove_relationships((int) $this->user->data['user_id'], $event['user_ids']);
 
 		// The service removed both directions, so keep phpBB's trailing DELETE inert.
 		$event['user_ids'] = array(0);
@@ -157,9 +159,20 @@ class zebra_listener implements EventSubscriberInterface
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
 		));
 
-		$incoming = $this->relationships->get_requests($user_id, true);
-		$outgoing = $this->relationships->get_requests($user_id, false);
-		$friends = $this->relationships->get_friends($user_id);
+		$page_size = \anavaro\zebraenhance\service\relationship_manager::PAGE_SIZE;
+		$incoming_start = max(0, $this->request->variable('ze_in_start', 0));
+		$outgoing_start = max(0, $this->request->variable('ze_out_start', 0));
+		$friends_start = max(0, $this->request->variable('ze_friend_start', 0));
+		$incoming_count = $this->relationships->count_requests($user_id, true);
+		$outgoing_count = $this->relationships->count_requests($user_id, false);
+		$friends_count = $this->relationships->count_friends($user_id);
+		$incoming = $this->relationships->get_requests($user_id, true, $page_size, $incoming_start);
+		$outgoing = $this->relationships->get_requests($user_id, false, $page_size, $outgoing_start);
+		$friends = $this->relationships->get_friends($user_id, $page_size, $friends_start);
+		$base_url = $this->ucp_friend_url('');
+		$this->pagination->generate_template_pagination($base_url, 'ze_in_pagination', 'ze_in_start', $incoming_count, $page_size, $incoming_start);
+		$this->pagination->generate_template_pagination($base_url, 'ze_out_pagination', 'ze_out_start', $outgoing_count, $page_size, $outgoing_start);
+		$this->pagination->generate_template_pagination($base_url, 'ze_friend_pagination', 'ze_friend_start', $friends_count, $page_size, $friends_start);
 		$identity_ids = array();
 		foreach (array_merge($incoming, $outgoing) as $row)
 		{
@@ -309,7 +322,13 @@ class zebra_listener implements EventSubscriberInterface
 
 	protected function ucp_friend_url($parameters)
 	{
-		return append_sid($this->root_path . 'ucp.' . $this->php_ext, 'i=ucp_zebra&mode=friends&' . $parameters);
+		$query = 'i=ucp_zebra&mode=friends';
+		if ($parameters !== '')
+		{
+			$query .= '&' . $parameters;
+		}
+
+		return append_sid($this->root_path . 'ucp.' . $this->php_ext, $query);
 	}
 
 	protected function request_action_url($request_id, $action)

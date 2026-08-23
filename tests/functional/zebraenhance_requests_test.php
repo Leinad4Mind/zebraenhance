@@ -23,6 +23,8 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$this->send_request_as_admin($username);
 		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(1, $crawler->filter('link[href*="zebraenhance.css"]')->count());
+		$this->assertSame(1, $crawler->filter('script[src*="zebraenhance.js"]')->count());
 		$cancel = $crawler->filter('#ze-outgoing-requests .js-ze-request')->first();
 		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
 		$this->post_action($cancel->attr('data-url'), array(), 403);
@@ -95,6 +97,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$this->login($close_friend);
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertSame(1, $crawler->filter('link[href*="zebraenhance.css"]')->count());
 		$this->assertStringContainsString($close_friend, $crawler->filter('#ze-friend-list')->text());
 		$this->logout();
 

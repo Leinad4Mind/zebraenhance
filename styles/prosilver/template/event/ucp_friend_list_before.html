@@ -20,6 +20,17 @@
 	{% endfor %}
 	</dd>
 </dl>
+{% if ze_in_pagination|length %}
+<div class="pagination ze-pagination"><ul>
+	{% for page in ze_in_pagination %}
+		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
+		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
+		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
+		{% elseif page.S_IS_NEXT %}<li class="arrow next"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="next"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_END }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('NEXT') }}</span></a></li>
+		{% else %}<li><a class="button" href="{{ page.PAGE_URL }}">{{ page.PAGE_NUMBER }}</a></li>{% endif %}
+	{% endfor %}
+</ul></div>
+{% endif %}
 {% endif %}
 
 <dl>
@@ -40,6 +51,17 @@
 	{% endfor %}
 	</dd>
 </dl>
+{% if ze_friend_pagination|length %}
+<div class="pagination ze-pagination"><ul>
+	{% for page in ze_friend_pagination %}
+		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
+		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
+		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
+		{% elseif page.S_IS_NEXT %}<li class="arrow next"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="next"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_END }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('NEXT') }}</span></a></li>
+		{% else %}<li><a class="button" href="{{ page.PAGE_URL }}">{{ page.PAGE_NUMBER }}</a></li>{% endif %}
+	{% endfor %}
+</ul></div>
+{% endif %}
 
 {% if pending_awaits|length %}
 <dl>
@@ -53,6 +75,17 @@
 	{% endfor %}
 	</dd>
 </dl>
+{% if ze_out_pagination|length %}
+<div class="pagination ze-pagination"><ul>
+	{% for page in ze_out_pagination %}
+		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
+		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
+		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
+		{% elseif page.S_IS_NEXT %}<li class="arrow next"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="next"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_END }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('NEXT') }}</span></a></li>
+		{% else %}<li><a class="button" href="{{ page.PAGE_URL }}">{{ page.PAGE_NUMBER }}</a></li>{% endif %}
+	{% endfor %}
+</ul></div>
+{% endif %}
 {% endif %}
 
 <dl>

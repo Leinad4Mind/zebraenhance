@@ -24,6 +24,7 @@ services:
             - '@user'
             - '@language'
             - '@controller.helper'
+            - '@pagination'
             - '%core.root_path%'
             - '%core.php_ext%'
         tags:
