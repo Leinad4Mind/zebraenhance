@@ -69,6 +69,49 @@
 		postAndReload($button, {circle_ids: circleIds});
 	});
 
+	$(document).on('change', '.js-ze-check-all', function () {
+		$($(this).attr('data-target')).prop('checked', this.checked);
+	});
+
+	$(document).on('click', '.js-ze-bulk-requests', function () {
+		var $button = $(this);
+		var requestIds = $($button.attr('data-target') + ':checked').map(function () {
+			return $(this).val();
+		}).get();
+		var submit = function () {
+			postAndReload($button, {request_ids: requestIds});
+		};
+		var confirmation = $button.attr('data-confirm');
+
+		if (!requestIds.length) {
+			showError({message: $controls.attr('data-select-request')});
+			return;
+		}
+		if (confirmation) {
+			phpbb.confirm(confirmation, function (confirmed) {
+				if (confirmed) {
+					submit();
+				}
+			});
+			return;
+		}
+		submit();
+	});
+
+	$(document).on('click', '.js-ze-search-friends', function () {
+		var $button = $(this);
+		var value = $($button.attr('data-input')).val();
+		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';
+		window.location.href = $button.attr('data-url') + separator + 'ze_friend_q=' + encodeURIComponent(value);
+	});
+
+	$(document).on('keydown', '#ze-friend-search', function (event) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			$('.js-ze-search-friends').trigger('click');
+		}
+	});
+
 	$(document).on('click', '.js-ze-close-friend', function () {
 		var $button = $(this);
 

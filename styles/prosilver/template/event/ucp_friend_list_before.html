@@ -2,7 +2,7 @@
 {% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
 {% INCLUDEJS '@anavaro_zebraenhance/zebraenhance.js' %}
 
-<div id="ze-friend-controls" data-error-title="{{ lang('ZE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}">
+<div id="ze-friend-controls" data-error-title="{{ lang('ZE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}" data-select-request="{{ lang('ZE_SELECT_REQUEST') }}">
 	<div id="ze-form-token" class="hidden">{{ S_FORM_TOKEN_ZE }}</div>
 
 <dl>
@@ -29,6 +29,7 @@
 	<dd id="ze-incoming-requests" class="ze-scroll-list">
 	{% for request in pending_requests %}
 		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
+			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM') }}">
 			<span class="ze-actions">
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
@@ -36,6 +37,11 @@
 			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
+		<div class="ze-bulk-actions">
+			<label><input type="checkbox" class="js-ze-check-all" data-target="#ze-incoming-requests .js-ze-request-select"> {{ lang('ZE_SELECT_ALL') }}</label>
+			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_ACCEPT }}" data-target="#ze-incoming-requests .js-ze-request-select">{{ lang('ZE_ACCEPT_SELECTED') }}</button>
+			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_DECLINE }}" data-target="#ze-incoming-requests .js-ze-request-select" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_SELECTED') }}">{{ lang('ZE_DECLINE_SELECTED') }}</button>
+		</div>
 	</dd>
 </dl>
 {% if ze_in_pagination|length %}
@@ -50,6 +56,13 @@
 </ul></div>
 {% endif %}
 {% endif %}
+
+<div class="ze-friend-search">
+	<label class="sr-only" for="ze-friend-search">{{ lang('ZE_SEARCH_FRIENDS') }}</label>
+	<input type="search" id="ze-friend-search" class="inputbox autowidth" value="{{ FRIEND_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FRIENDS') }}">
+	<button type="button" class="button button-secondary js-ze-search-friends" data-url="{{ U_FRIEND_SEARCH }}" data-input="#ze-friend-search">{{ lang('SEARCH') }}</button>
+	{% if FRIEND_SEARCH %}<a class="button button-secondary" href="{{ U_FRIEND_SEARCH }}">{{ lang('RESET') }}</a>{% endif %}
+</div>
 
 <dl>
 	<dt><label>{{ lang('YOUR_FRIENDS') ~ lang('COLON') }}</label><br><span>{{ lang('YOUR_FRIENDS_EXPLAIN') }}</span></dt>
@@ -112,10 +125,15 @@
 	<dd id="ze-outgoing-requests" class="ze-scroll-list">
 	{% for request in pending_awaits %}
 		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
+			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM') }}">
 			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_CANCEL }}" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
 			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
+		<div class="ze-bulk-actions">
+			<label><input type="checkbox" class="js-ze-check-all" data-target="#ze-outgoing-requests .js-ze-request-select"> {{ lang('ZE_SELECT_ALL') }}</label>
+			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_CANCEL }}" data-target="#ze-outgoing-requests .js-ze-request-select" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_SELECTED') }}">{{ lang('ZE_CANCEL_SELECTED') }}</button>
+		</div>
 	</dd>
 </dl>
 {% if ze_out_pagination|length %}

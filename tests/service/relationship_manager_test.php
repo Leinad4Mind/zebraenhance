@@ -498,6 +498,16 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
 	}
 
+	public function test_bulk_request_actions_are_bounded_deduplicated_and_owner_checked()
+	{
+		$summary = $this->relationships->manage_requests(array(1, 2, 2, 999), 2, 'cancel');
+
+		$this->assertSame(2, $summary['completed']);
+		$this->assertSame(1, $summary['skipped']);
+		$this->assertSame(array(1 => 'cancelled', 2 => 'cancelled'), $summary['results']);
+		$this->assertSame(0, $this->relationships->count_requests(2, false));
+	}
+
 	public function test_friend_list_visibility_is_clamped_and_persisted()
 	{
 		$this->assertSame(5, $this->relationships->set_friend_list_visibility(2, 99));
@@ -682,6 +692,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 			VALUES (2, 4, 1, 0, 0)');
 		$this->assertSame(2, $this->relationships->count_friends(2));
 		$this->assertSame(1, count($this->relationships->get_friends(2, 1, 1)));
+	}
+
+	public function test_friend_list_search_filters_counts_and_rows_case_insensitively()
+	{
+		$this->db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 2, 'zebra_id' => 4, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+
+		$this->assertSame(1, $this->relationships->count_friends(2, 'USER3'));
+		$friends = $this->relationships->get_friends(2, 25, 0, 'USER3');
+		$this->assertCount(1, $friends);
+		$this->assertSame(3, (int) $friends[0]['zebra_id']);
 	}
 
 	public function test_mutual_friends_require_valid_friend_rows_for_both_users()

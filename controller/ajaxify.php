@@ -117,6 +117,38 @@ class ajaxify
 	}
 
 	/**
+	 * Accept, decline, or cancel selected requests with per-ID ownership checks.
+	 */
+	public function manage_requests($action)
+	{
+		if ($error = $this->authorize_relationship_change())
+		{
+			return $error;
+		}
+		$request_ids = array_values(array_filter(array_map('intval', $this->request->variable('request_ids', array(0)))));
+		if (!$request_ids)
+		{
+			return $this->error('ZE_SELECT_REQUEST', 400);
+		}
+		$summary = $this->relationships->manage_requests(
+			$request_ids,
+			(int) $this->user->data['user_id'],
+			(string) $action
+		);
+		if (!$summary['completed'])
+		{
+			return $this->error('ZE_AJAX_REQUEST_NOT_FOUND', 404);
+		}
+
+		return new JsonResponse(array(
+			'success'   => true,
+			'completed' => (int) $summary['completed'],
+			'skipped'   => (int) $summary['skipped'],
+			'message'   => $this->language->lang('ZE_BULK_REQUESTS_COMPLETED', (int) $summary['completed']),
+		));
+	}
+
+	/**
 	 * Create a friend request from a numeric profile user ID.
 	 */
 	public function create_request($userid)

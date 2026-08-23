@@ -45,6 +45,15 @@
 	gap: .25rem;
 }
 
+.ze-bulk-actions,
+.ze-friend-search {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: .4rem;
+	margin: .5rem 0;
+}
+
 .ze-icon-button {
 	line-height: 1;
 	padding: 2px 5px;

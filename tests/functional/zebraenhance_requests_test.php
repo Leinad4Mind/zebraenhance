@@ -282,6 +282,65 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_selected_outgoing_requests_can_be_cancelled_in_bulk()
+	{
+		$first = 'zebulkfirst';
+		$second = 'zebulksecond';
+		$this->create_user($first);
+		$this->create_user($second);
+		$this->send_request_as_admin($first);
+		$this->send_request_as_admin($second);
+
+		$crawler = $this->open_friends_as('admin');
+		$request_ids = array();
+		foreach (array($first, $second) as $username)
+		{
+			$row = $crawler->filter('#ze-outgoing-requests .ze-list-row')->reduce(function ($node) use ($username)
+			{
+				return strpos($node->text(), $username) !== false;
+			})->first();
+			$request_ids[] = (int) $row->filter('.js-ze-request-select')->attr('value');
+		}
+		$bulk = $crawler->filter('#ze-outgoing-requests .js-ze-bulk-requests');
+		$this->post_action($bulk->attr('data-url'), array(), 403);
+		$empty_response = $this->post_action($bulk->attr('data-url'), $this->form_token($crawler), 400);
+		$this->assertFalse($empty_response['success']);
+		$data = $this->form_token($crawler);
+		$data['request_ids'] = $request_ids;
+		$response = $this->post_action($bulk->attr('data-url'), $data);
+		$this->assertSame(2, $response['completed']);
+		$this->assertSame(0, $response['skipped']);
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertStringNotContainsString($first, $crawler->filter('html')->text());
+		$this->assertStringNotContainsString($second, $crawler->filter('html')->text());
+		$this->logout();
+	}
+
+	public function test_friend_search_filters_the_ucp_list()
+	{
+		$match = 'zefindneedle';
+		$other = 'zefindother';
+		$match_id = $this->create_user($match);
+		$other_id = $this->create_user($other);
+		$db = $this->get_db();
+		$db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => $match_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $match_id, 'zebra_id' => 2, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 2, 'zebra_id' => $other_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $other_id, 'zebra_id' => 2, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+
+		$this->login();
+		$this->add_lang('ucp');
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&ze_friend_q=needle&sid={$this->sid}");
+		$this->assertSame('needle', $crawler->filter('#ze-friend-search')->attr('value'));
+		$this->assertStringContainsString($match, $crawler->filter('#ze-friends')->text());
+		$this->assertStringNotContainsString($other, $crawler->filter('#ze-friends')->text());
+		$this->logout();
+	}
+
 	public function test_user_can_restrict_new_friend_requests_in_ucp()
 	{
 		$requester = 'zepolicy';

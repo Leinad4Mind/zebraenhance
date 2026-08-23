@@ -29,6 +29,8 @@ class relationship_manager
 	const PAGE_SIZE = 25;
 	const MAX_CIRCLES = 20;
 	const MAX_CIRCLE_NAME_LENGTH = 50;
+	const MAX_BULK_REQUESTS = 100;
+	const MAX_FRIEND_SEARCH_LENGTH = 100;
 	const DEFAULT_MAX_PENDING_REQUESTS = 100;
 	const REQUEST_POLICY_EVERYONE = 0;
 	const REQUEST_POLICY_FRIENDS_OF_FRIENDS = 1;
@@ -428,6 +430,41 @@ class relationship_manager
 		$event_name = $action === 'decline' ? self::EVENT_REQUEST_DECLINED : self::EVENT_REQUEST_CANCELLED;
 		$this->dispatch_request_event($event_name, $request, $actor_id, 'user');
 		return $action === 'decline' ? 'declined' : 'cancelled';
+	}
+
+	/**
+	 * Apply the normal ownership-checked request action to a bounded ID list.
+	 */
+	public function manage_requests(array $request_ids, $actor_id, $action)
+	{
+		$actor_id = (int) $actor_id;
+		$request_ids = array_values(array_unique(array_filter(array_map('intval', $request_ids))));
+		$total_ids = count($request_ids);
+		$request_ids = array_slice($request_ids, 0, self::MAX_BULK_REQUESTS);
+		$summary = array(
+			'completed' => 0,
+			'skipped'   => $total_ids - count($request_ids),
+			'results'   => array(),
+		);
+		if (!$actor_id || !in_array($action, array('accept', 'decline', 'cancel'), true))
+		{
+			$summary['skipped'] += count($request_ids);
+			return $summary;
+		}
+
+		foreach ($request_ids as $request_id)
+		{
+			$result = $this->manage_request($request_id, $actor_id, $action);
+			if ($result === false)
+			{
+				$summary['skipped']++;
+				continue;
+			}
+			$summary['completed']++;
+			$summary['results'][$request_id] = $result;
+		}
+
+		return $summary;
 	}
 
 	public function set_friend_list_visibility($user_id, $visibility)
@@ -902,15 +939,16 @@ class relationship_manager
 	/**
 	 * Return friend rows for UCP or profile display.
 	 */
-	public function get_friends($owner_id, $limit = 0, $offset = 0)
+	public function get_friends($owner_id, $limit = 0, $offset = 0, $search = '')
 	{
+		$search_sql = $this->friend_search_sql($search, 'u');
 		$sql = 'SELECT z.zebra_id, z.bff, u.username, u.user_colour
 			FROM ' . $this->zebra_table . ' z
 			INNER JOIN ' . $this->users_table . ' u
 				ON u.user_id = z.zebra_id
 			WHERE z.user_id = ' . (int) $owner_id . '
 				AND z.friend = 1
-				AND z.foe = 0
+				AND z.foe = 0' . $search_sql . '
 			ORDER BY u.username_clean ASC';
 		$result = $limit ? $this->db->sql_query_limit($sql, (int) $limit, max(0, (int) $offset)) : $this->db->sql_query($sql);
 		$rows = array();
@@ -1039,18 +1077,34 @@ class relationship_manager
 		return $suggestions;
 	}
 
-	public function count_friends($owner_id)
+	public function count_friends($owner_id, $search = '')
 	{
+		$search_sql = $this->friend_search_sql($search, 'u');
 		$sql = 'SELECT COUNT(*) AS total
-			FROM ' . $this->zebra_table . '
-			WHERE user_id = ' . (int) $owner_id . '
-				AND friend = 1
-				AND foe = 0';
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u
+				ON u.user_id = z.zebra_id
+			WHERE z.user_id = ' . (int) $owner_id . '
+				AND z.friend = 1
+				AND z.foe = 0' . $search_sql;
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);
 
 		return $count;
+	}
+
+	protected function friend_search_sql($search, $user_alias)
+	{
+		$search = utf8_clean_string(utf8_substr(trim((string) $search), 0, self::MAX_FRIEND_SEARCH_LENGTH));
+		if ($search === '')
+		{
+			return '';
+		}
+
+		return ' AND ' . $user_alias . '.username_clean ' . $this->db->sql_like_expression(
+			$this->db->get_any_char() . $search . $this->db->get_any_char()
+		);
 	}
 
 	/**

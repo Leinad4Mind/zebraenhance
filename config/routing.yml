@@ -14,6 +14,13 @@ anavaro_zebraenhance_manage_request:
         requestid: \d+
         action: accept|decline|cancel
 
+anavaro_zebraenhance_manage_requests:
+    path: /zebraenhance/requests/{action}
+    defaults: { _controller: anavaro.zebraenhance.controller:manage_requests }
+    methods: [POST]
+    requirements:
+        action: accept|decline|cancel
+
 anavaro_zebraenhance_create_request:
     path: /zebraenhance/friend/{userid}/request
     defaults: { _controller: anavaro.zebraenhance.controller:create_request }

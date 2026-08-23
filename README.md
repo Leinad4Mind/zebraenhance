@@ -25,6 +25,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Friend acceptance/removal is symmetric and transactional.
 - Friend and request lists are paginated. Administrators can configure the maximum pending requests per account.
+- UCP users can search accepted friends and process selected incoming or outgoing requests in one action.
 - A configurable cooldown prevents an explicitly declined requester from immediately contacting the same user again.
 - Requests, circles, circle memberships, and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.

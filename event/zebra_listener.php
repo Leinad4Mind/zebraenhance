@@ -151,6 +151,11 @@ class zebra_listener implements EventSubscriberInterface
 
 		add_form_key('anavaro_zebraenhance', '_ZE');
 		$user_id = (int) $this->user->data['user_id'];
+		$friend_search = utf8_substr(
+			trim($this->request->variable('ze_friend_q', '', true)),
+			0,
+			\anavaro\zebraenhance\service\relationship_manager::MAX_FRIEND_SEARCH_LENGTH
+		);
 		if ($this->request->is_set_post('zebra_profile_acl') || $this->request->is_set_post('zebra_request_policy'))
 		{
 			if (!check_form_key('anavaro_zebraenhance'))
@@ -181,7 +186,12 @@ class zebra_listener implements EventSubscriberInterface
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
 			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
+			'FRIEND_SEARCH'       => $friend_search,
+			'U_FRIEND_SEARCH'     => $this->ucp_friend_url(''),
 			'U_CREATE_CIRCLE'     => $this->controller_helper->route('anavaro_zebraenhance_create_circle'),
+			'U_BULK_ACCEPT'       => $this->controller_helper->route('anavaro_zebraenhance_manage_requests', array('action' => 'accept')),
+			'U_BULK_DECLINE'      => $this->controller_helper->route('anavaro_zebraenhance_manage_requests', array('action' => 'decline')),
+			'U_BULK_CANCEL'       => $this->controller_helper->route('anavaro_zebraenhance_manage_requests', array('action' => 'cancel')),
 		));
 
 		$page_size = \anavaro\zebraenhance\service\relationship_manager::PAGE_SIZE;
@@ -190,10 +200,10 @@ class zebra_listener implements EventSubscriberInterface
 		$friends_start = max(0, $this->request->variable('ze_friend_start', 0));
 		$incoming_count = $this->relationships->count_requests($user_id, true);
 		$outgoing_count = $this->relationships->count_requests($user_id, false);
-		$friends_count = $this->relationships->count_friends($user_id);
+		$friends_count = $this->relationships->count_friends($user_id, $friend_search);
 		$incoming = $this->relationships->get_requests($user_id, true, $page_size, $incoming_start);
 		$outgoing = $this->relationships->get_requests($user_id, false, $page_size, $outgoing_start);
-		$friends = $this->relationships->get_friends($user_id, $page_size, $friends_start);
+		$friends = $this->relationships->get_friends($user_id, $page_size, $friends_start, $friend_search);
 		$suggestions = $this->relationships->get_friend_suggestions($user_id);
 		$circles = $this->relationships->get_circles($user_id);
 		foreach ($circles as $circle)
@@ -212,7 +222,7 @@ class zebra_listener implements EventSubscriberInterface
 				)),
 			));
 		}
-		$base_url = $this->ucp_friend_url('');
+		$base_url = $this->ucp_friend_url($friend_search !== '' ? 'ze_friend_q=' . rawurlencode($friend_search) : '');
 		$this->pagination->generate_template_pagination($base_url, 'ze_in_pagination', 'ze_in_start', $incoming_count, $page_size, $incoming_start);
 		$this->pagination->generate_template_pagination($base_url, 'ze_out_pagination', 'ze_out_start', $outgoing_count, $page_size, $outgoing_start);
 		$this->pagination->generate_template_pagination($base_url, 'ze_friend_pagination', 'ze_friend_start', $friends_count, $page_size, $friends_start);
@@ -244,6 +254,7 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			$requester_id = (int) $row['requester_id'];
 			$this->template->assign_block_vars('pending_requests', array(
+				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $requester_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($requester_id, 'full'),
 				'MESSAGE'       => (string) $row['request_message'],
@@ -256,6 +267,7 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			$recipient_id = (int) $row['recipient_id'];
 			$this->template->assign_block_vars('pending_awaits', array(
+				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $recipient_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($recipient_id, 'full'),
 				'MESSAGE'       => (string) $row['request_message'],
