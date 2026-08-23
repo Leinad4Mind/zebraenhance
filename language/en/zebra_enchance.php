@@ -37,7 +37,8 @@ $lang = array_merge($lang, array(
 	'NOTIFICATION_TYPE_ZEBRA_CONFIRM'	=>	'Confirmation for friend request',
 	'NOTIFICATION_ZEBRA_CONFIRM'	=>	'%1$s confirmed your friend request!',
 
-	'FRINEDLIST_TITLE'	=>	'Friendlist',
+	'FRIENDLIST_TITLE'	=>	'Friend list',
+	'FRINEDLIST_TITLE'	=>	'Friend list', // 1.x compatibility
 
 	'NOT_ENEMY'	=>	'All except foes',
 	'SPECIAL_FRIENDS'	=>	'Special friends',
@@ -46,5 +47,14 @@ $lang = array_merge($lang, array(
 	'ZE_FRIENDLIST_EXPLAIN'	=>	'Who can see your friendlist?',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'You do not have access to see user\'s friendlist.',
+
+	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
+	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
+	'ZE_CANCEL_REQUEST'      => 'Cancel friend request',
+	'ZE_REMOVE_FRIEND'       => 'Remove friend',
+	'ZE_ADD_CLOSE_FRIEND'    => 'Add to Close Friends',
+	'ZE_REMOVE_CLOSE_FRIEND' => 'Remove from Close Friends',
+	'ZE_AJAX_NOT_AUTHORIZED' => 'You are not authorized to change Close Friends.',
+	'ZE_AJAX_NOT_FRIEND'     => 'That user is not in your friend list.',
 
 ));

@@ -46,4 +46,14 @@ $lang = array_merge($lang, array(
 	'ZE_FRIENDLIST_EXPLAIN'	=>	'Кой може да вижда приятелите ви в профила ви?',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Нямате права да виждате приятелите на този потребител',
+	'FRIENDLIST_TITLE'       => 'Friend list',
+	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
+	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
+	'ZE_CANCEL_REQUEST'      => 'Cancel friend request',
+	'ZE_REMOVE_FRIEND'       => 'Remove friend',
+	'ZE_ADD_CLOSE_FRIEND'    => 'Add to Close Friends',
+	'ZE_REMOVE_CLOSE_FRIEND' => 'Remove from Close Friends',
+	'ZE_AJAX_NOT_AUTHORIZED' => 'You are not authorized to change Close Friends.',
+	'ZE_AJAX_NOT_FRIEND'     => 'That user is not in your friend list.',
+
 ));

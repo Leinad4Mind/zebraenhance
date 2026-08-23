@@ -1,41 +1,64 @@
-<!-- IF HAS_PENDING -->
+{% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
+{% INCLUDEJS '@anavaro_zebraenhance/zebraenhance.js' %}
+
+{% if pending_requests|length %}
 <dl>
-	<dt><label>{L_UCP_ZEBRA_PENDING_IN}</label><br /><span>{L_UCP_ZEBRA_PENDING_IN_EXP}</span></dt>
-	<dd id="ze_other_req" style="height: 100px; width: 250px; overflow: auto;">
-		<!-- BEGIN pending_requests -->
-				<span style="display: block;">{pending_requests.CONFIRM} {pending_requests.CANCEL} {pending_requests.USERNAME}</span>
-		<!-- END pending_requests -->
+	<dt><label>{{ lang('UCP_ZEBRA_PENDING_IN') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_IN_EXP') }}</span></dt>
+	<dd id='ze-incoming-requests' class='ze-scroll-list'>
+	{% for request in pending_requests %}
+		<div class='ze-list-row' data-user-id='{{ request.USER_ID }}'>
+			<span class='ze-actions'>
+				<a href='{{ request.U_CONFIRM }}' data-ajax='true' data-refresh='true' title='{{ lang('ZE_ACCEPT_REQUEST') }}' aria-label='{{ lang('ZE_ACCEPT_REQUEST') }}'><i class='icon fa-check fa-fw' aria-hidden='true'></i></a>
+				<a href='{{ request.U_CANCEL }}' data-ajax='true' data-refresh='true' title='{{ lang('ZE_DECLINE_REQUEST') }}' aria-label='{{ lang('ZE_DECLINE_REQUEST') }}'><i class='icon fa-times fa-fw' aria-hidden='true'></i></a>
+			</span>
+			<a class='username-coloured' style='color: #{{ request.USER_COLOUR }}' href='{{ request.U_PROFILE }}'>{{ request.USERNAME }}</a>
+		</div>
+	{% endfor %}
 	</dd>
 </dl>
-<!-- ENDIF -->
-<!-- IF HAS_WAITING -->
+{% endif %}
+
 <dl>
-	<dt><label>{L_UCP_ZEBRA_PENDING_OUT}</label><br /><span>{L_UCP_ZEBRA_PENDING_OUT_EXP}</span></dt>
-	<dd id="ze_slef_req" style="height: 100px; width: 250px; overflow: auto;">
-		<!-- BEGIN pending_awaits -->
-				<span style="display: block;">{pending_awaits.CANCEL} {pending_awaits.USERNAME}</span>
-		<!-- END pending_awaits -->
+	<dt><label>{{ lang('YOUR_FRIENDS') ~ lang('COLON') }}</label><br><span>{{ lang('YOUR_FRIENDS_EXPLAIN') }}</span></dt>
+	<dd id='ze-friends' class='ze-scroll-list'>
+	{% for friend in pretty_zebra %}
+		<div class='ze-list-row' data-user-id='{{ friend.USER_ID }}'>
+			<span class='ze-actions'>
+			{% if S_CAN_CLOSE_FRIENDS %}
+				<button type='button' class='button button-secondary ze-icon-button js-ze-close-friend' data-add-url='{{ friend.U_CLOSE_ADD }}' data-remove-url='{{ friend.U_CLOSE_REMOVE }}' data-url='{{ friend.S_CLOSE ? friend.U_CLOSE_REMOVE : friend.U_CLOSE_ADD }}' aria-pressed='{{ friend.S_CLOSE ? 'true' : 'false' }}' title='{{ friend.L_CLOSE_ACTION }}' aria-label='{{ friend.L_CLOSE_ACTION }}'><i class='icon {{ friend.S_CLOSE ? 'fa-star' : 'fa-star-o' }} fa-fw' aria-hidden='true'></i></button>
+			{% endif %}
+				<a href='{{ friend.U_CANCEL }}' data-ajax='true' data-refresh='true' title='{{ lang('ZE_REMOVE_FRIEND') }}' aria-label='{{ lang('ZE_REMOVE_FRIEND') }}'><i class='icon fa-user-times fa-fw' aria-hidden='true'></i></a>
+			</span>
+			<a class='username-coloured' style='color: #{{ friend.USER_COLOUR }}' href='{{ friend.U_PROFILE }}'>{{ friend.USERNAME }}</a>
+		</div>
+	{% else %}
+		<p>{{ lang('NO_FRIENDS') }}</p>
+	{% endfor %}
 	</dd>
 </dl>
-<!-- ENDIF -->
+
+{% if pending_awaits|length %}
 <dl>
-	<dt><label <!-- IF S_USERNAME_OPTIONS -->for="usernames"<!-- ENDIF -->>{L_YOUR_FRIENDS}{L_COLON}</label><br /><span>{L_YOUR_FRIENDS_EXPLAIN}</span></dt>
-	<dd style="height: 200px; width: 250px; overflow: auto;">
-		<!-- BEGIN prity_zebra -->
-			<div id="ze_ajaxify" style="display: block;"><div style="float: left;">{prity_zebra.BFF} {prity_zebra.USERNAME}</div><div style="float: right;"> {prity_zebra.CANCEL} </div> <div style="clear: both"></div></div>
-		<!-- END prity_zebra -->
+	<dt><label>{{ lang('UCP_ZEBRA_PENDING_OUT') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_OUT_EXP') }}</span></dt>
+	<dd id='ze-outgoing-requests' class='ze-scroll-list'>
+	{% for request in pending_awaits %}
+		<div class='ze-list-row' data-user-id='{{ request.USER_ID }}'>
+			<a href='{{ request.U_CANCEL }}' data-ajax='true' data-refresh='true' title='{{ lang('ZE_CANCEL_REQUEST') }}' aria-label='{{ lang('ZE_CANCEL_REQUEST') }}'><i class='icon fa-times fa-fw' aria-hidden='true'></i></a>
+			<a class='username-coloured' style='color: #{{ request.USER_COLOUR }}' href='{{ request.U_PROFILE }}'>{{ request.USERNAME }}</a>
+		</div>
+	{% endfor %}
 	</dd>
 </dl>
+{% endif %}
+
 <dl>
-	<dt><label>{L_ZE_FRIENDLIST}</label><br/><span>{L_ZE_FRIENDLIST_EXPLAIN}</span></dt>
-	<dd>
-		<select id="zebra_profile_acl" name="zebra_profile_acl">
-			<option value="0" <!-- IF ZEBRA_ACL == 0 -->SELECTED<!-- ENDIF -->>{L_ALL}</option>
-			<option value="1" <!-- IF ZEBRA_ACL == 1 -->SELECTED<!-- ENDIF -->>{L_REGISTERED}</option>
-			<option value="2" <!-- IF ZEBRA_ACL == 2 -->SELECTED<!-- ENDIF -->>{L_NOT_ENEMY}</option>
-			<option value="3" <!-- IF ZEBRA_ACL == 3 -->SELECTED<!-- ENDIF -->>{L_FRIENDS}</option>
-			<option value="4" <!-- IF ZEBRA_ACL == 4 -->SELECTED<!-- ENDIF -->>{L_SPECIAL_FRIENDS}</option>
-			<option value="5" <!-- IF ZEBRA_ACL == 5 -->SELECTED<!-- ENDIF -->>{L_NONE}</option>
-		</select>
-	</dd>
+	<dt><label for='zebra_profile_acl'>{{ lang('ZE_FRIENDLIST') }}</label><br><span>{{ lang('ZE_FRIENDLIST_EXPLAIN') }}</span></dt>
+	<dd><select id='zebra_profile_acl' name='zebra_profile_acl'>
+		<option value='0'{% if ZEBRA_ACL == 0 %} selected{% endif %}>{{ lang('ALL') }}</option>
+		<option value='1'{% if ZEBRA_ACL == 1 %} selected{% endif %}>{{ lang('REGISTERED') }}</option>
+		<option value='2'{% if ZEBRA_ACL == 2 %} selected{% endif %}>{{ lang('NOT_ENEMY') }}</option>
+		<option value='3'{% if ZEBRA_ACL == 3 %} selected{% endif %}>{{ lang('FRIENDS') }}</option>
+		<option value='4'{% if ZEBRA_ACL == 4 %} selected{% endif %}>{{ lang('SPECIAL_FRIENDS') }}</option>
+		<option value='5'{% if ZEBRA_ACL == 5 %} selected{% endif %}>{{ lang('NONE') }}</option>
+	</select></dd>
 </dl>

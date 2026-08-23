@@ -1,0 +1,42 @@
+.ze-scroll-list {
+	max-height: 12rem;
+	overflow: auto;
+}
+
+.ze-list-row {
+	align-items: center;
+	display: flex;
+	gap: .5rem;
+	justify-content: flex-start;
+	min-height: 2rem;
+}
+
+.ze-actions {
+	display: inline-flex;
+	gap: .25rem;
+}
+
+.ze-icon-button {
+	line-height: 1;
+	padding: 2px 5px;
+}
+
+.ze-profile-friends {
+	display: grid;
+	gap: .75rem;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.ze-profile-friends li {
+	align-items: center;
+	display: flex;
+	gap: .5rem;
+}
+
+.ze-profile-friends .header-avatar img {
+	max-height: 3rem;
+	max-width: 3rem;
+}
