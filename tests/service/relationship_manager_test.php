@@ -17,6 +17,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 	protected $db_tools;
 	protected $notifications;
 	protected $dispatcher;
+	protected $config;
 	protected $relationships;
 
 	static protected function setup_extensions()
@@ -42,12 +43,18 @@ class relationship_manager_test extends \phpbb_database_test_case
 			->disableOriginalConstructor()
 			->getMock();
 		$this->dispatcher = $this->getMockBuilder('\phpbb\event\dispatcher_interface')->getMock();
+		$this->config = new \phpbb\config\config(array(
+			'ze_max_pending_requests' => 100,
+			'ze_decline_cooldown_days' => 7,
+		));
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
 			$this->db_tools,
 			$this->notifications,
 			$this->dispatcher,
+			$this->config,
 			'phpbb_zebra_requests',
+			'phpbb_zebra_request_cooldowns',
 			'phpbb_zebra_confirm',
 			'phpbb_zebra',
 			'phpbb_users',
@@ -74,6 +81,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_changed'))
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'zebra_changed', array('UINT', 0));
+		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_request_policy'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_request_policy', array('UINT', 0));
 		}
 	}
 
@@ -276,6 +287,35 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame('blocked', $this->relationships->request_friendship(3, 4));
 	}
 
+	public function test_recipient_can_restrict_new_requests_to_nobody()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_request_policy = 2 WHERE user_id = 4');
+		$this->notifications->expects($this->never())->method('add_notifications');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
+
+		$this->assertSame('restricted', $this->relationships->request_friendship(3, 4));
+	}
+
+	public function test_friends_of_friends_policy_requires_a_mutual_friend()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_request_policy = 1 WHERE user_id = 4');
+		$this->assertSame('restricted', $this->relationships->request_friendship(3, 4));
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff)
+			VALUES (3, 52, 1, 0, 0)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff)
+			VALUES (4, 52, 1, 0, 0)');
+
+		$this->assertSame('created', $this->relationships->request_friendship(3, 4));
+	}
+
+	public function test_reverse_request_can_be_accepted_despite_recipient_policy()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_request_policy = 2 WHERE user_id = 2');
+
+		$this->assertSame('accepted', $this->relationships->request_friendship(3, 2));
+		$this->assertSame(2, $this->count_friend_rows(2, 3));
+	}
+
 	public function test_only_unique_constraint_errors_are_treated_as_request_races()
 	{
 		$method = new \ReflectionMethod($this->relationships, 'is_duplicate_key_error');
@@ -377,6 +417,25 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 		$this->assertSame('declined', $this->relationships->manage_request(1, 3, 'decline'));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_request_cooldowns'));
+		$this->assertSame('cooldown', $this->relationships->request_friendship(2, 3));
+	}
+
+	public function test_zero_cooldown_allows_a_new_request_after_decline()
+	{
+		$this->config->set('ze_decline_cooldown_days', 0);
+		$this->assertSame('declined', $this->relationships->manage_request(1, 3, 'decline'));
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_request_cooldowns'));
+		$this->assertSame('created', $this->relationships->request_friendship(2, 3));
+	}
+
+	public function test_expired_cooldown_is_removed_opportunistically()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra_request_cooldowns
+			(requester_id, recipient_id, expires_at) VALUES (3, 4, ' . (time() - 1) . ')');
+
+		$this->assertSame('created', $this->relationships->request_friendship(3, 4));
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_request_cooldowns'));
 	}
 
 	public function test_requester_can_cancel_request_by_id()
@@ -407,6 +466,14 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(5, $this->relationships->set_friend_list_visibility(2, 99));
 		$result = $this->db->sql_query('SELECT profile_friend_show FROM phpbb_users WHERE user_id = 2');
 		$this->assertSame(5, (int) $this->db->sql_fetchfield('profile_friend_show'));
+		$this->db->sql_freeresult($result);
+	}
+
+	public function test_request_policy_is_clamped_and_persisted()
+	{
+		$this->assertSame(2, $this->relationships->set_request_policy(2, 99));
+		$result = $this->db->sql_query('SELECT zebra_request_policy FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(2, (int) $this->db->sql_fetchfield('zebra_request_policy'));
 		$this->db->sql_freeresult($result);
 	}
 
@@ -483,27 +550,25 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_pending_request_limit_prevents_unbounded_spam()
 	{
-		$rows = array();
-		for ($i = 0; $i < \anavaro\zebraenhance\service\relationship_manager::MAX_PENDING_REQUESTS; $i++)
-		{
-			$other_id = 1000 + $i;
-			$rows[] = array(
-				'requester_id' => $other_id,
-				'recipient_id' => 4,
-				'user_low'     => 4,
-				'user_high'    => $other_id,
-				'request_time' => 200 + $i,
-			);
-		}
-		$this->db->sql_multi_insert('phpbb_zebra_requests', $rows);
+		$this->config->set('ze_max_pending_requests', 1);
 		$this->notifications->expects($this->never())->method('add_notifications');
 
 		$this->assertSame('limited', $this->relationships->request_friendship(3, 4));
 	}
 
+	public function test_zero_pending_request_limit_is_unlimited()
+	{
+		$this->config->set('ze_max_pending_requests', 0);
+		$this->assertSame('created', $this->relationships->request_friendship(3, 4));
+	}
+
 	public function test_user_deletion_cleans_requests_and_all_custom_notifications()
 	{
 		$this->notifications->expects($this->once())->method('delete_notifications');
+		$this->db->sql_query('INSERT INTO phpbb_zebra_request_cooldowns
+			(requester_id, recipient_id, expires_at) VALUES (3, 4, ' . (time() + 1000) . ')');
+		$this->db->sql_query('INSERT INTO phpbb_zebra_request_cooldowns
+			(requester_id, recipient_id, expires_at) VALUES (4, 5, ' . (time() + 1000) . ')');
 		if ($this->db_tools->sql_table_exists('phpbb_notification_emails'))
 		{
 			$this->db->sql_query('INSERT INTO phpbb_notification_emails
@@ -514,6 +579,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->relationships->delete_user_data(array(3));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
 		$this->assertSame(0, $this->count_rows('phpbb_notifications'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_request_cooldowns'));
 		if ($this->db_tools->sql_table_exists('phpbb_notification_emails'))
 		{
 			$this->assertSame(0, $this->count_rows('phpbb_notification_emails'));

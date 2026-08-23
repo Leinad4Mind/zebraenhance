@@ -1,0 +1,25 @@
+{% INCLUDE 'overall_header.html' %}
+
+<h1>{{ lang('ACP_ZEBRA_ENHANCE_SETTINGS') }}</h1>
+<p>{{ lang('ACP_ZEBRA_ENHANCE_SETTINGS_EXPLAIN') }}</p>
+
+<form id="acp_zebraenhance" method="post" action="{{ U_ACTION }}">
+	<fieldset>
+		<legend>{{ lang('ACP_ZEBRA_ENHANCE_REQUESTS') }}</legend>
+		<dl>
+			<dt><label for="ze_max_pending_requests">{{ lang('ACP_ZE_MAX_PENDING_REQUESTS') }}</label><br><span>{{ lang('ACP_ZE_MAX_PENDING_REQUESTS_EXPLAIN') }}</span></dt>
+			<dd><input id="ze_max_pending_requests" name="ze_max_pending_requests" type="number" min="0" max="1000" value="{{ ZE_MAX_PENDING_REQUESTS }}"></dd>
+		</dl>
+		<dl>
+			<dt><label for="ze_decline_cooldown_days">{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS') }}</label><br><span>{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS_EXPLAIN') }}</span></dt>
+			<dd><input id="ze_decline_cooldown_days" name="ze_decline_cooldown_days" type="number" min="0" max="3650" value="{{ ZE_DECLINE_COOLDOWN_DAYS }}"></dd>
+		</dl>
+	</fieldset>
+
+	<fieldset class="submit-buttons">
+		<input class="button1" type="submit" name="submit" value="{{ lang('SUBMIT') }}">
+		{{ S_FORM_TOKEN }}
+	</fieldset>
+</form>
+
+{% INCLUDE 'overall_footer.html' %}

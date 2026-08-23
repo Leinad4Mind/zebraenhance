@@ -23,7 +23,10 @@ class relationship_manager
 	const EVENT_CLOSE_FRIEND_CHANGED = 'anavaro.zebraenhance.close_friend_changed';
 	const EVENT_VISIBILITY_CHANGED = 'anavaro.zebraenhance.friend_list_visibility_changed';
 	const PAGE_SIZE = 25;
-	const MAX_PENDING_REQUESTS = 100;
+	const DEFAULT_MAX_PENDING_REQUESTS = 100;
+	const REQUEST_POLICY_EVERYONE = 0;
+	const REQUEST_POLICY_FRIENDS_OF_FRIENDS = 1;
+	const REQUEST_POLICY_NOBODY = 2;
 
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
@@ -34,11 +37,17 @@ class relationship_manager
 	/** @var \phpbb\event\dispatcher_interface */
 	protected $dispatcher;
 
+	/** @var \phpbb\config\config */
+	protected $config;
+
 	/** @var \phpbb\db\tools\tools_interface */
 	protected $db_tools;
 
 	/** @var string */
 	protected $requests_table;
+
+	/** @var string */
+	protected $cooldowns_table;
 
 	/** @var string */
 	protected $legacy_requests_table;
@@ -63,7 +72,9 @@ class relationship_manager
 		\phpbb\db\tools\tools_interface $db_tools,
 		\phpbb\notification\manager $notification_manager,
 		\phpbb\event\dispatcher_interface $dispatcher,
+		\phpbb\config\config $config,
 		$requests_table,
+		$cooldowns_table,
 		$legacy_requests_table,
 		$zebra_table,
 		$users_table,
@@ -76,7 +87,9 @@ class relationship_manager
 		$this->db_tools = $db_tools;
 		$this->notification_manager = $notification_manager;
 		$this->dispatcher = $dispatcher;
+		$this->config = $config;
 		$this->requests_table = $requests_table;
+		$this->cooldowns_table = $cooldowns_table;
 		$this->legacy_requests_table = $legacy_requests_table;
 		$this->zebra_table = $zebra_table;
 		$this->users_table = $users_table;
@@ -128,7 +141,7 @@ class relationship_manager
 	/**
 	 * Create a request or accept the reverse request.
 	 *
-	 * @return string created, accepted, ignored, blocked, or limited
+	 * @return string created, accepted, ignored, blocked, restricted, cooldown, or limited
 	 */
 	public function request_friendship($requester_id, $recipient_id)
 	{
@@ -164,8 +177,17 @@ class relationship_manager
 		{
 			return 'blocked';
 		}
-		if ($this->count_pending_requests($requester_id) >= self::MAX_PENDING_REQUESTS
-			|| $this->count_pending_requests($recipient_id) >= self::MAX_PENDING_REQUESTS)
+		if (!$this->request_policy_allows($requester_id, $recipient_id))
+		{
+			return 'restricted';
+		}
+		if ($this->is_request_on_cooldown($requester_id, $recipient_id))
+		{
+			return 'cooldown';
+		}
+		$max_pending = $this->max_pending_requests();
+		if ($max_pending > 0 && ($this->count_pending_requests($requester_id) >= $max_pending
+			|| $this->count_pending_requests($recipient_id) >= $max_pending))
 		{
 			return 'limited';
 		}
@@ -367,6 +389,10 @@ class relationship_manager
 		{
 			$this->delete_request_rows(array($request));
 			$this->delete_legacy_between((int) $request['requester_id'], (int) $request['recipient_id']);
+			if ($action === 'decline')
+			{
+				$this->replace_request_cooldown((int) $request['requester_id'], (int) $request['recipient_id']);
+			}
 			$this->db->sql_transaction('commit');
 		}
 		catch (\Throwable $e)
@@ -406,6 +432,20 @@ class relationship_manager
 		));
 
 		return $visibility;
+	}
+
+	public function set_request_policy($user_id, $policy)
+	{
+		$user_id = (int) $user_id;
+		$policy = max(self::REQUEST_POLICY_EVERYONE, min(self::REQUEST_POLICY_NOBODY, (int) $policy));
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_request_policy = ' . (int) $policy . '
+				WHERE user_id = ' . (int) $user_id);
+		}
+
+		return $policy;
 	}
 
 	/**
@@ -651,6 +691,105 @@ class relationship_manager
 		return $count;
 	}
 
+	protected function max_pending_requests()
+	{
+		if (!isset($this->config['ze_max_pending_requests']))
+		{
+			return self::DEFAULT_MAX_PENDING_REQUESTS;
+		}
+
+		return max(0, (int) $this->config['ze_max_pending_requests']);
+	}
+
+	protected function request_policy_allows($requester_id, $recipient_id)
+	{
+		$sql = 'SELECT zebra_request_policy
+			FROM ' . $this->users_table . '
+			WHERE user_id = ' . (int) $recipient_id;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$policy = $this->db->sql_fetchfield('zebra_request_policy');
+		$this->db->sql_freeresult($result);
+		$policy = $policy === false ? self::REQUEST_POLICY_NOBODY : (int) $policy;
+		if ($policy === self::REQUEST_POLICY_NOBODY)
+		{
+			return false;
+		}
+		if ($policy !== self::REQUEST_POLICY_FRIENDS_OF_FRIENDS)
+		{
+			return true;
+		}
+
+		$sql = 'SELECT 1 AS is_mutual
+			FROM ' . $this->zebra_table . ' requester_friend
+			INNER JOIN ' . $this->zebra_table . ' recipient_friend
+				ON recipient_friend.zebra_id = requester_friend.zebra_id
+			WHERE requester_friend.user_id = ' . (int) $requester_id . '
+				AND recipient_friend.user_id = ' . (int) $recipient_id . '
+				AND requester_friend.friend = 1
+				AND requester_friend.foe = 0
+				AND recipient_friend.friend = 1
+				AND recipient_friend.foe = 0';
+		$result = $this->db->sql_query_limit($sql, 1);
+		$allowed = (bool) $this->db->sql_fetchfield('is_mutual');
+		$this->db->sql_freeresult($result);
+
+		return $allowed;
+	}
+
+	protected function is_request_on_cooldown($requester_id, $recipient_id)
+	{
+		$sql = 'SELECT expires_at
+			FROM ' . $this->cooldowns_table . '
+			WHERE requester_id = ' . (int) $requester_id . '
+				AND recipient_id = ' . (int) $recipient_id;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$expires_at = $this->db->sql_fetchfield('expires_at');
+		$this->db->sql_freeresult($result);
+		if ($expires_at === false)
+		{
+			return false;
+		}
+		if ((int) $expires_at > time())
+		{
+			return true;
+		}
+
+		$this->delete_request_cooldown($requester_id, $recipient_id);
+		return false;
+	}
+
+	protected function replace_request_cooldown($requester_id, $recipient_id)
+	{
+		$this->delete_request_cooldown($requester_id, $recipient_id);
+		$days = isset($this->config['ze_decline_cooldown_days'])
+			? max(0, (int) $this->config['ze_decline_cooldown_days'])
+			: 7;
+		if (!$days)
+		{
+			return;
+		}
+
+		$this->db->sql_query('INSERT INTO ' . $this->cooldowns_table . ' ' . $this->db->sql_build_array('INSERT', array(
+			'requester_id' => (int) $requester_id,
+			'recipient_id' => (int) $recipient_id,
+			'expires_at'   => time() + $days * 86400,
+		)));
+	}
+
+	protected function delete_request_cooldown($requester_id, $recipient_id, $both_directions = false)
+	{
+		$sql = 'DELETE FROM ' . $this->cooldowns_table . '
+			WHERE (requester_id = ' . (int) $requester_id . '
+				AND recipient_id = ' . (int) $recipient_id . ')';
+		if ($both_directions)
+		{
+			$sql .= '
+				OR (requester_id = ' . (int) $recipient_id . '
+					AND recipient_id = ' . (int) $requester_id . ')';
+		}
+		$this->db->sql_query($sql);
+	}
+
 	protected function can_receive_friend_request($user_id)
 	{
 		$user_id = (int) $user_id;
@@ -700,6 +839,9 @@ class relationship_manager
 		$this->db->sql_query('DELETE FROM ' . $this->legacy_requests_table . '
 			WHERE ' . $this->db->sql_in_set('user_id', $user_ids) . '
 				OR ' . $this->db->sql_in_set('zebra_id', $user_ids));
+		$this->db->sql_query('DELETE FROM ' . $this->cooldowns_table . '
+			WHERE ' . $this->db->sql_in_set('requester_id', $user_ids) . '
+				OR ' . $this->db->sql_in_set('recipient_id', $user_ids));
 
 		$this->delete_request_notifications($requests);
 		$this->delete_user_notifications($user_ids);
@@ -771,6 +913,7 @@ class relationship_manager
 
 				$this->delete_zebra_between($requester_id, $acceptor_id);
 				$this->delete_legacy_between($requester_id, $acceptor_id);
+				$this->delete_request_cooldown($requester_id, $acceptor_id, true);
 				$this->db->sql_multi_insert($this->zebra_table, array(
 					array('user_id' => $requester_id, 'zebra_id' => $acceptor_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
 					array('user_id' => $acceptor_id, 'zebra_id' => $requester_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
