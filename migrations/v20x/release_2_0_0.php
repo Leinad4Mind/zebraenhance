@@ -87,6 +87,13 @@ class release_2_0_0 extends \phpbb\db\migration\migration
 		);
 	}
 
+	public function revert_data()
+	{
+		return array(
+			array('config.update', array('zebra_module_id', 'none')),
+		);
+	}
+
 	/**
 	 * Remove 1.x notifications whose item IDs were recipient user IDs rather
 	 * than stable request IDs. Keeping them would cause collisions with 2.x
@@ -145,7 +152,13 @@ class release_2_0_0 extends \phpbb\db\migration\migration
 				ON requester.user_id = zc.user_id
 			INNER JOIN ' . $this->table_prefix . 'users recipient
 				ON recipient.user_id = zc.zebra_id
+			LEFT JOIN ' . $this->table_prefix . 'zebra z
+				ON z.friend = 1
+					AND z.foe = 0
+					AND ((z.user_id = zc.user_id AND z.zebra_id = zc.zebra_id)
+						OR (z.user_id = zc.zebra_id AND z.zebra_id = zc.user_id))
 			WHERE zc.friend = 1
+				AND z.user_id IS NULL
 			ORDER BY zc.user_id, zc.zebra_id';
 		$result = $this->db->sql_query($sql);
 
@@ -179,9 +192,9 @@ class release_2_0_0 extends \phpbb\db\migration\migration
 		}
 		$this->db->sql_freeresult($result);
 
-		if ($requests)
+		foreach (array_chunk($requests, 500) as $request_batch)
 		{
-			$this->db->sql_multi_insert($request_table, $requests);
+			$this->db->sql_multi_insert($request_table, $request_batch);
 		}
 	}
 }

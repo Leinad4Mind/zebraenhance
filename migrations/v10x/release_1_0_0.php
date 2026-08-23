@@ -12,6 +12,11 @@ namespace anavaro\zebraenhance\migrations\v10x;
 
 class release_1_0_0 extends \phpbb\db\migration\migration
 {
+	public static function depends_on()
+	{
+		return array('\phpbb\db\migration\data\v330\v330');
+	}
+
 	public function effectively_installed()
 	{
 		return isset($this->config['zebra_enhance_version']) && version_compare($this->config['zebra_enhance_version'], '1.0.0', '>=');
@@ -30,8 +35,8 @@ class release_1_0_0 extends \phpbb\db\migration\migration
 			'add_tables'    => array(
 				$this->table_prefix . 'zebra_confirm'		=> array(
 					'COLUMNS'		=> array(
-						'user_id'		=> array('UINT:8', 0),
-						'zebra_id'		=> array('UINT:8', 0),
+						'user_id'		=> array('ULINT', 0),
+						'zebra_id'		=> array('ULINT', 0),
 						'friend'		=> array('UINT:1', 0),
 						'foe'			=> array('UINT:1', 0)
 					),
@@ -39,10 +44,10 @@ class release_1_0_0 extends \phpbb\db\migration\migration
 				),
 			),
 			'add_columns'	=> array(
-				ZEBRA_TABLE 	=> array(
+				$this->table_prefix . 'zebra' 	=> array(
 					'bff'	=> array('UINT', 0),
 				),
-				USERS_TABLE        => array(
+				$this->table_prefix . 'users'        => array(
 					'profile_friend_show'    => array('UINT', 5),
 				)
 			),
@@ -56,10 +61,10 @@ class release_1_0_0 extends \phpbb\db\migration\migration
 				$this->table_prefix . 'zebra_confirm'
 			),
 			'drop_columns'          => array(
-				ZEBRA_TABLE	=> array(
+				$this->table_prefix . 'zebra'	=> array(
 					'bff',
 				),
-				USERS_TABLE        => array(
+				$this->table_prefix . 'users'        => array(
 					'profile_friend_show',
 				)
 			),

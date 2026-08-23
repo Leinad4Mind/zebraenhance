@@ -27,7 +27,7 @@ class release_1_0_1 extends \phpbb\db\migration\migration
 	{
 		return array(
 			'add_columns'	=> array(
-				USERS_TABLE        => array(
+				$this->table_prefix . 'users'        => array(
 					'zebra_changed'    => array('UINT', 0),
 				)
 			)
@@ -38,7 +38,7 @@ class release_1_0_1 extends \phpbb\db\migration\migration
 	{
 		return array(
 			'drop_columns'	=> array(
-				USERS_TABLE        => array(
+				$this->table_prefix . 'users'        => array(
 					'zebra_changed',
 				)
 			)

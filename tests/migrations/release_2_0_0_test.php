@@ -36,6 +36,8 @@ class release_2_0_0_test extends \phpbb_database_test_case
 			VALUES (99, 2, 1, 0)');
 		$db->sql_query('INSERT INTO phpbb_zebra_confirm (user_id, zebra_id, friend, foe)
 			VALUES (2, 2, 1, 0)');
+		$db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe)
+			VALUES (3, 2, 1, 0)');
 
 		$factory = new \phpbb\db\tools\factory();
 		$migration = new \anavaro\zebraenhance\migrations\v20x\release_2_0_0(
@@ -51,10 +53,29 @@ class release_2_0_0_test extends \phpbb_database_test_case
 		$result = $db->sql_query('SELECT requester_id, recipient_id, user_low, user_high
 			FROM phpbb_zebra_requests ORDER BY user_high');
 		$this->assertEquals(array(
-			array('requester_id' => '2', 'recipient_id' => '3', 'user_low' => '2', 'user_high' => '3'),
 			array('requester_id' => '2', 'recipient_id' => '52', 'user_low' => '2', 'user_high' => '52'),
 		), $db->sql_fetchrowset($result));
 		$db->sql_freeresult($result);
+	}
+
+	public function test_downgrade_restores_legacy_module_marker()
+	{
+		global $phpbb_root_path;
+
+		$db = $this->new_dbal();
+		$factory = new \phpbb\db\tools\factory();
+		$migration = new \anavaro\zebraenhance\migrations\v20x\release_2_0_0(
+			new \phpbb\config\config(array('zebra_enhance_version' => '2.0.0')),
+			$db,
+			$factory->get($db),
+			$phpbb_root_path,
+			'php',
+			'phpbb_'
+		);
+
+		$this->assertSame(array(
+			array('config.update', array('zebra_module_id', 'none')),
+		), $migration->revert_data());
 	}
 
 	public function test_legacy_notifications_are_purged_during_upgrade()
