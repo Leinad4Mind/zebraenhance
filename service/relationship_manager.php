@@ -51,6 +51,9 @@ class relationship_manager
 	/** @var \phpbb\db\tools\tools_interface */
 	protected $db_tools;
 
+	/** @var \phpbb\auth\auth */
+	protected $auth;
+
 	/** @var string */
 	protected $requests_table;
 
@@ -84,6 +87,7 @@ class relationship_manager
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\db\tools\tools_interface $db_tools,
+		\phpbb\auth\auth $auth,
 		\phpbb\notification\manager $notification_manager,
 		\phpbb\event\dispatcher_interface $dispatcher,
 		\phpbb\config\config $config,
@@ -101,6 +105,7 @@ class relationship_manager
 	{
 		$this->db = $db;
 		$this->db_tools = $db_tools;
+		$this->auth = $auth;
 		$this->notification_manager = $notification_manager;
 		$this->dispatcher = $dispatcher;
 		$this->config = $config;
@@ -376,16 +381,16 @@ class relationship_manager
 	}
 
 	/**
-	 * Accept, decline, or cancel a request using its stable request ID.
+	 * Accept, decline, decline and block, or cancel a request using its stable request ID.
 	 *
-	 * @return string|false The completed action, or false when it is not owned
-	 *                      by the acting user
+	 * @return string|false The completed action, not_blockable for protected
+	 *                      staff, or false when it is not owned by the actor
 	 */
 	public function manage_request($request_id, $actor_id, $action)
 	{
 		$request_id = (int) $request_id;
 		$actor_id = (int) $actor_id;
-		if (!$request_id || !$actor_id || !in_array($action, array('accept', 'decline', 'cancel'), true))
+		if (!$request_id || !$actor_id || !in_array($action, array('accept', 'decline', 'decline_block', 'cancel'), true))
 		{
 			return false;
 		}
@@ -401,6 +406,19 @@ class relationship_manager
 			return (int) $request['recipient_id'] === $actor_id && $this->accept_request($request, $actor_id)
 				? 'accepted'
 				: false;
+		}
+		if ($action === 'decline_block')
+		{
+			if ((int) $request['recipient_id'] !== $actor_id)
+			{
+				return false;
+			}
+			if (!$this->can_be_foe((int) $request['requester_id']))
+			{
+				return 'not_blockable';
+			}
+
+			return $this->decline_and_block_request($request, $actor_id);
 		}
 
 		$owner_column = $action === 'decline' ? 'recipient_id' : 'requester_id';
@@ -430,6 +448,94 @@ class relationship_manager
 		$event_name = $action === 'decline' ? self::EVENT_REQUEST_DECLINED : self::EVENT_REQUEST_CANCELLED;
 		$this->dispatch_request_event($event_name, $request, $actor_id, 'user');
 		return $action === 'decline' ? 'declined' : 'cancelled';
+	}
+
+	/**
+	 * Decline an owned request and create a directional phpBB foe relation.
+	 */
+	protected function decline_and_block_request(array $request, $actor_id)
+	{
+		$actor_id = (int) $actor_id;
+		$requester_id = (int) $request['requester_id'];
+		$had_friendship = false;
+		$this->db->sql_transaction('begin');
+		try
+		{
+			$sql = 'SELECT 1 AS is_friend
+				FROM ' . $this->zebra_table . '
+				WHERE friend = 1
+					AND foe = 0
+					AND ((user_id = ' . $actor_id . ' AND zebra_id = ' . $requester_id . ')
+						OR (user_id = ' . $requester_id . ' AND zebra_id = ' . $actor_id . '))';
+			$result = $this->db->sql_query_limit($sql, 1);
+			$had_friendship = (bool) $this->db->sql_fetchfield('is_friend');
+			$this->db->sql_freeresult($result);
+
+			$this->db->sql_query('DELETE FROM ' . $this->zebra_table . '
+				WHERE friend = 1
+					AND foe = 0
+					AND ((user_id = ' . $actor_id . ' AND zebra_id = ' . $requester_id . ')
+						OR (user_id = ' . $requester_id . ' AND zebra_id = ' . $actor_id . '))');
+			if ($had_friendship)
+			{
+				$this->delete_circle_membership_between($actor_id, $requester_id);
+			}
+
+			// Replace only the actor-owned row; an existing foe owned by the requester is private state.
+			$this->db->sql_query('DELETE FROM ' . $this->zebra_table . '
+				WHERE user_id = ' . $actor_id . '
+					AND zebra_id = ' . $requester_id);
+			$this->db->sql_query('INSERT INTO ' . $this->zebra_table . ' ' . $this->db->sql_build_array('INSERT', array(
+				'user_id'  => $actor_id,
+				'zebra_id' => $requester_id,
+				'friend'   => 0,
+				'foe'      => 1,
+				'bff'      => 0,
+			)));
+			$this->delete_request_rows(array($request));
+			$this->delete_legacy_between($requester_id, $actor_id);
+			$this->delete_request_cooldown($requester_id, $actor_id, true);
+			$this->mark_changed(array($actor_id, $requester_id));
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		$this->delete_request_notifications(array($request));
+		$this->dispatch_request_event(self::EVENT_REQUEST_DECLINED, $request, $actor_id, 'foe');
+		if ($had_friendship)
+		{
+			$this->dispatch_event(self::EVENT_FRIENDSHIP_REMOVED, array(
+				'user_id'   => $actor_id,
+				'friend_id' => $requester_id,
+				'reason'    => 'foe',
+			));
+		}
+
+		return 'blocked';
+	}
+
+	/**
+	 * Match phpBB Zebra's rule that administrators and moderators cannot be foes.
+	 */
+	protected function can_be_foe($user_id)
+	{
+		$user_id = (int) $user_id;
+		foreach ((array) $this->auth->acl_get_list(array($user_id), array('a_', 'm_')) as $forum_permissions)
+		{
+			foreach ((array) $forum_permissions as $permission_users)
+			{
+				if (in_array($user_id, array_map('intval', (array) $permission_users), true))
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}
 
 	/**

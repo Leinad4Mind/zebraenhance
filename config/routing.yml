@@ -12,7 +12,7 @@ anavaro_zebraenhance_manage_request:
     methods: [POST]
     requirements:
         requestid: \d+
-        action: accept|decline|cancel
+        action: accept|decline|decline_block|cancel
 
 anavaro_zebraenhance_manage_requests:
     path: /zebraenhance/requests/{action}

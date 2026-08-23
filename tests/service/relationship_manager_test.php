@@ -15,6 +15,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 {
 	protected $db;
 	protected $db_tools;
+	protected $auth;
 	protected $notifications;
 	protected $dispatcher;
 	protected $config;
@@ -39,6 +40,9 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$factory = new \phpbb\db\tools\factory();
 		$this->db_tools = $factory->get($this->db);
 		$this->ensure_extension_columns();
+		$this->auth = $this->getMockBuilder('\phpbb\auth\auth')
+			->disableOriginalConstructor()
+			->getMock();
 		$this->notifications = $this->getMockBuilder('\phpbb\notification\manager')
 			->disableOriginalConstructor()
 			->getMock();
@@ -50,6 +54,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
 			$this->db_tools,
+			$this->auth,
 			$this->notifications,
 			$this->dispatcher,
 			$this->config,
@@ -402,6 +407,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 	{
 		$this->assertFalse($this->relationships->manage_request(1, 2, 'accept'));
 		$this->assertFalse($this->relationships->manage_request(1, 2, 'decline'));
+		$this->assertFalse($this->relationships->manage_request(1, 2, 'decline_block'));
 		$this->assertFalse($this->relationships->manage_request(1, 3, 'cancel'));
 		$this->assertFalse($this->relationships->manage_request(999, 3, 'accept'));
 		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
@@ -456,6 +462,57 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_request_cooldowns'));
 		$this->assertSame('cooldown', $this->relationships->request_friendship(2, 3));
+	}
+
+	public function test_recipient_can_decline_and_block_without_removing_requester_foe_state()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra_requests
+			(request_id, requester_id, recipient_id, user_low, user_high, request_time)
+			VALUES (3, 4, 3, 3, 4, 102)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (4, 3, 0, 1, 0)');
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_DECLINED,
+				array(
+					'request_id' => 3,
+					'requester_id' => 4,
+					'recipient_id' => 3,
+					'actor_id' => 3,
+					'request_time' => 102,
+					'reason' => 'foe',
+				)
+			);
+		$this->notifications->expects($this->once())
+			->method('delete_notifications')
+			->with('anavaro.zebraenhance.notification.zebraadd', 3, false, 3);
+
+		$this->assertSame('blocked', $this->relationships->manage_request(3, 3, 'decline_block'));
+		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
+		$result = $this->db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra_request_cooldowns
+			WHERE (requester_id = 4 AND recipient_id = 3)
+				OR (requester_id = 3 AND recipient_id = 4)');
+		$this->assertSame(0, (int) $this->db->sql_fetchfield('total'));
+		$this->db->sql_freeresult($result);
+		$this->assertSame(1, $this->count_zebra_rows(3, 4, 0, 1));
+		$this->assertSame(1, $this->count_zebra_rows(4, 3, 0, 1));
+		$this->assertSame('blocked', $this->relationships->request_friendship(4, 3));
+	}
+
+	public function test_administrators_and_moderators_cannot_be_blocked()
+	{
+		$this->auth->expects($this->once())
+			->method('acl_get_list')
+			->with(array(2), array('a_', 'm_'))
+			->willReturn(array(0 => array('a_' => array(2))));
+		$this->notifications->expects($this->never())->method('delete_notifications');
+		$this->dispatcher->expects($this->never())->method('trigger_event');
+
+		$this->assertSame('not_blockable', $this->relationships->manage_request(1, 3, 'decline_block'));
+		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
+		$this->assertSame(0, $this->count_zebra_rows(3, 2, 0, 1));
 	}
 
 	public function test_zero_cooldown_allows_a_new_request_after_decline()

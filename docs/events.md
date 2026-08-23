@@ -33,7 +33,7 @@ The following events share the same core payload:
 | `actor_id` | integer | User whose action caused this event. |
 | `request_time` | integer | Unix timestamp stored with the request. |
 | `message` | string | Optional message supplied by the requester; omitted when empty. |
-| `reason` | string | Present only for decline/cancel events: `user`, `foe`, or `relationship_removed`. |
+| `reason` | string | Present only for decline/cancel events: `user`, `foe`, or `relationship_removed`. `foe` includes the explicit decline-and-block action. |
 
 ## Friendship removal
 

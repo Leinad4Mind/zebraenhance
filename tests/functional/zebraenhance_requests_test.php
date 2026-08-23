@@ -72,6 +72,62 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_recipient_can_decline_and_block_requester()
+	{
+		$requester = 'zedeclineblock';
+		$requester_id = $this->create_user($requester);
+		$this->login($requester);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('created', $response['action']);
+		$this->logout();
+
+		$crawler = $this->open_friends_as('admin');
+		$block = $crawler->filter('#ze-incoming-requests .js-ze-decline-block')->first();
+		$this->assertStringContainsString('/decline_block', $block->attr('data-url'));
+		$this->post_action($block->attr('data-url'), array(), 403);
+		$response = $this->post_action($block->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('blocked', $response['action']);
+		$db = $this->get_db();
+		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra
+			WHERE user_id = 2 AND zebra_id = ' . (int) $requester_id . ' AND friend = 0 AND foe = 1');
+		$this->assertSame(1, (int) $db->sql_fetchfield('total'));
+		$db->sql_freeresult($result);
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertStringNotContainsString($requester, $crawler->filter('html')->text());
+		$this->logout();
+
+		$this->login($requester);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler), 409);
+		$this->assertFalse($response['success']);
+		$this->logout();
+	}
+
+	public function test_staff_requester_cannot_be_blocked()
+	{
+		$recipient = 'zenostaffblock';
+		$recipient_id = $this->create_user($recipient);
+		$this->send_request_as_admin($recipient);
+
+		$crawler = $this->open_friends_as($recipient);
+		$block = $crawler->filter('#ze-incoming-requests .js-ze-decline-block')->first();
+		$response = $this->post_action($block->attr('data-url'), $this->form_token($crawler), 409);
+		$this->assertFalse($response['success']);
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertStringContainsString('admin', $crawler->filter('#ze-incoming-requests')->text());
+		$db = $this->get_db();
+		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra
+			WHERE user_id = ' . (int) $recipient_id . ' AND zebra_id = 2 AND foe = 1');
+		$this->assertSame(0, (int) $db->sql_fetchfield('total'));
+		$db->sql_freeresult($result);
+		$this->logout();
+	}
+
 	public function test_profile_friend_control_covers_request_states()
 	{
 		$username = "ze'profile";
@@ -102,6 +158,8 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
 		$this->assertStringContainsString($message, $crawler->filter('#ze-friend-controls .ze-request-message')->text());
 		$this->assertStringNotContainsString('<b>', $crawler->filter('#ze-friend-controls .ze-request-message')->html());
+		$block = $crawler->filter('#ze-friend-controls .js-ze-decline-block')->first();
+		$this->assertStringContainsString('/decline_block', $block->attr('data-url'));
 		$accept = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
 		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
 		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));

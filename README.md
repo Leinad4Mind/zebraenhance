@@ -13,9 +13,10 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 
 - Friend requests must be accepted before phpBB creates the mutual friendship.
 - Incoming and outgoing requests appear in UCP > Friends.
+- Incoming requests can be declined and blocked in one protected action.
 - Requests sent from a profile may include an optional personal message.
 - Users can accept requests from everyone, only friends of friends, or nobody.
-- Profile controls create, accept, decline, or cancel requests using numeric IDs and CSRF-protected AJAX.
+- Profile controls create, accept, decline, decline-and-block, or cancel requests using numeric IDs and CSRF-protected AJAX.
 - Request and acceptance notifications use a unique request ID.
 - Request and acceptance notifications support board alerts and opt-in email through phpBB's notification preferences.
 - Each user can independently mark an accepted friend as a Close Friend.

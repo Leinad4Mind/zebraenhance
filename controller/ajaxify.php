@@ -79,7 +79,7 @@ class ajaxify
 	}
 
 	/**
-	 * Accept, decline, or cancel a request using its stable ID.
+	 * Accept, decline, decline and block, or cancel a request using its stable ID.
 	 */
 	public function manage_request($requestid, $action)
 	{
@@ -103,10 +103,15 @@ class ajaxify
 		{
 			return $this->error('ZE_AJAX_REQUEST_NOT_FOUND', 404);
 		}
+		if ($result === 'not_blockable')
+		{
+			return $this->error('ZE_REQUESTER_CANNOT_BE_BLOCKED', 409);
+		}
 
 		$messages = array(
 			'accepted'  => 'ZE_REQUEST_ACCEPTED',
 			'declined'  => 'ZE_REQUEST_DECLINED',
+			'blocked'   => 'ZE_REQUEST_DECLINED_BLOCKED',
 			'cancelled' => 'ZE_REQUEST_CANCELLED',
 		);
 		return new JsonResponse(array(

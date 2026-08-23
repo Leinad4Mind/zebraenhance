@@ -260,6 +260,7 @@ class zebra_listener implements EventSubscriberInterface
 				'MESSAGE'       => (string) $row['request_message'],
 				'U_ACCEPT'      => $this->request_action_url((int) $row['request_id'], 'accept'),
 				'U_DECLINE'     => $this->request_action_url((int) $row['request_id'], 'decline'),
+				'U_DECLINE_BLOCK' => $this->request_action_url((int) $row['request_id'], 'decline_block'),
 			));
 		}
 
@@ -358,6 +359,7 @@ class zebra_listener implements EventSubscriberInterface
 					)) : '',
 					'U_ZE_PROFILE_ACCEPT'         => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'accept') : '',
 					'U_ZE_PROFILE_DECLINE'        => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline') : '',
+					'U_ZE_PROFILE_DECLINE_BLOCK'  => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline_block') : '',
 					'U_ZE_PROFILE_CANCEL'         => $request && !$is_incoming ? $this->request_action_url((int) $request['request_id'], 'cancel') : '',
 					'ZE_PROFILE_REQUEST_MESSAGE'  => $request ? (string) $request['request_message'] : '',
 				));

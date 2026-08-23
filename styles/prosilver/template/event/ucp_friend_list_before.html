@@ -33,6 +33,7 @@
 			<span class="ze-actions">
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+				<button type="button" class="button button-secondary ze-icon-button js-ze-request js-ze-decline-block" data-url="{{ request.U_DECLINE_BLOCK }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
 			</span>
 			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>

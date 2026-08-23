@@ -15,6 +15,7 @@
 	{% if ZE_PROFILE_REQUEST_MESSAGE %}<div class="ze-request-message">{{ ZE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
 	<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ U_ZE_PROFILE_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
 	<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ U_ZE_PROFILE_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+	<button type="button" class="button button-secondary ze-icon-button js-ze-request js-ze-decline-block" data-url="{{ U_ZE_PROFILE_DECLINE_BLOCK }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
 	{% elseif S_ZE_PROFILE_OUTGOING %}
 	<strong>{{ lang('UCP_ZEBRA_PENDING_OUT') }}</strong>
 	{% if ZE_PROFILE_REQUEST_MESSAGE %}<div class="ze-request-message">{{ ZE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
