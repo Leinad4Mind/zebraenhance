@@ -69,5 +69,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_POLICY_EVERYONE'           => 'همه',
 	'ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS' => 'دوستان دوستان',
 	'ZE_REQUEST_POLICY_NOBODY'             => 'هیچ‌کس',
+	'ZE_REQUEST_MESSAGE'                   => 'پیام اختیاری',
+	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'یک پیام شخصی کوتاه اضافه کنید (اختیاری)',
 
 ));

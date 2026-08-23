@@ -79,5 +79,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_POLICY_EVERYONE'           => 'Всички',
 	'ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS' => 'Приятели на приятели',
 	'ZE_REQUEST_POLICY_NOBODY'             => 'Никой',
+	'ZE_REQUEST_MESSAGE'                   => 'Незадължително съобщение',
+	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Добавете кратко лично съобщение (незадължително)',
 
 ));

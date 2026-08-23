@@ -15,7 +15,7 @@
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
 			</span>
-			{{ request.USERNAME_FULL }}
+			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
 	</dd>
@@ -70,7 +70,7 @@
 	{% for request in pending_awaits %}
 		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
 			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_CANCEL }}" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
-			{{ request.USERNAME_FULL }}
+			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
 	</dd>

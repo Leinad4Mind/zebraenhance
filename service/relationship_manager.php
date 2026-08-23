@@ -109,14 +109,14 @@ class relationship_manager
 	 * @param array  $results Outcomes for intercepted friend requests
 	 * @return array Rows phpBB should continue inserting
 	 */
-	public function process_additions($mode, array $rows, ?array &$results = null)
+	public function process_additions($mode, array $rows, ?array &$results = null, $request_message = '')
 	{
 		$results = array();
 		if ($mode === 'friends')
 		{
 			foreach ($rows as $row)
 			{
-				$results[] = $this->request_friendship((int) $row['user_id'], (int) $row['zebra_id']);
+				$results[] = $this->request_friendship((int) $row['user_id'], (int) $row['zebra_id'], $request_message);
 			}
 
 			return array();
@@ -143,10 +143,11 @@ class relationship_manager
 	 *
 	 * @return string created, accepted, ignored, blocked, restricted, cooldown, or limited
 	 */
-	public function request_friendship($requester_id, $recipient_id)
+	public function request_friendship($requester_id, $recipient_id, $request_message = '')
 	{
 		$requester_id = (int) $requester_id;
 		$recipient_id = (int) $recipient_id;
+		$request_message = $this->normalize_request_message($request_message);
 		if (!$requester_id || !$recipient_id || $requester_id === $recipient_id)
 		{
 			return 'ignored';
@@ -198,6 +199,7 @@ class relationship_manager
 			'user_low'     => min($requester_id, $recipient_id),
 			'user_high'    => max($requester_id, $recipient_id),
 			'request_time' => time(),
+			'request_message' => $request_message,
 		);
 		$this->db->sql_return_on_error(true);
 		$result = $this->db->sql_query('INSERT INTO ' . $this->requests_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
@@ -225,6 +227,7 @@ class relationship_manager
 		$this->notification_manager->add_notifications(self::REQUEST_NOTIFICATION, array(
 			'request_id'  => $request_id,
 			'requester_id' => $requester_id,
+			'request_message' => $request_message,
 			'user_id'      => array($recipient_id => 'notification.method.board'),
 		));
 		$request = $sql_ary;
@@ -277,7 +280,7 @@ class relationship_manager
 		$this->db->sql_transaction('begin');
 		try
 		{
-			$sql = 'SELECT request_id, requester_id, recipient_id, request_time
+			$sql = 'SELECT request_id, requester_id, recipient_id, request_time, request_message
 				FROM ' . $this->requests_table . '
 				WHERE (requester_id = ' . (int) $user_id . '
 						AND ' . $this->db->sql_in_set('recipient_id', $zebra_ids) . ')
@@ -628,7 +631,7 @@ class relationship_manager
 	{
 		$user_column = $incoming ? 'r.requester_id' : 'r.recipient_id';
 		$match_column = $incoming ? 'r.recipient_id' : 'r.requester_id';
-		$sql = 'SELECT r.request_id, r.requester_id, r.recipient_id,
+		$sql = 'SELECT r.request_id, r.requester_id, r.recipient_id, r.request_message,
 				u.username, u.user_colour
 			FROM ' . $this->requests_table . ' r
 			INNER JOIN ' . $this->users_table . ' u
@@ -675,7 +678,14 @@ class relationship_manager
 			'requester_id' => (int) $request['requester_id'],
 			'recipient_id' => (int) $request['recipient_id'],
 			'request_time' => (int) $request['request_time'],
+			'request_message' => isset($request['request_message']) ? (string) $request['request_message'] : '',
 		);
+	}
+
+	protected function normalize_request_message($request_message)
+	{
+		$request_message = trim((string) $request_message);
+		return utf8_substr($request_message, 0, 255);
 	}
 
 	protected function count_pending_requests($user_id)
@@ -1046,6 +1056,10 @@ class relationship_manager
 		if ($reason !== null)
 		{
 			$data['reason'] = (string) $reason;
+		}
+		if (!empty($request['request_message']))
+		{
+			$data['message'] = (string) $request['request_message'];
 		}
 
 		$this->dispatch_event($event_name, $data);

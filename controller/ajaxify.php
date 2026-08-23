@@ -134,7 +134,8 @@ class ajaxify
 
 		$result = $this->relationships->request_friendship(
 			(int) $this->user->data['user_id'],
-			(int) $userid
+			(int) $userid,
+			$this->request->variable('message', '', true)
 		);
 		if (!in_array($result, array('created', 'accepted'), true))
 		{

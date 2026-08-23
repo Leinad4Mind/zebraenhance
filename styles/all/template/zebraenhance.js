@@ -57,11 +57,16 @@
 	$(document).on('click', '.js-ze-request', function () {
 		var $button = $(this);
 		var submit = function () {
+			var payload = tokenPayload();
+			var messageInput = $button.attr('data-message-input');
+			if (messageInput) {
+				payload.message = $(messageInput).val();
+			}
 			$button.prop('disabled', true);
 			$.ajax({
 				url: $button.attr('data-url'),
 				method: 'POST',
-				data: tokenPayload(),
+				data: payload,
 				dataType: 'json'
 			}).done(function (response) {
 				if (response.success) {

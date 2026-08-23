@@ -81,5 +81,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_POLICY_EVERYONE'           => 'Jeder',
 	'ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS' => 'Freunde von Freunden',
 	'ZE_REQUEST_POLICY_NOBODY'             => 'Niemand',
+	'ZE_REQUEST_MESSAGE'                   => 'Optionale Nachricht',
+	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Kurze persönliche Nachricht hinzufügen (optional)',
 
 ));

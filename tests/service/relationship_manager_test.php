@@ -128,6 +128,36 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(3, $this->count_rows('phpbb_zebra_requests'));
 	}
 
+	public function test_request_message_is_normalized_persisted_and_dispatched()
+	{
+		$message = "  Let's connect!\nWe share interests.  ";
+		$normalized = "Let's connect!\nWe share interests.";
+		$this->dispatcher->expects($this->once())
+			->method('trigger_event')
+			->with(
+				\anavaro\zebraenhance\service\relationship_manager::EVENT_REQUEST_CREATED,
+				$this->callback(function ($data) use ($normalized)
+				{
+					return isset($data['message']) && $data['message'] === $normalized;
+				})
+			);
+		$this->notifications->expects($this->once())
+			->method('add_notifications')
+			->with(
+				'anavaro.zebraenhance.notification.zebraadd',
+				$this->callback(function ($data) use ($normalized)
+				{
+					return $data['request_message'] === $normalized;
+				})
+			);
+
+		$this->assertSame('created', $this->relationships->request_friendship(3, 4, $message));
+		$result = $this->db->sql_query('SELECT request_message FROM phpbb_zebra_requests
+			WHERE requester_id = 3 AND recipient_id = 4');
+		$this->assertSame($normalized, $this->db->sql_fetchfield('request_message'));
+		$this->db->sql_freeresult($result);
+	}
+
 	public function test_blocked_request_is_silently_discarded()
 	{
 		$this->notifications->expects($this->never())->method('add_notifications');
@@ -163,6 +193,9 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_removal_cleans_new_and_legacy_pending_rows()
 	{
+		$this->db->sql_query("UPDATE phpbb_zebra_requests
+			SET request_message = 'Still interested'
+			WHERE request_id = 2");
 		$this->dispatcher->expects($this->once())
 			->method('trigger_event')
 			->with(
@@ -174,6 +207,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 					'actor_id' => 2,
 					'request_time' => 101,
 					'reason' => 'relationship_removed',
+					'message' => 'Still interested',
 				)
 			);
 		$this->notifications->expects($this->once())
@@ -261,6 +295,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 			'requester_id' => 2,
 			'recipient_id' => 3,
 			'request_time' => 100,
+			'request_message' => '',
 		), $this->relationships->get_pending_request_between(3, 2));
 		$this->assertFalse($this->relationships->get_pending_request_between(3, 4));
 	}

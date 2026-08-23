@@ -17,6 +17,23 @@
 	min-height: 2rem;
 }
 
+.ze-request-compose {
+	display: grid;
+	gap: .4rem;
+	max-width: 30rem;
+}
+
+.ze-request-compose .button {
+	justify-self: start;
+}
+
+.ze-request-message {
+	display: block;
+	font-style: italic;
+	margin-top: .2rem;
+	white-space: pre-wrap;
+}
+
 .ze-actions {
 	display: inline-flex;
 	gap: .25rem;

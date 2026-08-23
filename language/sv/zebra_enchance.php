@@ -81,5 +81,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_POLICY_EVERYONE'           => 'Alla',
 	'ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS' => 'Vänners vänner',
 	'ZE_REQUEST_POLICY_NOBODY'             => 'Ingen',
+	'ZE_REQUEST_MESSAGE'                   => 'Valfritt meddelande',
+	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Lägg till ett kort personligt meddelande (valfritt)',
 
 ));
