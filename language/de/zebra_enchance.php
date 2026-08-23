@@ -76,5 +76,10 @@ $lang = array_merge($lang, array(
 	'ZE_VIS_NOBODY'               => 'Nobody',
 	'ZE_FRIEND_REQUEST_NOT_AUTHORIZED' => 'You are not authorized to send friend requests.',
 	'ZE_FRIEND_REQUEST_UNCHANGED'      => 'No friend request was changed.',
+	'ZE_REQUEST_POLICY'                    => 'Wer darf dir Freundschaftsanfragen senden?',
+	'ZE_REQUEST_POLICY_EXPLAIN'            => 'Dies gilt nur für neue Anfragen. Bereits gesendete Anfragen können weiterhin angenommen werden.',
+	'ZE_REQUEST_POLICY_EVERYONE'           => 'Jeder',
+	'ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS' => 'Freunde von Freunden',
+	'ZE_REQUEST_POLICY_NOBODY'             => 'Niemand',
 
 ));

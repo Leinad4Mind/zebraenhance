@@ -146,23 +146,35 @@ class zebra_listener implements EventSubscriberInterface
 
 		add_form_key('anavaro_zebraenhance', '_ZE');
 		$user_id = (int) $this->user->data['user_id'];
-		if ($this->request->is_set_post('zebra_profile_acl'))
+		if ($this->request->is_set_post('zebra_profile_acl') || $this->request->is_set_post('zebra_request_policy'))
 		{
 			if (!check_form_key('anavaro_zebraenhance'))
 			{
 				trigger_error('FORM_INVALID');
 			}
 
-			$visibility = $this->relationships->set_friend_list_visibility(
-				$user_id,
-				$this->request->variable('zebra_profile_acl', 5)
-			);
-			$this->user->data['profile_friend_show'] = $visibility;
+			if ($this->request->is_set_post('zebra_profile_acl'))
+			{
+				$visibility = $this->relationships->set_friend_list_visibility(
+					$user_id,
+					$this->request->variable('zebra_profile_acl', 5)
+				);
+				$this->user->data['profile_friend_show'] = $visibility;
+			}
+			if ($this->request->is_set_post('zebra_request_policy'))
+			{
+				$policy = $this->relationships->set_request_policy(
+					$user_id,
+					$this->request->variable('zebra_request_policy', 0)
+				);
+				$this->user->data['zebra_request_policy'] = $policy;
+			}
 		}
 
 		$this->template->assign_vars(array(
 			'IS_ZEBRA'           => true,
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
+			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
 		));
 

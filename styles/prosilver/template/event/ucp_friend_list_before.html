@@ -89,6 +89,15 @@
 {% endif %}
 
 <dl>
+	<dt><label for="zebra_request_policy">{{ lang('ZE_REQUEST_POLICY') }}</label><br><span>{{ lang('ZE_REQUEST_POLICY_EXPLAIN') }}</span></dt>
+	<dd><select id="zebra_request_policy" name="zebra_request_policy">
+		<option value="0"{% if ZEBRA_REQUEST_POLICY == 0 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_EVERYONE') }}</option>
+		<option value="1"{% if ZEBRA_REQUEST_POLICY == 1 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS') }}</option>
+		<option value="2"{% if ZEBRA_REQUEST_POLICY == 2 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_NOBODY') }}</option>
+	</select></dd>
+</dl>
+
+<dl>
 	<dt><label for="zebra_profile_acl">{{ lang('ZE_FRIENDLIST') }}</label><br><span>{{ lang('ZE_FRIENDLIST_EXPLAIN') }}</span></dt>
 	<dd><select id="zebra_profile_acl" name="zebra_profile_acl">
 		<option value="0"{% if ZEBRA_ACL == 0 %} selected{% endif %}>{{ lang('ZE_VIS_EVERYONE') }}</option>

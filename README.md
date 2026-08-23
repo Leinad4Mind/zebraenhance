@@ -7,18 +7,20 @@ Zebra Enhance adds confirmed friend requests, directional Close Friends, notific
 - phpBB 3.3.0 or newer in the 3.3.x series (the latest maintenance release is strongly recommended)
 - PHP 7.4 or newer
 
-The 2.0 line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
+The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 
 ## Features
 
 - Friend requests must be accepted before phpBB creates the mutual friendship.
 - Incoming and outgoing requests appear in UCP > Friends.
+- Users can accept requests from everyone, only friends of friends, or nobody.
 - Profile controls create, accept, decline, or cancel requests using numeric IDs and CSRF-protected AJAX.
 - Request and acceptance notifications use a unique request ID.
 - Each user can independently mark an accepted friend as a Close Friend.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Friend acceptance/removal is symmetric and transactional.
-- Friend and request lists are paginated, and pending requests are capped at 100 per account.
+- Friend and request lists are paginated. Administrators can configure the maximum pending requests per account.
+- A configurable cooldown prevents an explicitly declined requester from immediately contacting the same user again.
 - Requests and extension notifications are cleaned when a user is deleted; phpBB core cleans the Zebra rows.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
 - Vendor-prefixed [integration events](docs/events.md) let other extensions react to relationship changes.
@@ -37,11 +39,13 @@ The two user permissions are granted to the standard registered-user groups duri
 
 Copy the extension to `ext/anavaro/zebraenhance`, then enable **Zebra Enhance** in ACP > Customise > Manage extensions.
 
+Board-wide request limits are available in ACP > Customise > Zebra Enhance. Individual request privacy is available in UCP > Friends.
+
 ## Upgrade from 1.x
 
 1. Back up the forum database and extension files.
 2. Disable Zebra Enhance in the ACP. Do **not** purge or delete its data.
-3. Replace the files in `ext/anavaro/zebraenhance` with the 2.0 files.
+3. Replace the files in `ext/anavaro/zebraenhance` with the current 2.x files.
 4. Enable the extension again and let phpBB run its migrations.
 5. Purge phpBB's cache.
 

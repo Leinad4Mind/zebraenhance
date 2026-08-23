@@ -143,6 +143,58 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_user_can_restrict_new_friend_requests_in_ucp()
+	{
+		$requester = 'zepolicy';
+		$this->create_user($requester);
+
+		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(1, $crawler->filter('select[name=zebra_request_policy]')->count());
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_request_policy'] = 2;
+		self::submit($form);
+		$this->logout();
+
+		$this->login($requester);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler), 409);
+		$this->assertFalse($response['success']);
+		$this->assertSame($this->lang('ZE_FRIEND_REQUEST_UNCHANGED'), $response['message']);
+		$this->logout();
+
+		$crawler = $this->open_friends_as('admin');
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_request_policy'] = 0;
+		self::submit($form);
+		$this->logout();
+	}
+
+	public function test_acp_request_limits_can_be_saved()
+	{
+		$this->login();
+		$this->admin_login();
+		$this->add_lang_ext('anavaro/zebraenhance', 'info_acp_zebraenhance');
+		$url = 'adm/index.php?i=%5Canavaro%5Czebraenhance%5Cacp%5Csettings_module&mode=settings&sid=' . $this->sid;
+		$crawler = self::request('GET', $url);
+		$this->assertSame(1, $crawler->filter('input[name=ze_max_pending_requests]')->count());
+		$this->assertSame(1, $crawler->filter('input[name=ze_decline_cooldown_days]')->count());
+
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['ze_max_pending_requests'] = 12;
+		$form['ze_decline_cooldown_days'] = 3;
+		$crawler = self::submit($form);
+		$this->assertStringContainsString($this->lang('ACP_ZEBRA_ENHANCE_SAVED'), $crawler->filter('#main')->text());
+
+		$crawler = self::request('GET', $url);
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['ze_max_pending_requests'] = 100;
+		$form['ze_decline_cooldown_days'] = 7;
+		self::submit($form);
+		$this->logout();
+	}
+
 	protected function send_request_as_admin($username)
 	{
 		$this->login();
