@@ -15,10 +15,19 @@ class ext extends \phpbb\extension\base
 {
 	public function is_enableable()
 	{
-		return version_compare(PHP_VERSION, '7.4.0', '>=')
-			&& defined('PHPBB_VERSION')
-			&& version_compare(PHPBB_VERSION, '3.3.0', '>=')
-			&& version_compare(PHPBB_VERSION, '4.0.0', '<');
+		$reasons = array();
+		if (version_compare(PHP_VERSION, '7.4.0', '<'))
+		{
+			$reasons[] = 'Zebra Enhance requires PHP 7.4.0 or newer.';
+		}
+		if (!defined('PHPBB_VERSION')
+			|| version_compare(PHPBB_VERSION, '3.3.0', '<')
+			|| version_compare(PHPBB_VERSION, '4.0.0', '>='))
+		{
+			$reasons[] = 'Zebra Enhance requires phpBB 3.3.x.';
+		}
+
+		return $reasons ?: true;
 	}
 
 	public function enable_step($old_state)

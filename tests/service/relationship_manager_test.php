@@ -36,7 +36,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db = $this->new_dbal();
 		$factory = new \phpbb\db\tools\factory();
 		$this->db_tools = $factory->get($this->db);
-		$this->ensure_legacy_columns();
+		$this->ensure_extension_columns();
 		$this->notifications = $this->getMockBuilder('\phpbb\notification\manager')
 			->disableOriginalConstructor()
 			->getMock();
@@ -55,11 +55,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 	}
 
 	/**
-	 * phpBB's unit-test schema generator may process extension migrations
-	 * before the core table definitions. Add the legacy 1.x columns here so
-	 * the service tests exercise the same schema that an installed board has.
+	 * phpBB's database-test schema builder creates core tables after it reads
+	 * extension schemas, so add_columns cannot target them in this test harness.
 	 */
-	protected function ensure_legacy_columns()
+	protected function ensure_extension_columns()
 	{
 		if (!$this->db_tools->sql_column_exists('phpbb_zebra', 'bff'))
 		{
@@ -188,6 +187,17 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 		$this->assertSame(array(), $this->relationships->process_additions('friends', $rows, $results));
 		$this->assertSame(array('ignored'), $results);
+	}
+
+	public function test_only_unique_constraint_errors_are_treated_as_request_races()
+	{
+		$method = new \ReflectionMethod($this->relationships, 'is_duplicate_key_error');
+		$method->setAccessible(true);
+
+		$this->assertTrue($method->invoke($this->relationships, array('code' => 1062, 'message' => 'duplicate')));
+		$this->assertTrue($method->invoke($this->relationships, array('code' => '23505', 'message' => '')));
+		$this->assertTrue($method->invoke($this->relationships, array('code' => 0, 'message' => 'UNIQUE constraint failed')));
+		$this->assertFalse($method->invoke($this->relationships, array('code' => 5, 'message' => 'database is locked')));
 	}
 
 	public function test_request_is_accepted_by_stable_id_and_recipient()

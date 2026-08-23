@@ -13,6 +13,14 @@ namespace anavaro\zebraenhance\tests;
 
 class ext_test extends \phpbb_test_case
 {
+	public function test_current_environment_is_enableable()
+	{
+		$notifications = $this->getMockBuilder('\phpbb\notification\manager')
+			->disableOriginalConstructor()
+			->getMock();
+		$this->assertTrue($this->extension($notifications, false)->is_enableable());
+	}
+
 	public function test_enable_notifications_run_on_initial_false_state()
 	{
 		$notifications = $this->notification_manager('enable_notifications');
@@ -52,10 +60,10 @@ class ext_test extends \phpbb_test_case
 		return $notifications;
 	}
 
-	protected function extension($notifications)
+	protected function extension($notifications, $expect_manager = true)
 	{
 		$container = $this->getMockBuilder('\Symfony\Component\DependencyInjection\ContainerInterface')->getMock();
-		$container->expects($this->once())
+		$container->expects($expect_manager ? $this->once() : $this->never())
 			->method('get')
 			->with('notification_manager')
 			->willReturn($notifications);

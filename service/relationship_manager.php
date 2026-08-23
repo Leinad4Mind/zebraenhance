@@ -151,11 +151,17 @@ class relationship_manager
 		);
 		$this->db->sql_return_on_error(true);
 		$result = $this->db->sql_query('INSERT INTO ' . $this->requests_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
+		$sql_error = $result === false ? $this->db->get_sql_error_returned() : array();
 		$this->db->sql_return_on_error(false);
 
 		// A concurrent reverse request may have won the unique user-pair key.
 		if ($result === false)
 		{
+			if (!$this->is_duplicate_key_error($sql_error))
+			{
+				throw new \RuntimeException('Unable to create the friend request.');
+			}
+
 			$request = $this->get_request_between($requester_id, $recipient_id);
 			if ($request && (int) $request['requester_id'] === $recipient_id)
 			{
@@ -173,6 +179,18 @@ class relationship_manager
 		));
 
 		return 'created';
+	}
+
+	protected function is_duplicate_key_error(array $error)
+	{
+		$code = isset($error['code']) ? (string) $error['code'] : '';
+		if (in_array($code, array('19', '1062', '23000', '23505', '2601', '2627'), true))
+		{
+			return true;
+		}
+
+		$message = isset($error['message']) ? $error['message'] : '';
+		return (bool) preg_match('#(?:duplicate|unique constraint|unique violation)#i', $message);
 	}
 
 	/**
