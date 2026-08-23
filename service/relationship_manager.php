@@ -82,7 +82,7 @@ class relationship_manager
 	 * @param array  $results Outcomes for intercepted friend requests
 	 * @return array Rows phpBB should continue inserting
 	 */
-	public function process_additions($mode, array $rows, array &$results = null)
+	public function process_additions($mode, array $rows, ?array &$results = null)
 	{
 		$results = array();
 		if ($mode === 'friends')
@@ -204,6 +204,67 @@ class relationship_manager
 		}
 
 		$this->delete_request_notifications($requests);
+	}
+
+	/**
+	 * Accept, decline, or cancel a request using its stable request ID.
+	 *
+	 * @return string|false The completed action, or false when it is not owned
+	 *                      by the acting user
+	 */
+	public function manage_request($request_id, $actor_id, $action)
+	{
+		$request_id = (int) $request_id;
+		$actor_id = (int) $actor_id;
+		if (!$request_id || !$actor_id || !in_array($action, array('accept', 'decline', 'cancel'), true))
+		{
+			return false;
+		}
+
+		$request = $this->get_request_by_id($request_id);
+		if (!$request)
+		{
+			return false;
+		}
+
+		if ($action === 'accept')
+		{
+			return (int) $request['recipient_id'] === $actor_id && $this->accept_request($request, $actor_id)
+				? 'accepted'
+				: false;
+		}
+
+		$owner_column = $action === 'decline' ? 'recipient_id' : 'requester_id';
+		if ((int) $request[$owner_column] !== $actor_id)
+		{
+			return false;
+		}
+
+		$this->db->sql_transaction('begin');
+		try
+		{
+			$this->delete_request_rows(array($request));
+			$this->delete_legacy_between((int) $request['requester_id'], (int) $request['recipient_id']);
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		$this->delete_request_notifications(array($request));
+		return $action === 'decline' ? 'declined' : 'cancelled';
+	}
+
+	public function set_friend_list_visibility($user_id, $visibility)
+	{
+		$visibility = max(0, min(5, (int) $visibility));
+		$this->db->sql_query('UPDATE ' . $this->users_table . '
+			SET profile_friend_show = ' . (int) $visibility . '
+			WHERE user_id = ' . (int) $user_id);
+
+		return $visibility;
 	}
 
 	/**
@@ -523,6 +584,18 @@ class relationship_manager
 			FROM ' . $this->requests_table . '
 			WHERE user_low = ' . min((int) $user_id, (int) $zebra_id) . '
 				AND user_high = ' . max((int) $user_id, (int) $zebra_id);
+		$result = $this->db->sql_query_limit($sql, 1);
+		$row = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		return $row ?: false;
+	}
+
+	protected function get_request_by_id($request_id)
+	{
+		$sql = 'SELECT *
+			FROM ' . $this->requests_table . '
+			WHERE request_id = ' . (int) $request_id;
 		$result = $this->db->sql_query_limit($sql, 1);
 		$row = $this->db->sql_fetchrow($result);
 		$this->db->sql_freeresult($result);

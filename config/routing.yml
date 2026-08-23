@@ -5,3 +5,11 @@ anavaro_zebraenhance_close_friend:
     requirements:
         userid: \d+
         state: 0|1
+
+anavaro_zebraenhance_manage_request:
+    path: /zebraenhance/request/{requestid}/{action}
+    defaults: { _controller: anavaro.zebraenhance.controller:manage_request }
+    methods: [POST]
+    requirements:
+        requestid: \d+
+        action: accept|decline|cancel

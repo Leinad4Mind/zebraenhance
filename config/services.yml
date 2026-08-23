@@ -19,7 +19,6 @@ services:
             - '@anavaro.zebraenhance.relationships'
             - '@user_loader'
             - '@auth'
-            - '@dbal.conn'
             - '@request'
             - '@template'
             - '@user'
@@ -27,7 +26,6 @@ services:
             - '@controller.helper'
             - '%core.root_path%'
             - '%core.php_ext%'
-            - '%core.table_prefix%users'
         tags:
             - { name: event.listener }
 

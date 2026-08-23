@@ -52,7 +52,9 @@ class ajaxify
 	public function set_close_friend($userid, $state)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
-		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_close_friends'))
+		if ((int) $this->user->data['user_id'] === ANONYMOUS
+			|| !$this->auth->acl_get('u_ze_use')
+			|| !$this->auth->acl_get('u_ze_close_friends'))
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}
@@ -73,6 +75,44 @@ class ajaxify
 			'user_id'  => (int) $userid,
 			'is_close' => $is_close,
 			'label'    => $this->language->lang($is_close ? 'ZE_REMOVE_CLOSE_FRIEND' : 'ZE_ADD_CLOSE_FRIEND'),
+		));
+	}
+
+	/**
+	 * Accept, decline, or cancel a request using its stable ID.
+	 */
+	public function manage_request($requestid, $action)
+	{
+		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
+		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		{
+			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+		}
+
+		if (!check_form_key('anavaro_zebraenhance'))
+		{
+			return $this->error('FORM_INVALID', 403);
+		}
+
+		$result = $this->relationships->manage_request(
+			(int) $requestid,
+			(int) $this->user->data['user_id'],
+			(string) $action
+		);
+		if ($result === false)
+		{
+			return $this->error('ZE_AJAX_REQUEST_NOT_FOUND', 404);
+		}
+
+		$messages = array(
+			'accepted'  => 'ZE_REQUEST_ACCEPTED',
+			'declined'  => 'ZE_REQUEST_DECLINED',
+			'cancelled' => 'ZE_REQUEST_CANCELLED',
+		);
+		return new JsonResponse(array(
+			'success' => true,
+			'action'  => $result,
+			'message' => $this->language->lang($messages[$result]),
 		));
 	}
 

@@ -190,6 +190,65 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(array('ignored'), $results);
 	}
 
+	public function test_request_is_accepted_by_stable_id_and_recipient()
+	{
+		$this->notifications->expects($this->once())
+			->method('delete_notifications')
+			->with('anavaro.zebraenhance.notification.zebraadd', 1, false, 3);
+		$this->notifications->expects($this->once())
+			->method('add_notifications')
+			->with(
+				'anavaro.zebraenhance.notification.zebraconfirm',
+				$this->callback(function ($data)
+				{
+					return $data['request_id'] === 1
+						&& $data['requester_id'] === 3
+						&& isset($data['user_id'][2]);
+				})
+			);
+
+		$this->assertSame('accepted', $this->relationships->manage_request(1, 3, 'accept'));
+		$this->assertSame(2, $this->count_friend_rows(2, 3));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
+	}
+
+	public function test_request_actions_enforce_directional_ownership()
+	{
+		$this->assertFalse($this->relationships->manage_request(1, 2, 'accept'));
+		$this->assertFalse($this->relationships->manage_request(1, 2, 'decline'));
+		$this->assertFalse($this->relationships->manage_request(1, 3, 'cancel'));
+		$this->assertFalse($this->relationships->manage_request(999, 3, 'accept'));
+		$this->assertSame(2, $this->count_rows('phpbb_zebra_requests'));
+	}
+
+	public function test_recipient_can_decline_request_by_id()
+	{
+		$this->notifications->expects($this->once())
+			->method('delete_notifications')
+			->with('anavaro.zebraenhance.notification.zebraadd', 1, false, 3);
+
+		$this->assertSame('declined', $this->relationships->manage_request(1, 3, 'decline'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
+	}
+
+	public function test_requester_can_cancel_request_by_id()
+	{
+		$this->notifications->expects($this->once())
+			->method('delete_notifications')
+			->with('anavaro.zebraenhance.notification.zebraadd', 2, false, 52);
+
+		$this->assertSame('cancelled', $this->relationships->manage_request(2, 2, 'cancel'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
+	}
+
+	public function test_friend_list_visibility_is_clamped_and_persisted()
+	{
+		$this->assertSame(5, $this->relationships->set_friend_list_visibility(2, 99));
+		$result = $this->db->sql_query('SELECT profile_friend_show FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(5, (int) $this->db->sql_fetchfield('profile_friend_show'));
+		$this->db->sql_freeresult($result);
+	}
+
 	public function test_friend_list_visibility_rules()
 	{
 		$this->assertTrue($this->relationships->can_view_friend_list(4, ANONYMOUS, 0));

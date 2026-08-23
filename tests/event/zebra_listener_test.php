@@ -37,15 +37,13 @@ class zebra_listener_test extends \phpbb_test_case
 			$this->relationships,
 			$this->getMockBuilder('\phpbb\user_loader')->disableOriginalConstructor()->getMock(),
 			$this->auth,
-			$this->getMockBuilder('\phpbb\db\driver\driver_interface')->getMock(),
 			$this->getMockBuilder('\phpbb\request\request_interface')->getMock(),
 			$this->getMockBuilder('\phpbb\template\template')->getMock(),
 			$user,
 			$this->getMockBuilder('\phpbb\language\language')->disableOriginalConstructor()->getMock(),
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
 			'./',
-			'php',
-			'phpbb_users'
+			'php'
 		);
 	}
 
@@ -80,8 +78,13 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->auth->expects($this->once())->method('acl_get')->with('u_ze_use')->willReturn(true);
 		$this->relationships->expects($this->once())
 			->method('process_additions')
-			->with($mode, $sql_ary)
-			->willReturn(array());
+			->willReturnCallback(function ($actual_mode, $actual_rows, &$results) use ($mode, $sql_ary)
+			{
+				$this->assertSame($mode, $actual_mode);
+				$this->assertSame($sql_ary, $actual_rows);
+				$results = array('created');
+				return array();
+			});
 
 		$event = new \phpbb\event\data(compact('mode', 'sql_ary'));
 		$this->listener->zebra_confirm_add($event);

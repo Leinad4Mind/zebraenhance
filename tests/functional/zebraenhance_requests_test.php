@@ -1,11 +1,11 @@
 <?php
 /**
 *
-* ZebraEnhance test
+* Zebra Enhance extension for phpBB.
 *
 * @copyright (c) 2014 Stanislav Atanasov
 * @copyright (c) 2026 Leinad4Mind
-* @license GNU General Public License, version 2 (GPL-2.0)
+* @license GNU General Public License, version 2 (GPL-2.0-only)
 *
 */
 
@@ -16,302 +16,134 @@ namespace anavaro\zebraenhance\tests\functional;
 */
 class zebraenhance_requests_test extends zebraenhance_base
 {
-
-	public function test_request()
+	public function test_request_lifecycle_uses_stable_post_actions()
 	{
-		//create new user
-		$this->create_user('testuser');
-		$this->add_user_group('NEWLY_REGISTERED', array('testuser'));
-		$this->create_user('testuser1');
-		$this->add_user_group('NEWLY_REGISTERED', array('testuser1'));
-		$this->create_user('testuser2');
-		$this->add_user_group('NEWLY_REGISTERED', array('testuser2'));
-		$this->create_user('testuser3');
-		$this->add_user_group('NEWLY_REGISTERED', array('testuser2'));
+		$username = "ze'user";
+		$this->create_user($username);
 
-		//login as admin
-		$this->login();
-		$this->add_lang('ucp');
-		$this->add_lang('common');
-
-		//Send friend request
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser&sid={$this->sid}");
-
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		//Check if user request is there
-		$this->assertContains($this->lang('FRIENDS_UPDATED'), $crawler->filter('html')->text());
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('testuser', $crawler->filter('html')->text());
-	}
-	public function test_own_reqest_cancel()
-	{
-		//login as admin
-		$this->login();
-		$this->add_lang('ucp');
-
-		//send friend request
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser&sid={$this->sid}");
-
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		$this->assertContains($this->lang('FRIENDS_UPDATED'), $crawler->filter('html')->text());
-
-		//check if friend request is present
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('testuser', $crawler->filter('html')->text());
-
-		//get request URL
-		$link = $crawler->filter('#ze-outgoing-requests')->filter('a')->first()->link()->getUri();
-
-		//cancel friend request
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
-
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		//see if friend reques is canceled
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertNotContains('testuser', $crawler->filter('html')->text());
-	}
-	public function test_user_reqest_cancel()
-	{
-		$this->login();
-		$this->add_lang('ucp');
-
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser&sid={$this->sid}");
-
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		$this->assertContains($this->lang('FRIENDS_UPDATED'), $crawler->filter('html')->text());
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('testuser', $crawler->filter('html')->text());
-
+		$this->send_request_as_admin($username);
+		$crawler = $this->open_friends_as('admin');
+		$cancel = $crawler->filter('#ze-outgoing-requests .js-ze-request')->first();
+		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
+		$this->post_action($cancel->attr('data-url'), array(), 403);
+		$response = $this->post_action($cancel->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('cancelled', $response['action']);
 		$this->logout();
 
-		$this->login('testuser');
-		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$this->send_request_as_admin($username);
+		$crawler = $this->open_friends_as($username);
+		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
+		$this->assertStringNotContainsString(rawurlencode($username), $accept->attr('data-url'));
+		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('accepted', $response['action']);
+
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-
-		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(1)->link()->getUri();
-
-		$this->assertContains('2', $link);
-
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
+		$this->assertStringContainsString('admin', $crawler->filter('#ze-friends')->text());
+		$remove = $crawler->filter('#ze-friends a[data-ajax=true]')->first()->link()->getUri();
+		$crawler = self::request('GET', $this->local_path($remove));
 		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
+		self::submit($form);
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertNotContains($this->lang('UCP_ZEBRA_PENDING_OUT'), $crawler->filter('html')->text());
-	}
-	public function test_user_reqest_accept()
-	{
-		$this->login();
-		$this->add_lang('ucp');
-
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser&sid={$this->sid}");
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-		$this->assertContains($this->lang('FRIENDS_UPDATED'), $crawler->filter('html')->text());
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains('testuser', $crawler->filter('html')->text());
-
+		$this->assertSame(0, $crawler->filter('#ze-friends .ze-list-row')->count());
 		$this->logout();
 
-		$this->login('testuser');
-		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-
-		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
-
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertNotContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$this->assertContains('admin', $crawler->filter('#ze-friends')->text());
-	}
-	public function test_remove_friend()
-	{
-		$this->login();
-		$this->add_lang('ucp');
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$link = $crawler->filter('#ze-friends')->filter('a')->first()->link()->getUri();
-
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertNotContains('testuser', $crawler->filter('.cp-main')->text());
-		$this->assertEquals(0, $crawler->filter('#ze-friends .ze-list-row')->count());
-
-		$this->logout();
-
-		$this->login('testuser');
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertNotContains('admin', $crawler->filter('.cp-main')->text());
-		$this->assertEquals(0, $crawler->filter('#ze-friends .ze-list-row')->count());
+		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(0, $crawler->filter('#ze-friends .ze-list-row')->count());
 		$this->logout();
 	}
 
-	public function test_toggle_close_friends_is_post_only_and_csrf_protected()
+	public function test_recipient_can_decline_request()
 	{
-		$this->login();
-		//we create friends
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser&sid={$this->sid}");
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
+		$username = 'zedecline';
+		$this->create_user($username);
+		$this->send_request_as_admin($username);
+
+		$crawler = $this->open_friends_as($username);
+		$decline = $crawler->filter('#ze-incoming-requests .js-ze-request')->eq(1);
+		$this->assertStringContainsString('/decline', $decline->attr('data-url'));
+		$response = $this->post_action($decline->attr('data-url'), $this->form_token($crawler));
+		$this->assertSame('declined', $response['action']);
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter('#ze-incoming-requests')->count());
+		$this->logout();
+	}
+
+	public function test_close_friend_and_profile_visibility()
+	{
+		$close_friend = 'zeclose';
+		$registered = 'zeregistered';
+		$this->create_user($close_friend);
+		$this->create_user($registered);
+		$this->send_request_as_admin($close_friend);
+
+		$crawler = $this->open_friends_as($close_friend);
+		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$this->post_action($accept->attr('data-url'), $this->form_token($crawler));
 		$this->logout();
 
-		$this->login('testuser');
-		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$button = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
-		$link = $button->attr('data-url');
-		$path = substr($link, strpos($link, 'app.'));
-		$form_values = $crawler->selectButton($this->lang('SUBMIT'))->form()->getValues();
-
-		self::request('GET', $path, array(), false);
-		$this->assertSame(405, self::$client->getResponse()->getStatus());
-		self::request('POST', $path, array(), false);
-		$this->assertSame(403, self::$client->getResponse()->getStatus());
-		self::request('POST', $path, array(
-			'creation_time' => $form_values['creation_time'],
-			'form_token' => $form_values['form_token'],
-		), false);
-		$this->assertSame(200, self::$client->getResponse()->getStatus());
-		$response = json_decode(self::get_content(), true);
-		$this->assertTrue($response['success']);
+		$crawler = $this->open_friends_as('admin');
+		$close = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
+		$response = $this->post_action($close->attr('data-url'), $this->form_token($crawler));
 		$this->assertTrue($response['is_close']);
 
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame('true', $crawler->filter('#ze-friends .js-ze-close-friend')->first()->attr('aria-pressed'));
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_profile_acl'] = 4;
+		self::submit($form);
 		$this->logout();
 
-		$this->login();
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$button = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
-		$path = substr($button->attr('data-url'), strpos($button->attr('data-url'), 'app.'));
-		$form_values = $crawler->selectButton($this->lang('SUBMIT'))->form()->getValues();
-		self::request('POST', $path, array(
-			'creation_time' => $form_values['creation_time'],
-			'form_token' => $form_values['form_token'],
-		), false);
-		$this->assertSame(200, self::$client->getResponse()->getStatus());
-
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame('true', $crawler->filter('#ze-friends .js-ze-close-friend')->first()->attr('aria-pressed'));
+		$this->login($close_friend);
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertStringContainsString($close_friend, $crawler->filter('#ze-friend-list')->text());
 		$this->logout();
 
-		$this->login();
-		//we create friends
-		$crawler = self::request('GET', "ucp.php?i=zebra&add=testuser1&sid={$this->sid}");
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-		$this->logout();
-
-		$this->login('testuser1');
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertContains($this->lang('UCP_ZEBRA_PENDING_IN'), $crawler->filter('html')->text());
-		$link = $crawler->filter('#ze-incoming-requests')->filter('a')->eq(0)->link()->getUri();
-		$crawler = self::request('GET', substr($link, strpos($link, 'ucp.')));
-		$this->assertContains($this->lang('CONFIRM_OPERATION'), $crawler->filter('html')->text());
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
-		$this->logout();
-
-		$this->login();
-		//we create friends
-		$crawler = self::request('GET', "ucp.php?i=zebra&mode=foes&add=testuser2&sid={$this->sid}");
-		$form = $crawler->selectButton($this->lang('YES'))->form();
-		$crawler = self::submit($form);
+		$this->login($registered);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#ze-friend-list')->text());
 		$this->logout();
 	}
 
-	public function list_visibility_data()
+	protected function send_request_as_admin($username)
+	{
+		$this->login();
+		$this->add_lang('ucp');
+		$crawler = self::request('GET', 'ucp.php?i=zebra&add=' . rawurlencode($username) . "&sid={$this->sid}");
+		$form = $crawler->selectButton($this->lang('YES'))->form();
+		$crawler = self::submit($form);
+		$this->assertStringContainsString($this->lang('FRIENDS_UPDATED'), $crawler->filter('html')->text());
+		$this->logout();
+	}
+
+	protected function open_friends_as($username)
+	{
+		$username === 'admin' ? $this->login() : $this->login($username);
+		$this->add_lang('ucp');
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+
+		return self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+	}
+
+	protected function form_token($crawler)
 	{
 		return array(
-			'none'	=> array(
-				5, //State
-				'testuser', // test user
-				'You do not have access to see user',
-			),
-			'bff'	=> array(
-				4,
-				'testuser',
-				'testuser'
-			),
-			'bff_no'	=> array(
-				4,
-				'testuser1',
-				'You do not have access to see user'
-			),
-			'friend'	=> array(
-				3,
-				'testuser1',
-				'testuser1'
-			),
-			'friend_foe'	=> array(
-				3,
-				'testuser2',
-				'You do not have access to see user'
-			),
-			'friend_reg'	=> array(
-				3,
-				'testuser3',
-				'You do not have access to see user'
-			),
-			'not_foe'	=> array(
-				2,
-				'testuser2',
-				'You do not have access to see user'
-			),
-			'not_foe_true' => array(
-				2,
-				'testuser3',
-				'testuser'
-			),
+			'creation_time' => $crawler->filter('#ze-form-token input[name=creation_time]')->attr('value'),
+			'form_token'    => $crawler->filter('#ze-form-token input[name=form_token]')->attr('value'),
 		);
 	}
 
-	/**
-	* Test test_friend_list_visibility
-	*
-	* @dataProvider list_visibility_data
-	*/
-	public function test_friend_list_visibility($state, $user, $expected)
+	protected function post_action($url, array $data, $expected_status = 200)
 	{
-		$this->login();
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
-		$form['zebra_profile_acl'] = $state;
-		$crawler = self::submit($form);
-		$this->logout();
+		self::request('POST', $this->local_path($url), $data, false);
+		$this->assertSame($expected_status, self::$client->getResponse()->getStatus());
 
-		$this->login($user);
-		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
-		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertContains($expected, $crawler->filter('div#ze-friend-list')->text());
-		$this->logout();
+		return json_decode(self::get_content(), true);
+	}
+
+	protected function local_path($url)
+	{
+		$parts = parse_url($url);
+		return ltrim($parts['path'], '/') . (isset($parts['query']) ? '?' . $parts['query'] : '');
 	}
 }

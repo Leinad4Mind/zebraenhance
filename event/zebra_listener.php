@@ -25,9 +25,6 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var \phpbb\auth\auth */
 	protected $auth;
 
-	/** @var \phpbb\db\driver\driver_interface */
-	protected $db;
-
 	/** @var \phpbb\request\request_interface */
 	protected $request;
 
@@ -49,28 +46,22 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var string */
 	protected $php_ext;
 
-	/** @var string */
-	protected $users_table;
-
 	public function __construct(
 		\anavaro\zebraenhance\service\relationship_manager $relationships,
 		\phpbb\user_loader $user_loader,
 		\phpbb\auth\auth $auth,
-		\phpbb\db\driver\driver_interface $db,
 		\phpbb\request\request_interface $request,
 		\phpbb\template\template $template,
 		\phpbb\user $user,
 		\phpbb\language\language $language,
 		\phpbb\controller\helper $controller_helper,
 		$root_path,
-		$php_ext,
-		$users_table
+		$php_ext
 	)
 	{
 		$this->relationships = $relationships;
 		$this->user_loader = $user_loader;
 		$this->auth = $auth;
-		$this->db = $db;
 		$this->request = $request;
 		$this->template = $template;
 		$this->user = $user;
@@ -78,7 +69,6 @@ class zebra_listener implements EventSubscriberInterface
 		$this->controller_helper = $controller_helper;
 		$this->root_path = $root_path;
 		$this->php_ext = $php_ext;
-		$this->users_table = $users_table;
 	}
 
 	static public function getSubscribedEvents()
@@ -110,10 +100,16 @@ class zebra_listener implements EventSubscriberInterface
 		if ($mode === 'friends' && !$this->auth->acl_get('u_ze_use'))
 		{
 			$event['sql_ary'] = array();
+			trigger_error('ZE_FRIEND_REQUEST_NOT_AUTHORIZED');
 			return;
 		}
 
-		$event['sql_ary'] = $this->relationships->process_additions($mode, $sql_ary);
+		$results = array();
+		$event['sql_ary'] = $this->relationships->process_additions($mode, $sql_ary, $results);
+		if ($mode === 'friends' && !array_intersect($results, array('created', 'accepted')))
+		{
+			trigger_error('ZE_FRIEND_REQUEST_UNCHANGED');
+		}
 	}
 
 	public function zebra_confirm_remove($event)
@@ -139,7 +135,7 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		add_form_key('anavaro_zebraenhance');
+		add_form_key('anavaro_zebraenhance', '_ZE');
 		$user_id = (int) $this->user->data['user_id'];
 		if ($this->request->is_set_post('zebra_profile_acl'))
 		{
@@ -148,11 +144,10 @@ class zebra_listener implements EventSubscriberInterface
 				trigger_error('FORM_INVALID');
 			}
 
-			$visibility = max(0, min(5, $this->request->variable('zebra_profile_acl', 5)));
-			$sql = 'UPDATE ' . $this->users_table . '
-				SET profile_friend_show = ' . (int) $visibility . '
-				WHERE user_id = ' . (int) $user_id;
-			$this->db->sql_query($sql);
+			$visibility = $this->relationships->set_friend_list_visibility(
+				$user_id,
+				$this->request->variable('zebra_profile_acl', 5)
+			);
 			$this->user->data['profile_friend_show'] = $visibility;
 		}
 
@@ -162,40 +157,52 @@ class zebra_listener implements EventSubscriberInterface
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
 		));
 
-		foreach ($this->relationships->get_requests($user_id, true) as $row)
+		$incoming = $this->relationships->get_requests($user_id, true);
+		$outgoing = $this->relationships->get_requests($user_id, false);
+		$friends = $this->relationships->get_friends($user_id);
+		$identity_ids = array();
+		foreach (array_merge($incoming, $outgoing) as $row)
+		{
+			$identity_ids[] = (int) ((int) $row['requester_id'] === $user_id ? $row['recipient_id'] : $row['requester_id']);
+		}
+		foreach ($friends as $row)
+		{
+			$identity_ids[] = (int) $row['zebra_id'];
+		}
+		$identity_ids = array_values(array_unique(array_filter($identity_ids)));
+		if ($identity_ids)
+		{
+			$this->user_loader->load_users($identity_ids);
+		}
+
+		foreach ($incoming as $row)
 		{
 			$requester_id = (int) $row['requester_id'];
 			$this->template->assign_block_vars('pending_requests', array(
-				'USER_ID'     => $requester_id,
-				'USERNAME'    => $row['username'],
-				'USER_COLOUR' => $row['user_colour'],
-				'U_PROFILE'   => $this->profile_url($requester_id),
-				'U_CONFIRM'   => $this->ucp_friend_url('add=' . urlencode(html_entity_decode($row['username'], ENT_COMPAT))),
-				'U_CANCEL'    => $this->ucp_friend_url('remove=1&usernames[]=' . $requester_id),
+				'USER_ID'       => $requester_id,
+				'USERNAME_FULL' => $this->user_loader->get_username($requester_id, 'full'),
+				'U_ACCEPT'      => $this->request_action_url((int) $row['request_id'], 'accept'),
+				'U_DECLINE'     => $this->request_action_url((int) $row['request_id'], 'decline'),
 			));
 		}
 
-		foreach ($this->relationships->get_requests($user_id, false) as $row)
+		foreach ($outgoing as $row)
 		{
 			$recipient_id = (int) $row['recipient_id'];
 			$this->template->assign_block_vars('pending_awaits', array(
-				'USER_ID'     => $recipient_id,
-				'USERNAME'    => $row['username'],
-				'USER_COLOUR' => $row['user_colour'],
-				'U_PROFILE'   => $this->profile_url($recipient_id),
-				'U_CANCEL'    => $this->ucp_friend_url('remove=1&usernames[]=' . $recipient_id),
+				'USER_ID'       => $recipient_id,
+				'USERNAME_FULL' => $this->user_loader->get_username($recipient_id, 'full'),
+				'U_CANCEL'      => $this->request_action_url((int) $row['request_id'], 'cancel'),
 			));
 		}
 
-		foreach ($this->relationships->get_friends($user_id) as $row)
+		foreach ($friends as $row)
 		{
 			$friend_id = (int) $row['zebra_id'];
 			$is_close = (bool) $row['bff'];
 			$this->template->assign_block_vars('pretty_zebra', array(
 				'USER_ID'       => $friend_id,
-				'USERNAME'      => $row['username'],
-				'USER_COLOUR'   => $row['user_colour'],
-				'U_PROFILE'     => $this->profile_url($friend_id),
+				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
 				'U_CANCEL'      => $this->ucp_friend_url('remove=1&usernames[]=' . $friend_id),
 				'U_CLOSE_ADD'   => $this->controller_helper->route('anavaro_zebraenhance_close_friend', array(
 					'userid' => $friend_id,
@@ -218,6 +225,11 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function prepare_friends($event)
 	{
+		if (!$this->auth->acl_get('u_ze_use'))
+		{
+			return;
+		}
+
 		$member = $event['member'];
 		$owner_id = (int) $member['user_id'];
 		$viewer_id = (int) $this->user->data['user_id'];
@@ -228,6 +240,7 @@ class zebra_listener implements EventSubscriberInterface
 			(int) $member['profile_friend_show'],
 			$override,
 			(bool) $this->user->data['is_registered']
+				&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE)
 		);
 
 		$this->template->assign_vars(array(
@@ -254,11 +267,10 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			$friend_id = (int) $row['zebra_id'];
 			$this->template->assign_block_vars('zebra_friendslist', array(
-				'USER_ID'     => $friend_id,
-				'USERNAME'    => $row['username'],
-				'USER_COLOUR' => $row['user_colour'],
-				'U_PROFILE'   => $this->profile_url($friend_id),
-				'USER_AVATAR' => $this->user_loader->get_avatar($friend_id, false, true),
+				'USER_ID'       => $friend_id,
+				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
+				'U_PROFILE'     => $this->profile_url($friend_id),
+				'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
 			));
 		}
 	}
@@ -266,6 +278,11 @@ class zebra_listener implements EventSubscriberInterface
 	protected function is_zebra_friends_module($event)
 	{
 		if ($event['mode'] !== 'friends')
+		{
+			return false;
+		}
+
+		if (!isset($event['module']->module_ary) || !is_array($event['module']->module_ary))
 		{
 			return false;
 		}
@@ -279,9 +296,7 @@ class zebra_listener implements EventSubscriberInterface
 				continue;
 			}
 
-			return is_int($normalized_id)
-				? (int) $module['id'] === $normalized_id
-				: $module['name'] === $normalized_id;
+			return is_int($normalized_id) ? (int) $module['id'] === $normalized_id : $normalized_id === 'ucp_zebra';
 		}
 
 		return false;
@@ -295,5 +310,13 @@ class zebra_listener implements EventSubscriberInterface
 	protected function ucp_friend_url($parameters)
 	{
 		return append_sid($this->root_path . 'ucp.' . $this->php_ext, 'i=ucp_zebra&mode=friends&' . $parameters);
+	}
+
+	protected function request_action_url($request_id, $action)
+	{
+		return $this->controller_helper->route('anavaro_zebraenhance_manage_request', array(
+			'requestid' => (int) $request_id,
+			'action'    => $action,
+		));
 	}
 }
