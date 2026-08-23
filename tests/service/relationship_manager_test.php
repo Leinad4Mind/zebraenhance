@@ -13,6 +13,7 @@ namespace anavaro\zebraenhance\tests\service;
 class relationship_manager_test extends \phpbb_database_test_case
 {
 	protected $db;
+	protected $db_tools;
 	protected $notifications;
 	protected $relationships;
 
@@ -32,12 +33,15 @@ class relationship_manager_test extends \phpbb_database_test_case
 	{
 		parent::setUp();
 		$this->db = $this->new_dbal();
+		$factory = new \phpbb\db\tools\factory();
+		$this->db_tools = $factory->get($this->db);
 		$this->ensure_legacy_columns();
 		$this->notifications = $this->getMockBuilder('\phpbb\notification\manager')
 			->disableOriginalConstructor()
 			->getMock();
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
+			$this->db_tools,
 			$this->notifications,
 			'phpbb_zebra_requests',
 			'phpbb_zebra_confirm',
@@ -56,20 +60,17 @@ class relationship_manager_test extends \phpbb_database_test_case
 	 */
 	protected function ensure_legacy_columns()
 	{
-		$factory = new \phpbb\db\tools\factory();
-		$db_tools = $factory->get($this->db);
-
-		if (!$db_tools->sql_column_exists('phpbb_zebra', 'bff'))
+		if (!$this->db_tools->sql_column_exists('phpbb_zebra', 'bff'))
 		{
-			$db_tools->sql_column_add('phpbb_zebra', 'bff', array('UINT', 0));
+			$this->db_tools->sql_column_add('phpbb_zebra', 'bff', array('UINT', 0));
 		}
-		if (!$db_tools->sql_column_exists('phpbb_users', 'profile_friend_show'))
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'profile_friend_show'))
 		{
-			$db_tools->sql_column_add('phpbb_users', 'profile_friend_show', array('UINT', 5));
+			$this->db_tools->sql_column_add('phpbb_users', 'profile_friend_show', array('UINT', 5));
 		}
-		if (!$db_tools->sql_column_exists('phpbb_users', 'zebra_changed'))
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_changed'))
 		{
-			$db_tools->sql_column_add('phpbb_users', 'zebra_changed', array('UINT', 0));
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_changed', array('UINT', 0));
 		}
 	}
 
@@ -160,11 +161,20 @@ class relationship_manager_test extends \phpbb_database_test_case
 	public function test_user_deletion_cleans_requests_and_all_custom_notifications()
 	{
 		$this->notifications->expects($this->once())->method('delete_notifications');
+		if ($this->db_tools->sql_table_exists('phpbb_notification_emails'))
+		{
+			$this->db->sql_query('INSERT INTO phpbb_notification_emails
+				(notification_type_id, item_id, item_parent_id, user_id)
+				VALUES (90, 41, 2, 3)');
+		}
 
 		$this->relationships->delete_user_data(array(3));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
 		$this->assertSame(0, $this->count_rows('phpbb_notifications'));
-		$this->assertSame(0, $this->count_rows('phpbb_notification_emails'));
+		if ($this->db_tools->sql_table_exists('phpbb_notification_emails'))
+		{
+			$this->assertSame(0, $this->count_rows('phpbb_notification_emails'));
+		}
 
 		$sql = 'SELECT COUNT(*) AS total FROM phpbb_zebra_confirm
 			WHERE user_id = 3 OR zebra_id = 3';

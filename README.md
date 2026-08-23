@@ -4,7 +4,7 @@ Zebra Enhance adds confirmed friend requests, directional Close Friends, notific
 
 ## Requirements
 
-- phpBB 3.3.17
+- phpBB 3.3.0 or newer in the 3.3.x series (the latest maintenance release is strongly recommended)
 - PHP 7.4 or newer
 
 The 2.0 line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
@@ -46,7 +46,7 @@ The migration copies valid rows from the legacy `zebra_confirm` table into the n
 
 ## Development
 
-The test suite targets the official phpBB 3.3.17 source tree. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
+The test suite targets both the first and latest supported phpBB 3.3 releases. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
 
 The complete local verification also exercises the functional suite with phpBB served by PHP 7.4 and PHP 8.4.
 

@@ -16,7 +16,7 @@ class ext extends \phpbb\extension\base
 	{
 		return version_compare(PHP_VERSION, '7.4.0', '>=')
 			&& defined('PHPBB_VERSION')
-			&& version_compare(PHPBB_VERSION, '3.3.17', '>=')
+			&& version_compare(PHPBB_VERSION, '3.3.0', '>=')
 			&& version_compare(PHPBB_VERSION, '4.0.0', '<');
 	}
 

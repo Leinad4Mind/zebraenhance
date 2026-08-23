@@ -3,6 +3,7 @@ services:
         class: anavaro\zebraenhance\service\relationship_manager
         arguments:
             - '@dbal.conn'
+            - '@dbal.tools'
             - '@notification_manager'
             - '%core.table_prefix%zebra_requests'
             - '%core.table_prefix%zebra_confirm'

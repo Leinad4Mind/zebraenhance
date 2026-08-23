@@ -62,10 +62,17 @@ class release_2_0_0_test extends \phpbb_database_test_case
 
 		$db = $this->new_dbal();
 		$factory = new \phpbb\db\tools\factory();
+		$db_tools = $factory->get($db);
+		if ($db_tools->sql_table_exists('phpbb_notification_emails'))
+		{
+			$db->sql_query('INSERT INTO phpbb_notification_emails
+				(notification_type_id, item_id, item_parent_id, user_id)
+				VALUES (90, 41, 2, 3)');
+		}
 		$migration = new \anavaro\zebraenhance\migrations\v20x\release_2_0_0(
 			new \phpbb\config\config(array('zebra_enhance_version' => '1.0.4')),
 			$db,
-			$factory->get($db),
+			$db_tools,
 			$phpbb_root_path,
 			'php',
 			'phpbb_'
@@ -75,8 +82,11 @@ class release_2_0_0_test extends \phpbb_database_test_case
 		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_notifications');
 		$this->assertSame(0, (int) $db->sql_fetchfield('total'));
 		$db->sql_freeresult($result);
-		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_notification_emails');
-		$this->assertSame(0, (int) $db->sql_fetchfield('total'));
-		$db->sql_freeresult($result);
+		if ($db_tools->sql_table_exists('phpbb_notification_emails'))
+		{
+			$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_notification_emails');
+			$this->assertSame(0, (int) $db->sql_fetchfield('total'));
+			$db->sql_freeresult($result);
+		}
 	}
 }

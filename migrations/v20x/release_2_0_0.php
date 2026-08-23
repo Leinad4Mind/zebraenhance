@@ -116,7 +116,13 @@ class release_2_0_0 extends \phpbb\db\migration\migration
 
 		foreach (array('notifications', 'notification_emails') as $table_name)
 		{
-			$this->db->sql_query('DELETE FROM ' . $this->table_prefix . $table_name . '
+			$table = $this->table_prefix . $table_name;
+			if (!$this->db_tools->sql_table_exists($table))
+			{
+				continue;
+			}
+
+			$this->db->sql_query('DELETE FROM ' . $table . '
 				WHERE ' . $this->db->sql_in_set('notification_type_id', $type_ids));
 		}
 	}

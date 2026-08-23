@@ -21,6 +21,9 @@ class relationship_manager
 	/** @var \phpbb\notification\manager */
 	protected $notification_manager;
 
+	/** @var \phpbb\db\tools\tools_interface */
+	protected $db_tools;
+
 	/** @var string */
 	protected $requests_table;
 
@@ -44,6 +47,7 @@ class relationship_manager
 
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
+		\phpbb\db\tools\tools_interface $db_tools,
 		\phpbb\notification\manager $notification_manager,
 		$requests_table,
 		$legacy_requests_table,
@@ -55,6 +59,7 @@ class relationship_manager
 	)
 	{
 		$this->db = $db;
+		$this->db_tools = $db_tools;
 		$this->notification_manager = $notification_manager;
 		$this->requests_table = $requests_table;
 		$this->legacy_requests_table = $legacy_requests_table;
@@ -418,6 +423,11 @@ class relationship_manager
 
 		foreach (array($this->notifications_table, $this->notification_emails_table) as $table)
 		{
+			if (!$this->db_tools->sql_table_exists($table))
+			{
+				continue;
+			}
+
 			$sql = 'DELETE FROM ' . $table . '
 				WHERE ' . $this->db->sql_in_set('notification_type_id', $type_ids) . '
 					AND (' . $this->db->sql_in_set('user_id', $user_ids) . '

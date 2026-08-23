@@ -149,22 +149,4 @@
             <value>a:1:{s:12:"requester_id";i:2;}</value>
         </row>
     </table>
-    <table name="phpbb_notification_emails">
-        <column>notification_type_id</column>
-        <column>item_id</column>
-        <column>item_parent_id</column>
-        <column>user_id</column>
-        <row>
-            <value>91</value>
-            <value>40</value>
-            <value>3</value>
-            <value>2</value>
-        </row>
-        <row>
-            <value>90</value>
-            <value>41</value>
-            <value>2</value>
-            <value>3</value>
-        </row>
-    </table>
 </dataset>
