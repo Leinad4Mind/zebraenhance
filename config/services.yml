@@ -1,48 +1,58 @@
 services:
+    anavaro.zebraenhance.relationships:
+        class: anavaro\zebraenhance\service\relationship_manager
+        arguments:
+            - '@dbal.conn'
+            - '@notification_manager'
+            - '%core.table_prefix%zebra_requests'
+            - '%core.table_prefix%zebra_confirm'
+            - '%core.table_prefix%zebra'
+            - '%core.table_prefix%users'
+            - '%core.table_prefix%notifications'
+            - '%core.table_prefix%notification_emails'
+            - '%core.table_prefix%notification_types'
+
     anavaro.zebraenhance.listener:
         class: anavaro\zebraenhance\event\zebra_listener
         arguments:
+            - '@anavaro.zebraenhance.relationships'
             - '@user_loader'
             - '@auth'
-            - '@config'
             - '@dbal.conn'
             - '@request'
             - '@template'
             - '@user'
             - '@language'
-            - '@anavaro.zebraenhance.notifyhelper'
-            - '%core.table_prefix%'
+            - '@controller.helper'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+            - '%core.table_prefix%users'
         tags:
             - { name: event.listener }
-    anavaro.zebraenhance.ajaxyfy:
+
+    anavaro.zebraenhance.controller:
         class: anavaro\zebraenhance\controller\ajaxify
         arguments:
-            - '@dbal.conn'
+            - '@anavaro.zebraenhance.relationships'
+            - '@auth'
             - '@request'
             - '@user'
             - '@language'
-            - '%core.root_path%'
-            - '%core.table_prefix%'
-    anavaro.zebraenhance.notifyhelper:
-        class: anavaro\zebraenhance\controller\notifyhelper
-        arguments:
-            - '@service_container'
+
     anavaro.zebraenhance.notification.zebraadd:
         class: anavaro\zebraenhance\notification\zebraadd
         shared: false
         parent: notification.type.base
         calls:
             - [set_user_loader, ['@user_loader']]
-            - [set_config, ['@config']]
         tags:
             - { name: notification.type }
-    
+
     anavaro.zebraenhance.notification.zebraconfirm:
         class: anavaro\zebraenhance\notification\zebraconfirm
         shared: false
         parent: notification.type.base
         calls:
             - [set_user_loader, ['@user_loader']]
-            - [set_config, ['@config']]
         tags:
             - { name: notification.type }

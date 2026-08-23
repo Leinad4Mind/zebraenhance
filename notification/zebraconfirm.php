@@ -41,14 +41,6 @@ class zebraconfirm extends \phpbb\notification\type\base
 	/** @var \phpbb\user_loader */
 	protected $user_loader;
 
-	/** @var \phpbb\config\config */
-	protected $config;
-
-	public function set_config(\phpbb\config\config $config)
-	{
-		$this->config = $config;
-	}
-
 	public function set_user_loader(\phpbb\user_loader $user_loader)
 	{
 		$this->user_loader = $user_loader;
@@ -70,12 +62,7 @@ class zebraconfirm extends \phpbb\notification\type\base
 	 */
 	static public function get_item_id($data)
 	{
-		$uid = '';
-		foreach ($data['user_id'] as $id => $string)
-		{
-			$uid = $id;
-		}
-		return (int) $uid;
+		return (int) $data['request_id'];
 	}
 
 	/**
@@ -86,8 +73,7 @@ class zebraconfirm extends \phpbb\notification\type\base
 	 */
 	public static function get_item_parent_id($data)
 	{
-		// No parent
-		return 0;
+		return (int) $data['requester_id'];
 	}
 
 	/**
@@ -142,7 +128,7 @@ class zebraconfirm extends \phpbb\notification\type\base
 	*/
 	public function get_url()
 	{
-		return append_sid($this->phpbb_root_path . 'ucp.' . $this->php_ext, "i=". $this->config['zebra_module_id']);
+		return append_sid($this->phpbb_root_path . 'ucp.' . $this->php_ext, 'i=ucp_zebra&mode=friends');
 	}
 
 	/**

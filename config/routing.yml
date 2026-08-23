@@ -1,5 +1,7 @@
-zebra_enchacnce_ajax:
-    path: /zebraenhance/{action}/{userid}
-    defaults: { _controller: anavaro.zebraenhance.ajaxyfy:base }
+anavaro_zebraenhance_close_friend:
+    path: /zebraenhance/close-friend/{userid}/{state}
+    defaults: { _controller: anavaro.zebraenhance.controller:set_close_friend }
+    methods: [POST]
     requirements:
         userid: \d+
+        state: 0|1

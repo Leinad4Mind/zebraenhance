@@ -34,7 +34,7 @@ class release_1_0_0 extends \phpbb\db\migration\migration
 						'friend'		=> array('UINT:1', 0),
 						'foe'			=> array('UINT:1', 0)
 					),
-					'PRIMARY_KEY'    => 'user_id, zebra_id',
+					'PRIMARY_KEY'    => array('user_id', 'zebra_id'),
 				),
 			),
 			'add_columns'	=> array(

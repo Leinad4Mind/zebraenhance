@@ -13,7 +13,7 @@ class release_1_0_1 extends \phpbb\db\migration\migration
 {
 	public function effectively_installed()
 	{
-		return !isset($this->config['zebra_enhance_version']);
+		return isset($this->config['zebra_enhance_version']) && version_compare($this->config['zebra_enhance_version'], '1.0.1', '>=');
 	}
 
 	static public function depends_on()

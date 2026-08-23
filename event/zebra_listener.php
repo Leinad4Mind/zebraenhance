@@ -1,35 +1,21 @@
 <?php
-
 /**
 *
-* @package Anavaro.com Zebra Enchance
-* @copyright (c) 2013 Lucifer
-* @license http://opensource.org/licenses/gpl-2.0.php GNU General Public License v2
+* Zebra Enhance extension for phpBB.
+*
+* @copyright (c) 2013-2026 Stanislav Atanasov
+* @license GNU General Public License, version 2 (GPL-2.0-only)
 *
 */
-//TODO 2: Make use of ajax requests for canceling requests
-//TODO 3: check if Zebra table is cleaned from deletion of user (make it clean if it is not.
 
 namespace anavaro\zebraenhance\event;
 
-/**
-* Event listener
-*/
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class zebra_listener implements EventSubscriberInterface
 {
-	static public function getSubscribedEvents()
-	{
-		return array(
-			'core.user_setup'		=> 'load_language_on_setup',
-			'core.ucp_add_zebra'	=>	'zebra_confirm_add',
-			'core.ucp_remove_zebra'	=>	'zebra_confirm_remove',
-			'core.ucp_display_module_before'	=>	'module_display',
-			'core.delete_user_before'	=> 'delete_users',
-			'core.memberlist_prepare_profile_data'	       => 'prepare_friends',
-		);
-	}
+	/** @var \anavaro\zebraenhance\service\relationship_manager */
+	protected $relationships;
 
 	/** @var \phpbb\user_loader */
 	protected $user_loader;
@@ -37,13 +23,10 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var \phpbb\auth\auth */
 	protected $auth;
 
-	/** @var \phpbb\config\config */
-	protected $config;
-
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
 
-	/** @var \phpbb\request\request */
+	/** @var \phpbb\request\request_interface */
 	protected $request;
 
 	/** @var \phpbb\template\template */
@@ -53,337 +36,262 @@ class zebra_listener implements EventSubscriberInterface
 	protected $user;
 
 	/** @var \phpbb\language\language */
-	protected $lang;
+	protected $language;
 
-	/** @var \anavaro\zebraenhance\controller\notifyhelper */
-	protected $notifyhelper;
+	/** @var \phpbb\controller\helper */
+	protected $controller_helper;
 
-	/** @var  */
-	protected $table_prefix;
-	/**
-	 * Constructor
-	 *
-	 * @param \phpbb\user_loader                            $user_loader
-	 * @param \phpbb\auth\auth                              $auth
-	 * @param \phpbb\config\config                          $config
-	 * @param \phpbb\db\driver\driver_interface             $db
-	 * @param \phpbb\request\request                        $request
-	 * @param \phpbb\template\template                      $template
-	 * @param \phpbb\user                                   $user
-	 * @param \phpbb\language\language                      $language
-	 * @param \anavaro\zebraenhance\controller\notifyhelper $notifyhelper
-	 * @param                                               $table_prefix
-	 */
-	public function __construct(\phpbb\user_loader $user_loader, \phpbb\auth\auth $auth, \phpbb\config\config $config,
-		\phpbb\db\driver\driver_interface $db, \phpbb\request\request $request, \phpbb\template\template $template,
-		\phpbb\user $user, \phpbb\language\language $language, \anavaro\zebraenhance\controller\notifyhelper $notifyhelper,
-		$table_prefix)
+	/** @var string */
+	protected $root_path;
+
+	/** @var string */
+	protected $php_ext;
+
+	/** @var string */
+	protected $users_table;
+
+	public function __construct(
+		\anavaro\zebraenhance\service\relationship_manager $relationships,
+		\phpbb\user_loader $user_loader,
+		\phpbb\auth\auth $auth,
+		\phpbb\db\driver\driver_interface $db,
+		\phpbb\request\request_interface $request,
+		\phpbb\template\template $template,
+		\phpbb\user $user,
+		\phpbb\language\language $language,
+		\phpbb\controller\helper $controller_helper,
+		$root_path,
+		$php_ext,
+		$users_table
+	)
 	{
+		$this->relationships = $relationships;
 		$this->user_loader = $user_loader;
 		$this->auth = $auth;
-		$this->config = $config;
 		$this->db = $db;
 		$this->request = $request;
 		$this->template = $template;
 		$this->user = $user;
-		$this->lang = $language;
-		$this->notifyhelper = $notifyhelper;
-		$this->table_prefix = $table_prefix;
+		$this->language = $language;
+		$this->controller_helper = $controller_helper;
+		$this->root_path = $root_path;
+		$this->php_ext = $php_ext;
+		$this->users_table = $users_table;
+	}
+
+	static public function getSubscribedEvents()
+	{
+		return array(
+			'core.user_setup'                => 'load_language_on_setup',
+			'core.ucp_add_zebra'             => 'zebra_confirm_add',
+			'core.ucp_remove_zebra'          => 'zebra_confirm_remove',
+			'core.ucp_display_module_before' => 'module_display',
+			'core.delete_user_before'        => 'delete_users',
+			'core.memberlist_view_profile'   => 'prepare_friends',
+		);
 	}
 
 	public function load_language_on_setup($event)
 	{
-		$this->lang->add_lang(array('zebra_enchance'), 'anavaro/zebraenhance');
-
-		if ($this->config['zebra_module_id'] == 'none')
-		{
-			$sql = 'SELECT parent_id FROM ' . MODULES_TABLE . ' WHERE module_basename = \'ucp_zebra\' LIMIT 1';
-			$result = $this->db->sql_query($sql);
-			$row = $this->db->sql_fetchrow($result);
-			$this->config->set('zebra_module_id', $row['parent_id']);
-		}
+		$lang_set_ext = $event['lang_set_ext'];
+		$lang_set_ext[] = array(
+			'ext_name' => 'anavaro/zebraenhance',
+			'lang_set' => 'zebra_enchance',
+		);
+		$event['lang_set_ext'] = $lang_set_ext;
 	}
-	protected $image_dir = 'ext/anavaro/zebraenhance/images';
 
 	public function zebra_confirm_add($event)
 	{
-		if ($event['mode'] == 'friends')
+		$mode = $event['mode'];
+		$sql_ary = $event['sql_ary'];
+		if ($mode === 'friends' && !$this->auth->acl_get('u_ze_use'))
 		{
-			foreach ($event['sql_ary'] as $VAR)
-			{
-				//let's test if we have sent request
-				$sql = 'SELECT * FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['user_id'] . ' AND zebra_id = ' . (int) $VAR['zebra_id'];
-				$result = $this->db->sql_fetchrow($this->db->sql_query($sql));
-				if (!$result)
-				{
-					//Let's test if request is pending from the other user
-					$sql = 'SELECT * FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['zebra_id'] . ' AND zebra_id = ' . (int) $VAR['user_id'];
-					$result = $this->db->sql_fetchrow($this->db->sql_query($sql));
-					//$this->var_display($result);
-					if ($result)
-					{
-						//so we have incoming request -> we add friends!
-						$sql = 'INSERT INTO '. ZEBRA_TABLE .' (user_id, zebra_id, friend, foe, bff) VALUES (' .(int) $VAR['user_id'] . ', ' . (int) $VAR['zebra_id'] . ', 1, 0, 0)';
-						$this->db->sql_query($sql);
-						$sql = 'INSERT INTO '. ZEBRA_TABLE .' (user_id, zebra_id, friend, foe, bff) VALUES (' .(int) $VAR['zebra_id'] . ', ' . (int) $VAR['user_id'] . ', 1, 0, 0)';
-						$this->db->sql_query($sql);
-
-						//Let's update zebra_change
-						$sql = 'UPDATE ' . USERS_TABLE .' SET zebra_changed = 1 WHERE (user_id =  ' . (int) $VAR['zebra_id'] . ' or user_id =  ' . (int) $VAR['user_id'] . ')';
-						$this->db->sql_query($sql);
-
-						//let's clean the request table
-						$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['zebra_id'] . ' AND zebra_id = ' . (int) $VAR['user_id'];
-						$this->db->sql_query($sql);
-						$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['user_id'] . ' AND zebra_id = ' . (int) $VAR['zebra_id'];
-						$this->db->sql_query($sql);
-						$this->notifyhelper->notify('confirm', $VAR['zebra_id'], $VAR['user_id']);
-					}
-					else
-					{
-						//lets see if user is hostile towerds us (if yes - silently drop request)
-						$sql = 'SELECT * FROM '. ZEBRA_TABLE .' WHERE user_id = ' . (int) $VAR['zebra_id'] . ' AND zebra_id = ' . (int) $VAR['user_id']. ' AND foe = 1';
-						$result = $this->db->sql_fetchrow($this->db->sql_query($sql));
-						if (!$result)
-						{
-							$sql = 'INSERT INTO ' . $this->table_prefix . 'zebra_confirm (user_id, zebra_id, friend, foe) VALUES (' .(int) $VAR['user_id'] . ', ' . (int) $VAR['zebra_id'] . ', 1, 0)';
-							$this->db->sql_query($sql);
-							$this->notifyhelper->notify('add', $VAR['zebra_id'], $VAR['user_id']);
-						}
-					}
-				}
-			}
 			$event['sql_ary'] = array();
+			return;
 		}
-		if ($event['mode'] == 'foes')
-		{
-			foreach ($event['sql_ary'] as $VAR)
-			{
-				//if we add user as foe we have to remove pending requests.
-				$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['zebra_id']. ' AND zebra_id = ' . (int) $VAR['user_id'];
-				$this->db->sql_query($sql);
-				$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = ' . (int) $VAR['user_id'] . ' AND zebra_id = ' . (int) $VAR['zebra_id'];
-				$this->db->sql_query($sql);
-			}
-		}
+
+		$event['sql_ary'] = $this->relationships->process_additions($mode, $sql_ary);
 	}
 
 	public function zebra_confirm_remove($event)
 	{
-		if ($event['mode'] == 'friends')
+		if ($event['mode'] !== 'friends')
 		{
-			//let's go for syncronieus remove
-			foreach ($event['user_ids'] as $VAR)
-			{
-				$sql = 'DELETE FROM ' . ZEBRA_TABLE . '
-				WHERE user_id = ' . $this->user->data['user_id'] . '
-				AND zebra_id = '. (int) $VAR;
-				$this->db->sql_query($sql);
-
-				$sql = 'DELETE FROM ' . ZEBRA_TABLE . '
-				WHERE user_id = ' . (int) $VAR . '
-				AND zebra_id = '. $this->user->data['user_id'];
-				$this->db->sql_query($sql);
-
-				$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm
-				WHERE user_id = ' . $this->user->data['user_id'] . '
-				AND zebra_id = '. (int) $VAR;
-				$this->db->sql_query($sql);
-
-				$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm
-				WHERE user_id = ' . (int) $VAR . '
-				AND zebra_id = '. $this->user->data['user_id'];
-				$this->db->sql_query($sql);
-
-				$this->notifyhelper->clean($VAR, $this->user->data['user_id']);
-
-				//Let's update zebra_change
-				$sql = 'UPDATE ' . USERS_TABLE .' SET zebra_changed = 1 WHERE (user_id =  ' . (int) $this->user->data['user_id'] . ' or user_id =  ' . (int) $VAR . ')';
-				$this->db->sql_query($sql);
-			}
-
-			$event['user_ids'] = array('0');
+			return;
 		}
+
+		foreach ($event['user_ids'] as $zebra_id)
+		{
+			$this->relationships->remove_relationship((int) $this->user->data['user_id'], (int) $zebra_id);
+		}
+
+		// The service removed both directions, so keep phpBB's trailing DELETE inert.
+		$event['user_ids'] = array(0);
 	}
 
 	public function module_display($event)
 	{
-		$ispending = $iswaiting = '';
-		$submit = $this->request->variable('submit', false);
-		$default_fla = $this->user->data['profile_friend_show'];
-		$friend_list_acl = $this->request->variable('zebra_profile_acl', $default_fla);
-		if ($event['id'] == 'zebra' or $event['id'] == 'ucp_zebra' or $event['id'] == $this->config['zebra_module_id'])
+		if (!$this->is_zebra_friends_module($event) || !$this->auth->acl_get('u_ze_use'))
 		{
-			// Are we submiting new form?
-			if ($submit == true)
-			{
-				if ($friend_list_acl > 5)
-				{
-					$friend_list_acl = 0;
-				}
-				$sql = 'UPDATE ' . USERS_TABLE .' SET profile_friend_show = ' . (int) $friend_list_acl . ' WHERE user_id = '.$this->user->data['user_id'];
-				$this->db->sql_query($sql);
-				$this->user->data['profile_friend_show'] = $friend_list_acl;
-			}
-			$this->template->assign_var('IS_ZEBRA', '1');
-			$this->template->assign_var('ZEBRA_ACL', $this->user->data['profile_friend_show']);
-			//let's get incoming pendings
-			$sql_array = array(
-				'SELECT'	=> 'zc.*, u.username, u.user_colour',
-				'FROM'		=> array(
-					$this->table_prefix . 'zebra_confirm'	=>	'zc',
-					USERS_TABLE	=> 'u',
-				),
-				'WHERE'	=> 'zc.user_id = u.user_id AND zc.zebra_id = '.$this->user->data['user_id']
-			);
-			$sql = $this->db->sql_build_query('SELECT', $sql_array);
-			$result = $this->db->sql_query($sql);
+			return;
+		}
 
-			while ($row = $this->db->sql_fetchrow($result))
+		add_form_key('anavaro_zebraenhance');
+		$user_id = (int) $this->user->data['user_id'];
+		if ($this->request->is_set_post('zebra_profile_acl'))
+		{
+			if (!check_form_key('anavaro_zebraenhance'))
 			{
-				$ispending = 1;
-				$this->template->assign_block_vars('pending_requests', array(
-					'USERNAME'	=> '<a class="username-coloured" style="color: '.$row['user_colour'].'" href="'.append_sid('memberlist.php?mode=viewprofile&u='.$row['user_id']).'">'.$row['username'].'</a>',
-					'CONFIRM' => '<a href="./ucp.php?i=zebra&add='.$row['username'].'" data-ajax="true" data-refresh="true"><img src="' . $this->image_dir . '/confirm_16.png"/></a>',
-					'CANCEL'	=> '<a href="./ucp.php?i=zebra&remove=1&usernames[]='.$row['user_id'].'" data-ajax="true" data-refresh="true""><img src="' . $this->image_dir . '/cancel.gif"/></a>',
-				));
-			}
-			if ($ispending)
-			{
-				$this->template->assign_var('HAS_PENDING', 'yes');
-			}
-			//now, let's get our own requests that are waiting.
-			$sql_array = array(
-				'SELECT'	=> 'zc.*, u.username, u.user_colour',
-				'FROM'		=> array(
-					$this->table_prefix . 'zebra_confirm'	=>	'zc',
-					USERS_TABLE	=> 'u',
-				),
-				'WHERE'	=> 'zc.zebra_id = u.user_id AND zc.user_id = '.$this->user->data['user_id']
-			);
-			$sql = $this->db->sql_build_query('SELECT', $sql_array);
-			$result = $this->db->sql_query($sql);
-
-			while ($row = $this->db->sql_fetchrow($result))
-			{
-				$iswaiting = 1;
-				$this->template->assign_block_vars('pending_awaits', array(
-					'USERNAME'	=> '<a class="username-coloured" style="color: '.$row['user_colour'].'" href="'.append_sid('memberlist.php?mode=viewprofile&u='.$row['zebra_id']).'">'.$row['username'].'</a>',
-					'CANCEL'	=> '<a href="./ucp.php?i=zebra&remove=1&usernames[]='.$row['zebra_id'].'" data-ajax="true" data-refresh="true"><img src="' . $this->image_dir . '/cancel.gif"/></a>',
-				));
-			}
-			if ($iswaiting)
-			{
-				$this->template->assign_var('HAS_WAITING', 'yes');
+				trigger_error('FORM_INVALID');
 			}
 
-			//let's populate the prity zebra list (bff and all)
-			$sql_array = array(
-				'SELECT'	=> 'zc.*, u.username, u.user_colour',
-				'FROM'	=> array(
-					ZEBRA_TABLE	=> 'zc',
-					USERS_TABLE	=> 'u',
-				),
-				'WHERE'	=> 'zc.zebra_id = u.user_id AND zc.user_id = '.$this->user->data['user_id'] .' AND zc.friend = 1',
-				'ORDER_BY'	=> 'u.username ASC'
-			);
-			$sql = $this->db->sql_build_query('SELECT', $sql_array);
-			$result = $this->db->sql_query($sql);
-			while ($row = $this->db->sql_fetchrow($result))
-			{
-				$this->template->assign_block_vars('prity_zebra', array(
-					'USERNAME'	=>	'<a class="username-coloured" style="color: '.$row['user_colour'].'" href="'.append_sid('memberlist.php?mode=viewprofile&u='.$row['zebra_id']).'">'.$row['username'].'</a>',
-					'CANCEL' => '<a href="./ucp.php?i=zebra&remove=1&usernames[]='.$row['zebra_id'].'" data-ajax="true" data-refresh="true"><img src="' . $this->image_dir . '/cancel.gif"/></a>',
-					'BFF' =>	$row['bff'] ? '<a href="./app.php/zebraenhance/togle_bff/'.$row['zebra_id'].'" data-ajax="togle_bff"><img id="usr_'.$row['zebra_id'].'" src="'. $this->image_dir . '/favorite_remove.png" width="16px" height="16px"/></a>' : '<a href="./app.php/zebraenhance/togle_bff/'.$row['zebra_id'].'" data-ajax="togle_bff"><img id="usr_'.$row['zebra_id'].'" src="'. $this->image_dir . '/favorite_add.png" width="16px" height="16px"/></a>'
-				));
-			}
-			$this->template->assign_var('IMGDIR', $this->image_dir);
+			$visibility = max(0, min(5, $this->request->variable('zebra_profile_acl', 5)));
+			$sql = 'UPDATE ' . $this->users_table . '
+				SET profile_friend_show = ' . (int) $visibility . '
+				WHERE user_id = ' . (int) $user_id;
+			$this->db->sql_query($sql);
+			$this->user->data['profile_friend_show'] = $visibility;
+		}
+
+		$this->template->assign_vars(array(
+			'IS_ZEBRA'           => true,
+			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
+			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
+		));
+
+		foreach ($this->relationships->get_requests($user_id, true) as $row)
+		{
+			$requester_id = (int) $row['requester_id'];
+			$this->template->assign_block_vars('pending_requests', array(
+				'USER_ID'     => $requester_id,
+				'USERNAME'    => $row['username'],
+				'USER_COLOUR' => $row['user_colour'],
+				'U_PROFILE'   => $this->profile_url($requester_id),
+				'U_CONFIRM'   => $this->ucp_friend_url('add=' . urlencode(html_entity_decode($row['username'], ENT_COMPAT))),
+				'U_CANCEL'    => $this->ucp_friend_url('remove=1&usernames[]=' . $requester_id),
+			));
+		}
+
+		foreach ($this->relationships->get_requests($user_id, false) as $row)
+		{
+			$recipient_id = (int) $row['recipient_id'];
+			$this->template->assign_block_vars('pending_awaits', array(
+				'USER_ID'     => $recipient_id,
+				'USERNAME'    => $row['username'],
+				'USER_COLOUR' => $row['user_colour'],
+				'U_PROFILE'   => $this->profile_url($recipient_id),
+				'U_CANCEL'    => $this->ucp_friend_url('remove=1&usernames[]=' . $recipient_id),
+			));
+		}
+
+		foreach ($this->relationships->get_friends($user_id) as $row)
+		{
+			$friend_id = (int) $row['zebra_id'];
+			$is_close = (bool) $row['bff'];
+			$this->template->assign_block_vars('pretty_zebra', array(
+				'USER_ID'       => $friend_id,
+				'USERNAME'      => $row['username'],
+				'USER_COLOUR'   => $row['user_colour'],
+				'U_PROFILE'     => $this->profile_url($friend_id),
+				'U_CANCEL'      => $this->ucp_friend_url('remove=1&usernames[]=' . $friend_id),
+				'U_CLOSE_ADD'   => $this->controller_helper->route('anavaro_zebraenhance_close_friend', array(
+					'userid' => $friend_id,
+					'state'  => 1,
+				)),
+				'U_CLOSE_REMOVE' => $this->controller_helper->route('anavaro_zebraenhance_close_friend', array(
+					'userid' => $friend_id,
+					'state'  => 0,
+				)),
+				'S_CLOSE'       => $is_close,
+				'L_CLOSE_ACTION' => $this->language->lang($is_close ? 'ZE_REMOVE_CLOSE_FRIEND' : 'ZE_ADD_CLOSE_FRIEND'),
+			));
 		}
 	}
 
 	public function delete_users($event)
 	{
-		foreach ($event['user_ids'] as $VAR)
-		{
-			$sql = 'DELETE FROM ' . $this->table_prefix . 'zebra_confirm WHERE user_id = '.$VAR.' OR zebra_id = '.$VAR;
-			$this->db->sql_query($sql);
-			$sql = 'DELETE FROM '. ZEBRA_TABLE .' WHERE user_id = '.$VAR.' OR zebra_id = '.$VAR;
-			$this->db->sql_query($sql);
-		}
+		$this->relationships->delete_user_data($event['user_ids']);
 	}
 
 	public function prepare_friends($event)
 	{
-		$optResult['profile_friend_show'] = $event['data']['profile_friend_show'];
-		$zebra_state = 0;
-		if ($this->auth->acl_get('a_') || $this->auth->acl_get('m_') || $this->user->data['user_id'] == $event['data']['user_id'])
+		$member = $event['member'];
+		$owner_id = (int) $member['user_id'];
+		$viewer_id = (int) $this->user->data['user_id'];
+		$override = $this->auth->acl_get('a_user') || $this->auth->acl_get('m_ze_view_private_friendlists');
+		$can_view = $this->relationships->can_view_friend_list(
+			$owner_id,
+			$viewer_id,
+			(int) $member['profile_friend_show'],
+			$override,
+			(bool) $this->user->data['is_registered']
+		);
+
+		$this->template->assign_vars(array(
+			'FRIENDLIST'              => true,
+			'FRIENDLIST_ERROR_ACCESS' => !$can_view,
+		));
+		if (!$can_view)
 		{
-			$state = 5;
-		}
-		else if ($this->user->data['user_id'] != ANONYMOUS)
-		{
-			$sql = 'SELECT * FROM ' . ZEBRA_TABLE . ' WHERE user_id = '.$this->db->sql_escape($event['data']['user_id']).' AND zebra_id = '.$this->user->data['user_id'];
-			$result = $this->db->sql_fetchrow($this->db->sql_query($sql));
-			if ($result)
-			{
-				if ($result['foe'] == 1)
-				{
-					$zebra_state = 2;
-				}
-				else
-				{
-					if ($result['bff'] == '0')
-					{
-						$zebra_state = 3;
-					}
-					else
-					{
-						$zebra_state = 4;
-					}
-				}
-			}
-			else
-			{
-				$zebra_state = 1;
-			}
+			return;
 		}
 
-		$show = (($optResult['profile_friend_show'] != 2) ? (($optResult['profile_friend_show'] <= $zebra_state) ? true : false) : (($optResult['profile_friend_show'] == 2 and $zebra_state > 0 and $zebra_state != 2) ? true : false));
-		if ($event['data']['user_id'] == $this->user->data['user_id'] || $this->auth->acl_get('a_user') || $show)
+		$friends = $this->relationships->get_friends($owner_id, 100);
+		if (!$friends)
 		{
-			$sql = 'SELECT zebra_id FROM ' . ZEBRA_TABLE . ' WHERE user_id = ' . $this->db->sql_escape($event['data']['user_id']) . ' AND friend = 1';
-			$result = $this->db->sql_query($sql);
-			while ($row = $this->db->sql_fetchrow($result))
-			{
-				$user_id[] = (int) $row['zebra_id'];
-			}
-			if (!empty($user_id))
-			{
-				$this->user_loader->load_users($user_id);
-				$selector = 0;
-				foreach ($user_id as $VAR)
-				{
-					$this->template->assign_block_vars('zebra_friendslist', array(
-						'USER_LINK'	=> $this->user_loader->get_username($VAR, 'profile'),
-						'USER_AVATAR'	=> $this->user_loader->get_avatar($VAR),
-						'USERNAME'	=> $this->user_loader->get_username($VAR, 'full'),
-						'SELECTOR'	=> $selector,
-					));
-					if ($selector == 3)
-					{
-						$selector = 0;
-					}
-					else
-					{
-						$selector ++;
-					}
-				}
-			}
+			return;
 		}
-		else
+
+		$user_ids = array_map(function ($row)
 		{
-			$this->template->assign_var('FRIENDLIST_ERROR_ACCESS', 'yes');
+			return (int) $row['zebra_id'];
+		}, $friends);
+		$this->user_loader->load_users($user_ids);
+		foreach ($friends as $row)
+		{
+			$friend_id = (int) $row['zebra_id'];
+			$this->template->assign_block_vars('zebra_friendslist', array(
+				'USER_ID'     => $friend_id,
+				'USERNAME'    => $row['username'],
+				'USER_COLOUR' => $row['user_colour'],
+				'U_PROFILE'   => $this->profile_url($friend_id),
+				'USER_AVATAR' => $this->user_loader->get_avatar($friend_id, false, true),
+			));
 		}
-		$this->template->assign_var('FRIENDLIST', 'yes');
+	}
+
+	protected function is_zebra_friends_module($event)
+	{
+		if ($event['mode'] !== 'friends')
+		{
+			return false;
+		}
+
+		$id = $event['id'];
+		$normalized_id = is_numeric($id) ? (int) $id : 'ucp_' . preg_replace('#^ucp_#', '', (string) $id);
+		foreach ($event['module']->module_ary as $module)
+		{
+			if ($module['name'] !== 'ucp_zebra' || $module['mode'] !== 'friends')
+			{
+				continue;
+			}
+
+			return is_int($normalized_id)
+				? (int) $module['id'] === $normalized_id
+				: $module['name'] === $normalized_id;
+		}
+
+		return false;
+	}
+
+	protected function profile_url($user_id)
+	{
+		return append_sid($this->root_path . 'memberlist.' . $this->php_ext, 'mode=viewprofile&u=' . (int) $user_id);
+	}
+
+	protected function ucp_friend_url($parameters)
+	{
+		return append_sid($this->root_path . 'ucp.' . $this->php_ext, 'i=ucp_zebra&mode=friends&' . $parameters);
 	}
 }
