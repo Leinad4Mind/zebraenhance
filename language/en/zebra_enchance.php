@@ -2,12 +2,11 @@
 
 /**
 *
-* Zebra Enhance [Bulgarian]
+* Zebra Enhance [English]
 *
 * @package language
-* @version $Id$
 * @copyright (c) 2026 Leinad4Mind
-* @license http://opensource.org/licenses/gpl-license.php GNU Public License
+* @license GNU General Public License, version 2 (GPL-2.0-only)
 *
 */
 
