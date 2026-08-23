@@ -149,4 +149,15 @@
             <value>a:1:{s:12:"requester_id";i:2;}</value>
         </row>
     </table>
+    <table name="phpbb_zebra_circles">
+        <column>circle_id</column>
+        <column>owner_id</column>
+        <column>circle_name</column>
+        <column>circle_name_clean</column>
+        <column>created_at</column>
+    </table>
+    <table name="phpbb_zebra_circle_members">
+        <column>circle_id</column>
+        <column>friend_id</column>
+    </table>
 </dataset>

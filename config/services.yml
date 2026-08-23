@@ -11,6 +11,8 @@ services:
             - '%core.table_prefix%zebra_request_cooldowns'
             - '%core.table_prefix%zebra_confirm'
             - '%core.table_prefix%zebra'
+            - '%core.table_prefix%zebra_circles'
+            - '%core.table_prefix%zebra_circle_members'
             - '%core.table_prefix%users'
             - '%core.table_prefix%notifications'
             - '%core.table_prefix%notification_emails'

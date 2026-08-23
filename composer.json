@@ -3,7 +3,7 @@
 	"type": "phpbb-extension",
 	"description": "Adds confirmed friend requests with optional messages, Close Friends, and privacy controls to phpBB Zebra.",
 	"homepage": "https://leinad4mind.top/forum",
-	"version": "2.2.0",
+	"version": "2.3.0",
 	"license": "GPL-2.0-only",
 	"authors": [
 		{

@@ -71,6 +71,52 @@ user selects a different profile friend-list visibility level.
 | `old_visibility` | integer | Previous visibility level, from 0 through 5. |
 | `new_visibility` | integer | New visibility level, from 0 through 5. |
 
+## Friend circles
+
+Circles are private, directional groups owned by one user. A friend can belong
+to several circles. Close Friends remains a separate built-in relationship
+flag and is not represented as a custom circle.
+
+`anavaro.zebraenhance.circle_created` is dispatched with:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `owner_id` | integer | User who owns the new circle. |
+| `circle_id` | integer | Stable ID of the new circle. |
+| `circle_name` | string | Display name of the circle. |
+
+`anavaro.zebraenhance.circle_renamed` is dispatched with:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `owner_id` | integer | User who owns the circle. |
+| `circle_id` | integer | Stable ID of the circle. |
+| `old_name` | string | Previous display name. |
+| `new_name` | string | New display name. |
+
+`anavaro.zebraenhance.circle_deleted` is dispatched after the circle and its
+memberships have been removed:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `owner_id` | integer | User who owned the circle. |
+| `circle_id` | integer | ID of the deleted circle. |
+| `circle_name` | string | Last display name of the circle. |
+
+`anavaro.zebraenhance.friend_circles_changed` is dispatched when an owner
+changes the circles assigned to an accepted friend:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `owner_id` | integer | User who owns the circles. |
+| `friend_id` | integer | Accepted friend whose assignments changed. |
+| `old_circle_ids` | integer[] | Previous sorted circle IDs. |
+| `new_circle_ids` | integer[] | New sorted circle IDs. |
+
+Other extensions can query circle state through the public relationship
+service methods `get_circles`, `get_friend_circle_ids`,
+`get_circle_friend_ids`, and `is_friend_in_circle`.
+
 ## Subscriber example
 
 ```php

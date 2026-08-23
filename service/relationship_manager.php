@@ -22,7 +22,13 @@ class relationship_manager
 	const EVENT_FRIENDSHIP_REMOVED = 'anavaro.zebraenhance.friendship_removed';
 	const EVENT_CLOSE_FRIEND_CHANGED = 'anavaro.zebraenhance.close_friend_changed';
 	const EVENT_VISIBILITY_CHANGED = 'anavaro.zebraenhance.friend_list_visibility_changed';
+	const EVENT_CIRCLE_CREATED = 'anavaro.zebraenhance.circle_created';
+	const EVENT_CIRCLE_RENAMED = 'anavaro.zebraenhance.circle_renamed';
+	const EVENT_CIRCLE_DELETED = 'anavaro.zebraenhance.circle_deleted';
+	const EVENT_FRIEND_CIRCLES_CHANGED = 'anavaro.zebraenhance.friend_circles_changed';
 	const PAGE_SIZE = 25;
+	const MAX_CIRCLES = 20;
+	const MAX_CIRCLE_NAME_LENGTH = 50;
 	const DEFAULT_MAX_PENDING_REQUESTS = 100;
 	const REQUEST_POLICY_EVERYONE = 0;
 	const REQUEST_POLICY_FRIENDS_OF_FRIENDS = 1;
@@ -56,6 +62,12 @@ class relationship_manager
 	protected $zebra_table;
 
 	/** @var string */
+	protected $circles_table;
+
+	/** @var string */
+	protected $circle_members_table;
+
+	/** @var string */
 	protected $users_table;
 
 	/** @var string */
@@ -77,6 +89,8 @@ class relationship_manager
 		$cooldowns_table,
 		$legacy_requests_table,
 		$zebra_table,
+		$circles_table,
+		$circle_members_table,
 		$users_table,
 		$notifications_table,
 		$notification_emails_table,
@@ -92,6 +106,8 @@ class relationship_manager
 		$this->cooldowns_table = $cooldowns_table;
 		$this->legacy_requests_table = $legacy_requests_table;
 		$this->zebra_table = $zebra_table;
+		$this->circles_table = $circles_table;
+		$this->circle_members_table = $circle_members_table;
 		$this->users_table = $users_table;
 		$this->notifications_table = $notifications_table;
 		$this->notification_emails_table = $notification_emails_table;
@@ -319,6 +335,10 @@ class relationship_manager
 						OR (zebra_id = ' . (int) $user_id . '
 							AND ' . $this->db->sql_in_set('user_id', $zebra_ids) . '))';
 			$this->db->sql_query($sql);
+			foreach (array_keys($removed_friend_ids) as $friend_id)
+			{
+				$this->delete_circle_membership_between($user_id, (int) $friend_id);
+			}
 			$this->delete_request_rows($requests);
 			$sql = 'DELETE FROM ' . $this->legacy_requests_table . '
 				WHERE (user_id = ' . (int) $user_id . '
@@ -499,6 +519,299 @@ class relationship_manager
 			'new_state' => $is_close,
 		));
 		return true;
+	}
+
+	/**
+	 * Create a private friend circle owned by a user.
+	 *
+	 * @return array|string The created row, or invalid, duplicate, or limit
+	 */
+	public function create_circle($owner_id, $circle_name)
+	{
+		$owner_id = (int) $owner_id;
+		$names = $this->normalize_circle_name($circle_name);
+		if (!$owner_id || !$names)
+		{
+			return 'invalid';
+		}
+		if (count($this->get_circles($owner_id)) >= self::MAX_CIRCLES)
+		{
+			return 'limit';
+		}
+		if ($this->get_circle_by_clean_name($owner_id, $names['clean']))
+		{
+			return 'duplicate';
+		}
+
+		$sql_ary = array(
+			'owner_id'          => $owner_id,
+			'circle_name'       => $names['display'],
+			'circle_name_clean' => $names['clean'],
+			'created_at'        => time(),
+		);
+		$this->db->sql_return_on_error(true);
+		$result = $this->db->sql_query('INSERT INTO ' . $this->circles_table . ' ' . $this->db->sql_build_array('INSERT', $sql_ary));
+		$sql_error = $result === false ? $this->db->get_sql_error_returned() : array();
+		$this->db->sql_return_on_error(false);
+		if ($result === false)
+		{
+			if ($this->is_duplicate_key_error($sql_error))
+			{
+				return 'duplicate';
+			}
+			throw new \RuntimeException('Unable to create the friend circle.');
+		}
+
+		$circle = $sql_ary;
+		$circle['circle_id'] = (int) $this->db->sql_nextid();
+		$circle['member_count'] = 0;
+		$this->dispatch_event(self::EVENT_CIRCLE_CREATED, array(
+			'owner_id'    => $owner_id,
+			'circle_id'   => $circle['circle_id'],
+			'circle_name' => $circle['circle_name'],
+		));
+
+		return $circle;
+	}
+
+	/**
+	 * Rename a circle owned by the acting user.
+	 *
+	 * @return array|string The renamed row, or invalid, duplicate, or not_found
+	 */
+	public function rename_circle($owner_id, $circle_id, $circle_name)
+	{
+		$owner_id = (int) $owner_id;
+		$circle_id = (int) $circle_id;
+		$names = $this->normalize_circle_name($circle_name);
+		if (!$owner_id || !$circle_id || !$names)
+		{
+			return 'invalid';
+		}
+		$circle = $this->get_owned_circle($owner_id, $circle_id);
+		if (!$circle)
+		{
+			return 'not_found';
+		}
+		if ((string) $circle['circle_name_clean'] === $names['clean']
+			&& (string) $circle['circle_name'] === $names['display'])
+		{
+			return $circle;
+		}
+		if ((string) $circle['circle_name_clean'] !== $names['clean']
+			&& $this->get_circle_by_clean_name($owner_id, $names['clean']))
+		{
+			return 'duplicate';
+		}
+
+		$this->db->sql_return_on_error(true);
+		$result = $this->db->sql_query('UPDATE ' . $this->circles_table . '
+			SET ' . $this->db->sql_build_array('UPDATE', array(
+				'circle_name'       => $names['display'],
+				'circle_name_clean' => $names['clean'],
+			)) . '
+			WHERE circle_id = ' . $circle_id . '
+				AND owner_id = ' . $owner_id);
+		$sql_error = $result === false ? $this->db->get_sql_error_returned() : array();
+		$this->db->sql_return_on_error(false);
+		if ($result === false)
+		{
+			if ($this->is_duplicate_key_error($sql_error))
+			{
+				return 'duplicate';
+			}
+			throw new \RuntimeException('Unable to rename the friend circle.');
+		}
+
+		$old_name = (string) $circle['circle_name'];
+		$circle['circle_name'] = $names['display'];
+		$circle['circle_name_clean'] = $names['clean'];
+		$this->dispatch_event(self::EVENT_CIRCLE_RENAMED, array(
+			'owner_id' => $owner_id,
+			'circle_id' => $circle_id,
+			'old_name' => $old_name,
+			'new_name' => $names['display'],
+		));
+
+		return $circle;
+	}
+
+	public function delete_circle($owner_id, $circle_id)
+	{
+		$owner_id = (int) $owner_id;
+		$circle_id = (int) $circle_id;
+		$circle = $this->get_owned_circle($owner_id, $circle_id);
+		if (!$circle)
+		{
+			return false;
+		}
+
+		$this->db->sql_transaction('begin');
+		try
+		{
+			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+				WHERE circle_id = ' . $circle_id);
+			$this->db->sql_query('DELETE FROM ' . $this->circles_table . '
+				WHERE circle_id = ' . $circle_id . '
+					AND owner_id = ' . $owner_id);
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		$this->dispatch_event(self::EVENT_CIRCLE_DELETED, array(
+			'owner_id'    => $owner_id,
+			'circle_id'   => $circle_id,
+			'circle_name' => (string) $circle['circle_name'],
+		));
+
+		return true;
+	}
+
+	public function get_circles($owner_id)
+	{
+		$sql = 'SELECT c.circle_id, c.owner_id, c.circle_name, c.circle_name_clean,
+				c.created_at, COUNT(m.friend_id) AS member_count
+			FROM ' . $this->circles_table . ' c
+			LEFT JOIN ' . $this->circle_members_table . ' m
+				ON m.circle_id = c.circle_id
+			WHERE c.owner_id = ' . (int) $owner_id . '
+			GROUP BY c.circle_id, c.owner_id, c.circle_name, c.circle_name_clean, c.created_at
+			ORDER BY c.circle_name_clean ASC';
+		$result = $this->db->sql_query($sql);
+		$circles = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$row['circle_id'] = (int) $row['circle_id'];
+			$row['owner_id'] = (int) $row['owner_id'];
+			$row['created_at'] = (int) $row['created_at'];
+			$row['member_count'] = (int) $row['member_count'];
+			$circles[] = $row;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $circles;
+	}
+
+	public function get_friend_circle_ids($owner_id, $friend_id)
+	{
+		$memberships = $this->get_circle_memberships($owner_id, array($friend_id));
+		return isset($memberships[(int) $friend_id]) ? $memberships[(int) $friend_id] : array();
+	}
+
+	public function get_circle_memberships($owner_id, array $friend_ids)
+	{
+		$friend_ids = array_values(array_unique(array_filter(array_map('intval', $friend_ids))));
+		if (!$friend_ids)
+		{
+			return array();
+		}
+
+		$sql = 'SELECT m.circle_id, m.friend_id
+			FROM ' . $this->circle_members_table . ' m
+			INNER JOIN ' . $this->circles_table . ' c
+				ON c.circle_id = m.circle_id
+			WHERE c.owner_id = ' . (int) $owner_id . '
+				AND ' . $this->db->sql_in_set('m.friend_id', $friend_ids) . '
+			ORDER BY m.circle_id ASC';
+		$result = $this->db->sql_query($sql);
+		$memberships = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$memberships[(int) $row['friend_id']][] = (int) $row['circle_id'];
+		}
+		$this->db->sql_freeresult($result);
+
+		return $memberships;
+	}
+
+	public function set_friend_circles($owner_id, $friend_id, array $circle_ids)
+	{
+		$owner_id = (int) $owner_id;
+		$friend_id = (int) $friend_id;
+		$circle_ids = array_values(array_unique(array_filter(array_map('intval', $circle_ids))));
+		sort($circle_ids);
+		if (!$owner_id || !$friend_id || $owner_id === $friend_id || !$this->are_friends($owner_id, $friend_id))
+		{
+			return false;
+		}
+
+		$owned_ids = $this->get_owned_circle_ids($owner_id);
+		if (array_diff($circle_ids, $owned_ids))
+		{
+			return false;
+		}
+		$old_ids = $this->get_friend_circle_ids($owner_id, $friend_id);
+		sort($old_ids);
+		if ($old_ids === $circle_ids)
+		{
+			return true;
+		}
+
+		$this->db->sql_transaction('begin');
+		try
+		{
+			if ($owned_ids)
+			{
+				$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+					WHERE friend_id = ' . $friend_id . '
+						AND ' . $this->db->sql_in_set('circle_id', $owned_ids));
+			}
+			if ($circle_ids)
+			{
+				$rows = array();
+				foreach ($circle_ids as $circle_id)
+				{
+					$rows[] = array('circle_id' => $circle_id, 'friend_id' => $friend_id);
+				}
+				$this->db->sql_multi_insert($this->circle_members_table, $rows);
+			}
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		$this->dispatch_event(self::EVENT_FRIEND_CIRCLES_CHANGED, array(
+			'owner_id'       => $owner_id,
+			'friend_id'      => $friend_id,
+			'old_circle_ids' => $old_ids,
+			'new_circle_ids' => $circle_ids,
+		));
+
+		return true;
+	}
+
+	public function is_friend_in_circle($owner_id, $friend_id, $circle_id)
+	{
+		return in_array((int) $circle_id, $this->get_friend_circle_ids($owner_id, $friend_id), true);
+	}
+
+	public function get_circle_friend_ids($owner_id, $circle_id)
+	{
+		$circle = $this->get_owned_circle($owner_id, $circle_id);
+		if (!$circle)
+		{
+			return array();
+		}
+
+		$result = $this->db->sql_query('SELECT friend_id
+			FROM ' . $this->circle_members_table . '
+			WHERE circle_id = ' . (int) $circle_id . '
+			ORDER BY friend_id ASC');
+		$friend_ids = array();
+		while ($friend_id = $this->db->sql_fetchfield('friend_id'))
+		{
+			$friend_ids[] = (int) $friend_id;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $friend_ids;
 	}
 
 	public function are_friends($user_id, $zebra_id)
@@ -688,6 +1001,80 @@ class relationship_manager
 		return utf8_substr($request_message, 0, 255);
 	}
 
+	protected function normalize_circle_name($circle_name)
+	{
+		$circle_name = trim(utf8_substr(trim((string) $circle_name), 0, self::MAX_CIRCLE_NAME_LENGTH));
+		$circle_name_clean = utf8_substr(utf8_clean_string($circle_name), 0, self::MAX_CIRCLE_NAME_LENGTH);
+		if ($circle_name === '' || $circle_name_clean === '')
+		{
+			return false;
+		}
+
+		return array(
+			'display' => $circle_name,
+			'clean'   => $circle_name_clean,
+		);
+	}
+
+	protected function get_circle_by_clean_name($owner_id, $circle_name_clean)
+	{
+		$sql = 'SELECT circle_id, owner_id, circle_name, circle_name_clean, created_at
+			FROM ' . $this->circles_table . '
+			WHERE owner_id = ' . (int) $owner_id . "
+				AND circle_name_clean = '" . $this->db->sql_escape($circle_name_clean) . "'";
+		$result = $this->db->sql_query_limit($sql, 1);
+		$circle = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		return $circle ?: false;
+	}
+
+	protected function get_owned_circle($owner_id, $circle_id)
+	{
+		$sql = 'SELECT circle_id, owner_id, circle_name, circle_name_clean, created_at
+			FROM ' . $this->circles_table . '
+			WHERE circle_id = ' . (int) $circle_id . '
+				AND owner_id = ' . (int) $owner_id;
+		$result = $this->db->sql_query_limit($sql, 1);
+		$circle = $this->db->sql_fetchrow($result);
+		$this->db->sql_freeresult($result);
+
+		return $circle ?: false;
+	}
+
+	protected function get_owned_circle_ids($owner_id)
+	{
+		$result = $this->db->sql_query('SELECT circle_id
+			FROM ' . $this->circles_table . '
+			WHERE owner_id = ' . (int) $owner_id);
+		$circle_ids = array();
+		while (($circle_id = $this->db->sql_fetchfield('circle_id')) !== false)
+		{
+			$circle_ids[] = (int) $circle_id;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $circle_ids;
+	}
+
+	protected function delete_circle_membership_between($first_user_id, $second_user_id)
+	{
+		$first_circle_ids = $this->get_owned_circle_ids($first_user_id);
+		if ($first_circle_ids)
+		{
+			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+				WHERE friend_id = ' . (int) $second_user_id . '
+					AND ' . $this->db->sql_in_set('circle_id', $first_circle_ids));
+		}
+		$second_circle_ids = $this->get_owned_circle_ids($second_user_id);
+		if ($second_circle_ids)
+		{
+			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+				WHERE friend_id = ' . (int) $first_user_id . '
+					AND ' . $this->db->sql_in_set('circle_id', $second_circle_ids));
+		}
+	}
+
 	protected function count_pending_requests($user_id)
 	{
 		$sql = 'SELECT COUNT(*) AS total
@@ -852,6 +1239,25 @@ class relationship_manager
 		$this->db->sql_query('DELETE FROM ' . $this->cooldowns_table . '
 			WHERE ' . $this->db->sql_in_set('requester_id', $user_ids) . '
 				OR ' . $this->db->sql_in_set('recipient_id', $user_ids));
+
+		$owned_circle_ids = array();
+		$result = $this->db->sql_query('SELECT circle_id
+			FROM ' . $this->circles_table . '
+			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
+		while (($circle_id = $this->db->sql_fetchfield('circle_id')) !== false)
+		{
+			$owned_circle_ids[] = (int) $circle_id;
+		}
+		$this->db->sql_freeresult($result);
+		if ($owned_circle_ids)
+		{
+			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+				WHERE ' . $this->db->sql_in_set('circle_id', $owned_circle_ids));
+		}
+		$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+			WHERE ' . $this->db->sql_in_set('friend_id', $user_ids));
+		$this->db->sql_query('DELETE FROM ' . $this->circles_table . '
+			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
 
 		$this->delete_request_notifications($requests);
 		$this->delete_user_notifications($user_ids);

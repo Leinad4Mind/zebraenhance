@@ -57,6 +57,8 @@ class relationship_manager_test extends \phpbb_database_test_case
 			'phpbb_zebra_request_cooldowns',
 			'phpbb_zebra_confirm',
 			'phpbb_zebra',
+			'phpbb_zebra_circles',
+			'phpbb_zebra_circle_members',
 			'phpbb_users',
 			'phpbb_notifications',
 			'phpbb_notification_emails',
@@ -540,6 +542,101 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertTrue($this->relationships->set_close_friend(2, 3, true));
 	}
 
+	public function test_circle_lifecycle_is_owner_scoped_and_dispatches_events()
+	{
+		$this->dispatcher->expects($this->exactly(4))
+			->method('trigger_event')
+			->withConsecutive(
+				array(
+					\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_CREATED,
+					$this->callback(function ($data)
+					{
+						return $data['owner_id'] === 2 && $data['circle_name'] === 'Gaming';
+					}),
+				),
+				array(
+					\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_RENAMED,
+					$this->callback(function ($data)
+					{
+						return $data['owner_id'] === 2
+							&& $data['old_name'] === 'Gaming'
+							&& $data['new_name'] === 'GAMING';
+					}),
+				),
+				array(
+					\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_RENAMED,
+					$this->callback(function ($data)
+					{
+						return $data['owner_id'] === 2
+							&& $data['old_name'] === 'GAMING'
+							&& $data['new_name'] === 'Gaming friends';
+					}),
+				),
+				array(
+					\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_DELETED,
+					$this->callback(function ($data)
+					{
+						return $data['owner_id'] === 2 && $data['circle_name'] === 'Gaming friends';
+					}),
+				)
+			);
+
+		$circle = $this->relationships->create_circle(2, '  Gaming  ');
+		$this->assertIsArray($circle);
+		$this->assertSame('duplicate', $this->relationships->create_circle(2, 'gaming'));
+		$this->assertSame('invalid', $this->relationships->create_circle(2, '   '));
+		$this->assertSame('not_found', $this->relationships->rename_circle(3, $circle['circle_id'], 'Other'));
+		$renamed = $this->relationships->rename_circle(2, $circle['circle_id'], 'GAMING');
+		$this->assertSame('GAMING', $renamed['circle_name']);
+		$renamed = $this->relationships->rename_circle(2, $circle['circle_id'], 'Gaming friends');
+		$this->assertSame('Gaming friends', $renamed['circle_name']);
+		$this->assertFalse($this->relationships->delete_circle(3, $circle['circle_id']));
+		$this->assertTrue($this->relationships->delete_circle(2, $circle['circle_id']));
+		$this->assertSame(array(), $this->relationships->get_circles(2));
+	}
+
+	public function test_circle_count_is_limited_per_owner()
+	{
+		for ($index = 1; $index <= \anavaro\zebraenhance\service\relationship_manager::MAX_CIRCLES; $index++)
+		{
+			$this->assertIsArray($this->relationships->create_circle(2, 'Circle ' . $index));
+		}
+		$this->assertSame('limit', $this->relationships->create_circle(2, 'One too many'));
+		$this->assertIsArray($this->relationships->create_circle(3, 'Another owner'));
+	}
+
+	public function test_circle_memberships_require_an_accepted_friendship()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, 3, 1, 0, 0)');
+		$circle = $this->relationships->create_circle(2, 'Local friends');
+		$foreign_circle = $this->relationships->create_circle(3, 'Work');
+
+		$this->assertFalse($this->relationships->set_friend_circles(2, 4, array($circle['circle_id'])));
+		$this->assertFalse($this->relationships->set_friend_circles(2, 3, array($foreign_circle['circle_id'])));
+		$this->assertTrue($this->relationships->set_friend_circles(2, 3, array($circle['circle_id'])));
+		$this->assertTrue($this->relationships->is_friend_in_circle(2, 3, $circle['circle_id']));
+		$this->assertSame(array(3), $this->relationships->get_circle_friend_ids(2, $circle['circle_id']));
+		$this->assertSame(array($circle['circle_id']), $this->relationships->get_friend_circle_ids(2, 3));
+	}
+
+	public function test_relationship_removal_cleans_circle_memberships_in_both_directions()
+	{
+		$this->db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 3, 'zebra_id' => 2, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+		$first = $this->relationships->create_circle(2, 'First');
+		$second = $this->relationships->create_circle(3, 'Second');
+		$this->assertTrue($this->relationships->set_friend_circles(2, 3, array($first['circle_id'])));
+		$this->assertTrue($this->relationships->set_friend_circles(3, 2, array($second['circle_id'])));
+
+		$this->relationships->remove_relationship(2, 3);
+
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_circle_members'));
+	}
+
 	public function test_integration_event_names_are_vendor_prefixed()
 	{
 		$events = array(
@@ -550,6 +647,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 			\anavaro\zebraenhance\service\relationship_manager::EVENT_FRIENDSHIP_REMOVED,
 			\anavaro\zebraenhance\service\relationship_manager::EVENT_CLOSE_FRIEND_CHANGED,
 			\anavaro\zebraenhance\service\relationship_manager::EVENT_VISIBILITY_CHANGED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_CREATED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_RENAMED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_CIRCLE_DELETED,
+			\anavaro\zebraenhance\service\relationship_manager::EVENT_FRIEND_CIRCLES_CHANGED,
 		);
 		foreach ($events as $event_name)
 		{
@@ -610,11 +711,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 				(notification_type_id, item_id, item_parent_id, user_id)
 				VALUES (90, 41, 2, 3)');
 		}
+		$owned = $this->relationships->create_circle(3, 'Owned');
+		$other = $this->relationships->create_circle(2, 'Other');
+		$this->db->sql_multi_insert('phpbb_zebra_circle_members', array(
+			array('circle_id' => $owned['circle_id'], 'friend_id' => 2),
+			array('circle_id' => $other['circle_id'], 'friend_id' => 3),
+		));
 
 		$this->relationships->delete_user_data(array(3));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_requests'));
 		$this->assertSame(0, $this->count_rows('phpbb_notifications'));
 		$this->assertSame(1, $this->count_rows('phpbb_zebra_request_cooldowns'));
+		$this->assertSame(1, $this->count_rows('phpbb_zebra_circles'));
+		$this->assertSame(0, $this->count_rows('phpbb_zebra_circle_members'));
 		if ($this->db_tools->sql_table_exists('phpbb_notification_emails'))
 		{
 			$this->assertSame(0, $this->count_rows('phpbb_notification_emails'));
