@@ -149,6 +149,47 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 	}
 
+	public function test_removal_preserves_foe_owned_by_other_user()
+	{
+		$this->db->sql_query('DELETE FROM phpbb_zebra_requests WHERE user_low = 2 AND user_high = 3');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (3, 2, 1, 0, 1)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, 3, 0, 1, 0)');
+
+		$this->relationships->remove_relationship(3, 2);
+
+		$this->assertSame(0, $this->count_zebra_rows(3, 2, 1, 0));
+		$this->assertSame(1, $this->count_zebra_rows(2, 3, 0, 1));
+	}
+
+	public function test_foe_addition_removes_friendship_but_preserves_existing_foes()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (3, 5, 1, 0, 1)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (5, 3, 1, 0, 0)');
+		$rows = array(array('user_id' => 3, 'zebra_id' => 5, 'foe' => 1));
+
+		$this->assertSame($rows, $this->relationships->process_additions('foes', $rows));
+		$this->assertSame(0, $this->count_zebra_rows(3, 5, 1, 0));
+		$this->assertSame(0, $this->count_zebra_rows(5, 3, 1, 0));
+		$this->assertSame(1, $this->count_zebra_rows(4, 5, 0, 1));
+	}
+
+	public function test_friend_addition_reports_request_outcomes()
+	{
+		$results = null;
+		$rows = array(array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1));
+
+		$this->assertSame(array(), $this->relationships->process_additions('friends', $rows, $results));
+		$this->assertSame(array('ignored'), $results);
+	}
+
 	public function test_friend_list_visibility_rules()
 	{
 		$this->assertTrue($this->relationships->can_view_friend_list(4, ANONYMOUS, 0));
@@ -208,6 +249,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 				(user_id = ' . (int) $first_id . ' AND zebra_id = ' . (int) $second_id . ')
 				OR (user_id = ' . (int) $second_id . ' AND zebra_id = ' . (int) $first_id . ')
 			)';
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+		return $count;
+	}
+
+	protected function count_zebra_rows($user_id, $zebra_id, $friend, $foe)
+	{
+		$sql = 'SELECT COUNT(*) AS total FROM phpbb_zebra
+			WHERE user_id = ' . (int) $user_id . '
+				AND zebra_id = ' . (int) $zebra_id . '
+				AND friend = ' . (int) $friend . '
+				AND foe = ' . (int) $foe;
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);

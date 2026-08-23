@@ -79,15 +79,17 @@ class relationship_manager
 	 *
 	 * @param string $mode
 	 * @param array  $rows
+	 * @param array  $results Outcomes for intercepted friend requests
 	 * @return array Rows phpBB should continue inserting
 	 */
-	public function process_additions($mode, array $rows)
+	public function process_additions($mode, array $rows, array &$results = null)
 	{
+		$results = array();
 		if ($mode === 'friends')
 		{
 			foreach ($rows as $row)
 			{
-				$this->request_friendship((int) $row['user_id'], (int) $row['zebra_id']);
+				$results[] = $this->request_friendship((int) $row['user_id'], (int) $row['zebra_id']);
 			}
 
 			return array();
@@ -97,7 +99,7 @@ class relationship_manager
 		{
 			foreach ($rows as $row)
 			{
-				$this->cancel_requests_between((int) $row['user_id'], (int) $row['zebra_id']);
+				$this->prepare_foe_addition((int) $row['user_id'], (int) $row['zebra_id']);
 			}
 		}
 
@@ -189,7 +191,35 @@ class relationship_manager
 		$this->db->sql_transaction('begin');
 		try
 		{
-			$this->delete_zebra_between($user_id, $zebra_id);
+			$this->delete_friendship_between($user_id, $zebra_id);
+			$this->delete_request_rows($requests);
+			$this->delete_legacy_between($user_id, $zebra_id);
+			$this->mark_changed(array($user_id, $zebra_id));
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		$this->delete_request_notifications($requests);
+	}
+
+	/**
+	 * Remove extension-owned relationship state before phpBB inserts a foe.
+	 *
+	 * Existing foe rows are deliberately preserved. This makes the service safe
+	 * for legacy one-sided friendships and for integrations that dispatch the
+	 * Zebra event without going through the stock UCP checks.
+	 */
+	protected function prepare_foe_addition($user_id, $zebra_id)
+	{
+		$requests = $this->get_requests_between($user_id, $zebra_id);
+		$this->db->sql_transaction('begin');
+		try
+		{
+			$this->delete_friendship_between($user_id, $zebra_id);
 			$this->delete_request_rows($requests);
 			$this->delete_legacy_between($user_id, $zebra_id);
 			$this->mark_changed(array($user_id, $zebra_id));
@@ -547,6 +577,16 @@ class relationship_manager
 		$sql = 'DELETE FROM ' . $this->zebra_table . '
 			WHERE (user_id = ' . (int) $user_id . ' AND zebra_id = ' . (int) $zebra_id . ')
 				OR (user_id = ' . (int) $zebra_id . ' AND zebra_id = ' . (int) $user_id . ')';
+		$this->db->sql_query($sql);
+	}
+
+	protected function delete_friendship_between($user_id, $zebra_id)
+	{
+		$sql = 'DELETE FROM ' . $this->zebra_table . '
+			WHERE friend = 1
+				AND foe = 0
+				AND ((user_id = ' . (int) $user_id . ' AND zebra_id = ' . (int) $zebra_id . ')
+					OR (user_id = ' . (int) $zebra_id . ' AND zebra_id = ' . (int) $user_id . '))';
 		$this->db->sql_query($sql);
 	}
 
