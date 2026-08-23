@@ -6,6 +6,19 @@
 		{% if FRIENDLIST_ERROR_ACCESS %}
 		<p class="responsive-center">{{ lang('FRIENDLIST_ERROR_ACCESS') }}</p>
 		{% elseif zebra_friendslist|length %}
+		{% if zebra_mutual_friends|length %}
+		<section id="ze-mutual-friends" class="ze-mutual-friends">
+			<h4>{{ lang('ZE_MUTUAL_FRIENDS') }}</h4>
+			<ul class="ze-profile-friends">
+			{% for friend in zebra_mutual_friends %}
+				<li>
+					<a href="{{ friend.U_PROFILE }}" class="header-avatar">{{ friend.USER_AVATAR }}</a>
+					{{ friend.USERNAME_FULL }}
+				</li>
+			{% endfor %}
+			</ul>
+		</section>
+		{% endif %}
 		<ul class="ze-profile-friends">
 		{% for friend in zebra_friendslist %}
 			<li>

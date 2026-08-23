@@ -684,6 +684,20 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(1, count($this->relationships->get_friends(2, 1, 1)));
 	}
 
+	public function test_mutual_friends_require_valid_friend_rows_for_both_users()
+	{
+		$this->db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 4, 'zebra_id' => 3, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 2, 'zebra_id' => 5, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+
+		$mutual_friends = $this->relationships->get_mutual_friends(2, 4);
+		$this->assertCount(1, $mutual_friends);
+		$this->assertSame(3, (int) $mutual_friends[0]['zebra_id']);
+		$this->assertSame(array(), $this->relationships->get_mutual_friends(2, 2));
+	}
+
 	public function test_pending_request_limit_prevents_unbounded_spam()
 	{
 		$this->config->set('ze_max_pending_requests', 1);

@@ -204,6 +204,37 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_mutual_friends_follow_profile_friend_list_privacy()
+	{
+		$viewer = 'zemutualviewer';
+		$mutual = 'zemutualfriend';
+		$viewer_id = $this->create_user($viewer);
+		$mutual_id = $this->create_user($mutual);
+		$db = $this->get_db();
+		$db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => $viewer_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $viewer_id, 'zebra_id' => 2, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 2, 'zebra_id' => $mutual_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $mutual_id, 'zebra_id' => 2, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $viewer_id, 'zebra_id' => $mutual_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $mutual_id, 'zebra_id' => $viewer_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 3 WHERE user_id = 2');
+
+		$this->login($viewer);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertSame(1, $crawler->filter('#ze-mutual-friends')->count());
+		$this->assertStringContainsString($mutual, $crawler->filter('#ze-mutual-friends')->text());
+
+		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 5 WHERE user_id = 2');
+		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter('#ze-mutual-friends')->count());
+		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#ze-friend-list')->text());
+		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 0 WHERE user_id = 2');
+		$this->logout();
+	}
+
 	public function test_user_can_restrict_new_friend_requests_in_ucp()
 	{
 		$requester = 'zepolicy';

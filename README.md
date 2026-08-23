@@ -20,6 +20,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Request and acceptance notifications support board alerts and opt-in email through phpBB's notification preferences.
 - Each user can independently mark an accepted friend as a Close Friend.
 - Users can create up to 20 private friend circles and assign accepted friends to several circles.
+- Profiles show mutual friends only when the viewer may see that profile's friend list.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Friend acceptance/removal is symmetric and transactional.
 - Friend and request lists are paginated. Administrators can configure the maximum pending requests per account.

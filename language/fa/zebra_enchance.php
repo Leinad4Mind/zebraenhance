@@ -72,6 +72,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_MESSAGE'                   => 'پیام اختیاری',
 	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'یک پیام شخصی کوتاه اضافه کنید (اختیاری)',
 
+	'ZE_MUTUAL_FRIENDS'        => 'Mutual friends',
 	'ZE_CIRCLES'               => 'Friend circles',
 	'ZE_CIRCLES_EXPLAIN'       => 'Create private groups and choose which accepted friends belong to each one.',
 	'ZE_CIRCLE_NAME'           => 'Circle name',

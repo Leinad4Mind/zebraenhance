@@ -923,6 +923,45 @@ class relationship_manager
 		return $rows;
 	}
 
+	/**
+	 * Return accepted friends present in both users' directional lists.
+	 */
+	public function get_mutual_friends($first_user_id, $second_user_id, $limit = 12)
+	{
+		$first_user_id = (int) $first_user_id;
+		$second_user_id = (int) $second_user_id;
+		$limit = max(1, min(100, (int) $limit));
+		if (!$first_user_id || !$second_user_id || $first_user_id === $second_user_id)
+		{
+			return array();
+		}
+
+		$sql = 'SELECT first_friend.zebra_id, u.username, u.user_colour
+			FROM ' . $this->zebra_table . ' first_friend
+			INNER JOIN ' . $this->zebra_table . ' second_friend
+				ON second_friend.zebra_id = first_friend.zebra_id
+			INNER JOIN ' . $this->users_table . ' u
+				ON u.user_id = first_friend.zebra_id
+			WHERE first_friend.user_id = ' . $first_user_id . '
+				AND second_friend.user_id = ' . $second_user_id . '
+				AND first_friend.zebra_id <> ' . $first_user_id . '
+				AND first_friend.zebra_id <> ' . $second_user_id . '
+				AND first_friend.friend = 1
+				AND first_friend.foe = 0
+				AND second_friend.friend = 1
+				AND second_friend.foe = 0
+			ORDER BY u.username_clean ASC';
+		$result = $this->db->sql_query_limit($sql, $limit);
+		$rows = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$rows[] = $row;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $rows;
+	}
+
 	public function count_friends($owner_id)
 	{
 		$sql = 'SELECT COUNT(*) AS total

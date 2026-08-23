@@ -82,6 +82,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_MESSAGE'                   => 'Незадължително съобщение',
 	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Добавете кратко лично съобщение (незадължително)',
 
+	'ZE_MUTUAL_FRIENDS'        => 'Mutual friends',
 	'ZE_CIRCLES'               => 'Friend circles',
 	'ZE_CIRCLES_EXPLAIN'       => 'Create private groups and choose which accepted friends belong to each one.',
 	'ZE_CIRCLE_NAME'           => 'Circle name',

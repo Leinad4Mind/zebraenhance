@@ -83,6 +83,7 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_MESSAGE'                   => 'Mensagem opcional',
 	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Adicione uma mensagem pessoal curta (opcional)',
 
+	'ZE_MUTUAL_FRIENDS'        => 'Amigos em comum',
 	'ZE_CIRCLES'               => 'Círculos de amigos',
 	'ZE_CIRCLES_EXPLAIN'       => 'Crie grupos privados e escolha quais amigos aceitos pertencem a cada um.',
 	'ZE_CIRCLE_NAME'           => 'Nome do círculo',

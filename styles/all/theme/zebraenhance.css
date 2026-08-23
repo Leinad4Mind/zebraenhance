@@ -108,3 +108,9 @@
 	max-height: 3rem;
 	max-width: 3rem;
 }
+
+.ze-mutual-friends {
+	border-bottom: 1px solid #ccc;
+	margin-bottom: 1rem;
+	padding-bottom: 1rem;
+}

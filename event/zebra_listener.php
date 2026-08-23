@@ -362,12 +362,26 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			return;
 		}
+		$mutual_friends = $viewer_registered && $viewer_id !== $owner_id
+			? $this->relationships->get_mutual_friends($owner_id, $viewer_id)
+			: array();
 
 		$user_ids = array_map(function ($row)
 		{
 			return (int) $row['zebra_id'];
-		}, $friends);
+		}, array_merge($friends, $mutual_friends));
+		$user_ids = array_values(array_unique($user_ids));
 		$this->user_loader->load_users($user_ids);
+		foreach ($mutual_friends as $row)
+		{
+			$friend_id = (int) $row['zebra_id'];
+			$this->template->assign_block_vars('zebra_mutual_friends', array(
+				'USER_ID'       => $friend_id,
+				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
+				'U_PROFILE'     => $this->profile_url($friend_id),
+				'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
+			));
+		}
 		foreach ($friends as $row)
 		{
 			$friend_id = (int) $row['zebra_id'];
