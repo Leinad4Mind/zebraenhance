@@ -2,15 +2,19 @@
 	"name": "anavaro/zebraenhance",
 	"type": "phpbb-extension",
 	"description": "Adds confirmed friend requests, Close Friends, and friend-list privacy controls to phpBB Zebra.",
-	"homepage": "https://github.com/lucifer4o/zebraenhance",
+	"homepage": "https://leinad4mind.top/forum",
 	"version": "2.0.0",
 	"license": "GPL-2.0-only",
 	"authors": [
 		{
 			"name": "Stanislav Atanasov",
 			"email": "lucifer@anavaro.com",
-			"homepage": "http://anavaro.com",
-			"role": "Lead Developer"
+			"role": "Original Author"
+		},
+		{
+			"name": "Leinad4Mind",
+			"homepage": "https://leinad4mind.top/forum",
+			"role": "Developer"
 		}
 	],
 	"require": {

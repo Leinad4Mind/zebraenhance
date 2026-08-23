@@ -4,6 +4,7 @@
 * Zebra Enhance extension for phpBB.
 *
 * @copyright (c) 2013-2026 Stanislav Atanasov
+* @copyright (c) 2026 Leinad4Mind
 * @license GNU General Public License, version 2 (GPL-2.0-only)
 *
 */

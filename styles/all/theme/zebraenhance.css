@@ -1,3 +1,9 @@
+/**
+ * @copyright (c) 2013-2026 Stanislav Atanasov
+ * @copyright (c) 2026 Leinad4Mind
+ * @license GNU General Public License, version 2 (GPL-2.0-only)
+ */
+
 .ze-scroll-list {
 	max-height: 12rem;
 	overflow: auto;

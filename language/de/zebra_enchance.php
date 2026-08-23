@@ -6,6 +6,7 @@
 *
 * @package language
 * @version $Id$
+* @copyright (c) 2026 Leinad4Mind
 * @license http://opensource.org/licenses/gpl-license.php GNU Public License
 *
 * German translation by franki (http://dieahnen.de/ahnenforum/)

@@ -3,6 +3,7 @@
 *
 * @package migration
 * @copyright (c) 2012 phpBB Group
+* @copyright (c) 2026 Leinad4Mind
 * @license http://opensource.org/licenses/gpl-license.php GNU Public License v2
 *
 */
