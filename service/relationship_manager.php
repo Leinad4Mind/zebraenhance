@@ -962,6 +962,83 @@ class relationship_manager
 		return $rows;
 	}
 
+	/**
+	 * Suggest visible friends-of-friends who can currently receive a request.
+	 */
+	public function get_friend_suggestions($viewer_id, $limit = 8)
+	{
+		$viewer_id = (int) $viewer_id;
+		$limit = max(1, min(50, (int) $limit));
+		if (!$viewer_id || $viewer_id === ANONYMOUS)
+		{
+			return array();
+		}
+		$max_pending = $this->max_pending_requests();
+		if ($max_pending > 0 && $this->count_pending_requests($viewer_id) >= $max_pending)
+		{
+			return array();
+		}
+		$candidate_limit_sql = $max_pending > 0
+			? ' AND (SELECT COUNT(*) FROM ' . $this->requests_table . ' candidate_pending
+				WHERE candidate_pending.requester_id = candidate.user_id
+					OR candidate_pending.recipient_id = candidate.user_id) < ' . $max_pending
+			: '';
+
+		$sql = 'SELECT candidate.user_id, candidate.username, candidate.user_colour,
+				candidate.profile_friend_show, candidate.zebra_request_policy,
+				COUNT(DISTINCT viewer_friend.zebra_id) AS mutual_count
+			FROM ' . $this->zebra_table . ' viewer_friend
+			INNER JOIN ' . $this->zebra_table . ' friend_candidate
+				ON friend_candidate.user_id = viewer_friend.zebra_id
+					AND friend_candidate.friend = 1
+					AND friend_candidate.foe = 0
+			INNER JOIN ' . $this->users_table . ' candidate
+				ON candidate.user_id = friend_candidate.zebra_id
+			LEFT JOIN ' . $this->zebra_table . ' viewer_relationship
+				ON viewer_relationship.user_id = ' . $viewer_id . '
+					AND viewer_relationship.zebra_id = candidate.user_id
+			LEFT JOIN ' . $this->zebra_table . ' candidate_relationship
+				ON candidate_relationship.user_id = candidate.user_id
+					AND candidate_relationship.zebra_id = ' . $viewer_id . '
+			LEFT JOIN ' . $this->requests_table . ' pending
+				ON (pending.requester_id = ' . $viewer_id . ' AND pending.recipient_id = candidate.user_id)
+					OR (pending.recipient_id = ' . $viewer_id . ' AND pending.requester_id = candidate.user_id)
+			LEFT JOIN ' . $this->cooldowns_table . ' active_cooldown
+				ON active_cooldown.requester_id = ' . $viewer_id . '
+					AND active_cooldown.recipient_id = candidate.user_id
+					AND active_cooldown.expires_at > ' . time() . '
+			WHERE viewer_friend.user_id = ' . $viewer_id . '
+				AND viewer_friend.friend = 1
+				AND viewer_friend.foe = 0
+				AND candidate.user_id <> ' . $viewer_id . '
+				AND ' . $this->db->sql_in_set('candidate.user_type', array(USER_NORMAL, USER_FOUNDER)) . '
+				AND candidate.zebra_request_policy <> ' . self::REQUEST_POLICY_NOBODY . '
+				AND ' . $this->db->sql_in_set('candidate.profile_friend_show', array(0, 1, 2)) . '
+				AND viewer_relationship.user_id IS NULL
+				AND candidate_relationship.user_id IS NULL
+				AND pending.request_id IS NULL
+				AND active_cooldown.requester_id IS NULL' . $candidate_limit_sql . '
+			GROUP BY candidate.user_id, candidate.username, candidate.user_colour,
+				candidate.profile_friend_show, candidate.zebra_request_policy
+			ORDER BY mutual_count DESC, candidate.username ASC';
+		$result = $this->db->sql_query_limit($sql, max(50, $limit * 5));
+		$suggestions = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$candidate_id = (int) $row['user_id'];
+			$row['user_id'] = $candidate_id;
+			$row['mutual_count'] = (int) $row['mutual_count'];
+			$suggestions[] = $row;
+			if (count($suggestions) >= $limit)
+			{
+				break;
+			}
+		}
+		$this->db->sql_freeresult($result);
+
+		return $suggestions;
+	}
+
 	public function count_friends($owner_id)
 	{
 		$sql = 'SELECT COUNT(*) AS total

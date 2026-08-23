@@ -235,6 +235,53 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_friend_suggestions_can_create_a_request_without_leaking_private_candidates()
+	{
+		$viewer = 'zesuggestviewer';
+		$shared = 'zesuggestshared';
+		$suggested = 'zesuggested';
+		$private = 'zesuggestprivate';
+		$viewer_id = $this->create_user($viewer);
+		$shared_id = $this->create_user($shared);
+		$suggested_id = $this->create_user($suggested);
+		$private_id = $this->create_user($private);
+		$db = $this->get_db();
+		$db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => $viewer_id, 'zebra_id' => $shared_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $shared_id, 'zebra_id' => $viewer_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $shared_id, 'zebra_id' => $suggested_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $suggested_id, 'zebra_id' => $shared_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $shared_id, 'zebra_id' => $private_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => $private_id, 'zebra_id' => $shared_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 0 WHERE user_id = ' . (int) $suggested_id);
+		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 5 WHERE user_id = ' . (int) $private_id);
+
+		$crawler = $this->open_friends_as($viewer);
+		$this->assertStringContainsString($suggested, $crawler->filter('#ze-friend-suggestions')->text());
+		$this->assertStringNotContainsString($private, $crawler->filter('#ze-friend-suggestions')->text());
+		$this->assertStringContainsString('1 mutual friend', $crawler->filter('#ze-friend-suggestions')->text());
+		$suggestion = $crawler->filter('#ze-friend-suggestions .ze-list-row')->reduce(function ($node) use ($suggested)
+		{
+			return strpos($node->text(), $suggested) !== false;
+		})->first();
+		$response = $this->post_action(
+			$suggestion->filter('.js-ze-request')->attr('data-url'),
+			$this->form_token($crawler)
+		);
+		$this->assertSame('created', $response['action']);
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter('#ze-friend-suggestions')->count());
+		$this->assertStringContainsString($suggested, $crawler->filter('#ze-outgoing-requests')->text());
+		$cancel = $crawler->filter('#ze-outgoing-requests .ze-list-row')->reduce(function ($node) use ($suggested)
+		{
+			return strpos($node->text(), $suggested) !== false;
+		})->first();
+		$this->post_action($cancel->filter('.js-ze-request')->attr('data-url'), $this->form_token($crawler));
+		$this->logout();
+	}
+
 	public function test_user_can_restrict_new_friend_requests_in_ucp()
 	{
 		$requester = 'zepolicy';

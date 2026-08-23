@@ -84,6 +84,13 @@ $lang = array_merge($lang, array(
 	'ZE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Adicione uma mensagem pessoal curta (opcional)',
 
 	'ZE_MUTUAL_FRIENDS'        => 'Amigos em comum',
+	'ZE_FRIEND_SUGGESTIONS'         => 'Pessoas que você talvez conheça',
+	'ZE_FRIEND_SUGGESTIONS_EXPLAIN' => 'Amigos de amigos cujas configurações de privacidade e pedidos permitem a sugestão.',
+	'ZE_SEND_FRIEND_REQUEST'        => 'Enviar pedido de amizade',
+	'ZE_MUTUAL_FRIEND_COUNT'        => array(
+		1 => '%d amigo em comum',
+		2 => '%d amigos em comum',
+	),
 	'ZE_CIRCLES'               => 'Círculos de amigos',
 	'ZE_CIRCLES_EXPLAIN'       => 'Crie grupos privados e escolha quais amigos aceitos pertencem a cada um.',
 	'ZE_CIRCLE_NAME'           => 'Nome do círculo',

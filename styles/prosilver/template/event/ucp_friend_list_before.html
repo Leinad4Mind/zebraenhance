@@ -92,6 +92,20 @@
 </ul></div>
 {% endif %}
 
+{% if ze_friend_suggestions|length %}
+<dl>
+	<dt><label>{{ lang('ZE_FRIEND_SUGGESTIONS') }}</label><br><span>{{ lang('ZE_FRIEND_SUGGESTIONS_EXPLAIN') }}</span></dt>
+	<dd id="ze-friend-suggestions" class="ze-scroll-list">
+	{% for suggestion in ze_friend_suggestions %}
+		<div class="ze-list-row" data-user-id="{{ suggestion.USER_ID }}">
+			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ suggestion.U_REQUEST }}" title="{{ lang('ZE_SEND_FRIEND_REQUEST') }}" aria-label="{{ lang('ZE_SEND_FRIEND_REQUEST') }}"><i class="icon fa-user-plus fa-fw" aria-hidden="true"></i></button>
+			<span>{{ suggestion.USERNAME_FULL }}<span class="ze-mutual-count">{{ lang('ZE_MUTUAL_FRIEND_COUNT', suggestion.MUTUAL_COUNT) }}</span></span>
+		</div>
+	{% endfor %}
+	</dd>
+</dl>
+{% endif %}
+
 {% if pending_awaits|length %}
 <dl>
 	<dt><label>{{ lang('UCP_ZEBRA_PENDING_OUT') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_OUT_EXP') }}</span></dt>

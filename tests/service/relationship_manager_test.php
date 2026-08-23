@@ -698,6 +698,37 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(array(), $this->relationships->get_mutual_friends(2, 2));
 	}
 
+	public function test_friend_suggestions_respect_privacy_policy_and_relationship_state()
+	{
+		$this->db->sql_multi_insert('phpbb_users', array(
+			array('user_id' => 6, 'user_type' => USER_NORMAL, 'group_id' => 2, 'username' => 'suggested', 'username_clean' => 'suggested', 'profile_friend_show' => 0, 'zebra_request_policy' => 0),
+			array('user_id' => 7, 'user_type' => USER_NORMAL, 'group_id' => 2, 'username' => 'private', 'username_clean' => 'private', 'profile_friend_show' => 5, 'zebra_request_policy' => 0),
+			array('user_id' => 8, 'user_type' => USER_NORMAL, 'group_id' => 2, 'username' => 'restricted', 'username_clean' => 'restricted', 'profile_friend_show' => 0, 'zebra_request_policy' => 2),
+		));
+		$this->db->sql_multi_insert('phpbb_zebra', array(
+			array('user_id' => 2, 'zebra_id' => 4, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 4, 'zebra_id' => 6, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 4, 'zebra_id' => 7, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+			array('user_id' => 4, 'zebra_id' => 8, 'friend' => 1, 'foe' => 0, 'bff' => 0),
+		));
+
+		$suggestions = $this->relationships->get_friend_suggestions(2);
+		$this->assertCount(1, $suggestions);
+		$this->assertSame(6, $suggestions[0]['user_id']);
+		$this->assertSame(1, $suggestions[0]['mutual_count']);
+
+		$this->db->sql_query('INSERT INTO phpbb_zebra_request_cooldowns
+			(requester_id, recipient_id, expires_at)
+			VALUES (2, 6, ' . (time() + 3600) . ')');
+		$this->assertSame(array(), $this->relationships->get_friend_suggestions(2));
+		$this->db->sql_query('DELETE FROM phpbb_zebra_request_cooldowns
+			WHERE requester_id = 2 AND recipient_id = 6');
+		$this->db->sql_query('INSERT INTO phpbb_zebra_requests
+			(requester_id, recipient_id, user_low, user_high, request_time, request_message)
+			VALUES (2, 6, 2, 6, ' . time() . ", '')");
+		$this->assertSame(array(), $this->relationships->get_friend_suggestions(2));
+	}
+
 	public function test_pending_request_limit_prevents_unbounded_spam()
 	{
 		$this->config->set('ze_max_pending_requests', 1);

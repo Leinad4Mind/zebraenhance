@@ -194,6 +194,7 @@ class zebra_listener implements EventSubscriberInterface
 		$incoming = $this->relationships->get_requests($user_id, true, $page_size, $incoming_start);
 		$outgoing = $this->relationships->get_requests($user_id, false, $page_size, $outgoing_start);
 		$friends = $this->relationships->get_friends($user_id, $page_size, $friends_start);
+		$suggestions = $this->relationships->get_friend_suggestions($user_id);
 		$circles = $this->relationships->get_circles($user_id);
 		foreach ($circles as $circle)
 		{
@@ -223,6 +224,10 @@ class zebra_listener implements EventSubscriberInterface
 		foreach ($friends as $row)
 		{
 			$identity_ids[] = (int) $row['zebra_id'];
+		}
+		foreach ($suggestions as $row)
+		{
+			$identity_ids[] = (int) $row['user_id'];
 		}
 		$identity_ids = array_values(array_unique(array_filter($identity_ids)));
 		if ($identity_ids)
@@ -255,6 +260,19 @@ class zebra_listener implements EventSubscriberInterface
 				'USERNAME_FULL' => $this->user_loader->get_username($recipient_id, 'full'),
 				'MESSAGE'       => (string) $row['request_message'],
 				'U_CANCEL'      => $this->request_action_url((int) $row['request_id'], 'cancel'),
+			));
+		}
+
+		foreach ($suggestions as $row)
+		{
+			$suggested_user_id = (int) $row['user_id'];
+			$this->template->assign_block_vars('ze_friend_suggestions', array(
+				'USER_ID'       => $suggested_user_id,
+				'USERNAME_FULL' => $this->user_loader->get_username($suggested_user_id, 'full'),
+				'MUTUAL_COUNT'  => (int) $row['mutual_count'],
+				'U_REQUEST'     => $this->controller_helper->route('anavaro_zebraenhance_create_request', array(
+					'userid' => $suggested_user_id,
+				)),
 			));
 		}
 
