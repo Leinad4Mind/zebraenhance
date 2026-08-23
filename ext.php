@@ -23,7 +23,7 @@ class ext extends \phpbb\extension\base
 
 	public function enable_step($old_state)
 	{
-		if ($old_state === '')
+		if ($old_state === false)
 		{
 			$notifications = $this->container->get('notification_manager');
 			$notifications->enable_notifications('anavaro.zebraenhance.notification.zebraadd');
@@ -37,7 +37,7 @@ class ext extends \phpbb\extension\base
 
 	public function disable_step($old_state)
 	{
-		if ($old_state === '')
+		if ($old_state === false)
 		{
 			$notifications = $this->container->get('notification_manager');
 			$notifications->disable_notifications('anavaro.zebraenhance.notification.zebraadd');
@@ -51,7 +51,7 @@ class ext extends \phpbb\extension\base
 
 	public function purge_step($old_state)
 	{
-		if ($old_state === '')
+		if ($old_state === false)
 		{
 			$notifications = $this->container->get('notification_manager');
 			$notifications->purge_notifications('anavaro.zebraenhance.notification.zebraadd');
