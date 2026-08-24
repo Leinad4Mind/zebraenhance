@@ -46,8 +46,10 @@ jobs:
         include:
           - phpbb: '3.3.0'
             php: '7.4'
+            composer: 'v1'
           - phpbb: '3.3.17'
             php: '7.4'
+            composer: 'v2'
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -55,14 +57,11 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: sqlite3
           coverage: none
+          tools: composer:${{ matrix.composer }}
       - name: Prepare phpBB ${{ matrix.phpbb }}
         run: |
           git clone --depth 1 --branch release-${{ matrix.phpbb }} https://github.com/phpbb/phpbb.git phpbb
-          if [[ "${{ matrix.phpbb }}" == "3.3.0" ]]; then
-            composer install --working-dir=phpbb/phpBB --no-interaction --no-progress --no-plugins --ignore-platform-req=composer-plugin-api
-          else
-            composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
-          fi
+          composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
           rsync -a --exclude=.git --exclude=phpbb --exclude=vendor --exclude=dist "$GITHUB_WORKSPACE/" phpbb/phpBB/ext/anavaro/zebraenhance/
@@ -79,8 +78,10 @@ jobs:
         include:
           - phpbb: '3.3.0'
             php: '7.4'
+            composer: 'v1'
           - phpbb: '3.3.17'
             php: '7.4'
+            composer: 'v2'
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -88,14 +89,11 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: sqlite3
           coverage: none
+          tools: composer:${{ matrix.composer }}
       - name: Prepare phpBB ${{ matrix.phpbb }}
         run: |
           git clone --depth 1 --branch release-${{ matrix.phpbb }} https://github.com/phpbb/phpbb.git phpbb
-          if [[ "${{ matrix.phpbb }}" == "3.3.0" ]]; then
-            composer install --working-dir=phpbb/phpBB --no-interaction --no-progress --no-plugins --ignore-platform-req=composer-plugin-api
-          else
-            composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
-          fi
+          composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
           rsync -a --exclude=.git --exclude=phpbb --exclude=vendor --exclude=dist "$GITHUB_WORKSPACE/" phpbb/phpBB/ext/anavaro/zebraenhance/
@@ -110,7 +108,10 @@ jobs:
             curl --fail --silent "$PHPBB_FUNCTIONAL_URL" > /dev/null && break
             sleep 1
           done
-          phpBB/vendor/bin/phpunit -c phpBB/ext/anavaro/zebraenhance/phpunit.xml.dist --testsuite 'Extension Functional Tests' --colors=always
+          if ! phpBB/vendor/bin/phpunit -c phpBB/ext/anavaro/zebraenhance/phpunit.xml.dist --testsuite 'Extension Functional Tests' --colors=always; then
+            cat "$RUNNER_TEMP/zebraenhance-server.log"
+            exit 1
+          fi
 
   extension-pre-validator:
     name: phpBB Extension Pre-Validator
