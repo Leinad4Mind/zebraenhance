@@ -565,6 +565,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(0, $this->relationships->count_requests(2, false));
 	}
 
+	public function test_acp_pending_request_report_is_counted_paginated_and_newest_first()
+	{
+		$this->assertSame(2, $this->relationships->count_pending_request_report());
+		$first_page = $this->relationships->get_pending_request_report(1, 0);
+		$this->assertCount(1, $first_page);
+		$this->assertSame(2, (int) $first_page[0]['request_id']);
+		$this->assertSame('admin', $first_page[0]['requester_username']);
+		$this->assertSame('user52', $first_page[0]['recipient_username']);
+		$second_page = $this->relationships->get_pending_request_report(1, 1);
+		$this->assertCount(1, $second_page);
+		$this->assertSame(1, (int) $second_page[0]['request_id']);
+	}
+
 	public function test_friend_list_visibility_is_clamped_and_persisted()
 	{
 		$this->assertSame(5, $this->relationships->set_friend_list_visibility(2, 99));

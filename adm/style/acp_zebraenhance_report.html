@@ -1,0 +1,49 @@
+{% INCLUDE 'overall_header.html' %}
+
+<h1>{{ lang('ACP_ZEBRA_ENHANCE_REPORT') }}</h1>
+<p>{{ lang('ACP_ZEBRA_ENHANCE_REPORT_EXPLAIN') }}</p>
+
+<p>{{ TOTAL_REQUESTS }}</p>
+
+{% if pagination|length %}
+<div class="pagination top-pagination">
+	{% INCLUDE 'pagination.html' %}
+</div>
+{% endif %}
+
+{% if ze_requests|length %}
+<table class="table1 zebra-table fixed-width-table">
+	<thead>
+	<tr>
+		<th>{{ lang('ACP_ZE_REQUEST_ID') }}</th>
+		<th>{{ lang('ACP_ZE_REQUESTER') }}</th>
+		<th>{{ lang('ACP_ZE_RECIPIENT') }}</th>
+		<th>{{ lang('ACP_ZE_REQUEST_DATE') }}</th>
+		<th>{{ lang('ACP_ZE_REQUEST_MESSAGE') }}</th>
+	</tr>
+	</thead>
+	<tbody>
+	{% for request in ze_requests %}
+	<tr>
+		<td>{{ request.REQUEST_ID }}</td>
+		<td>{{ request.REQUESTER }}</td>
+		<td>{{ request.RECIPIENT }}</td>
+		<td>{{ request.DATE }}</td>
+		<td>{{ request.MESSAGE ?: '&mdash;' }}</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% else %}
+<div class="errorbox notice">
+	<p>{{ lang('ACP_ZE_NO_PENDING_REQUESTS') }}</p>
+</div>
+{% endif %}
+
+{% if pagination|length %}
+<div class="pagination">
+	{% INCLUDE 'pagination.html' %}
+</div>
+{% endif %}
+
+{% INCLUDE 'overall_footer.html' %}

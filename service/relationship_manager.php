@@ -31,6 +31,7 @@ class relationship_manager
 	const MAX_CIRCLE_NAME_LENGTH = 50;
 	const MAX_BULK_REQUESTS = 100;
 	const MAX_FRIEND_SEARCH_LENGTH = 100;
+	const ACP_REPORT_PAGE_SIZE = 50;
 	const DEFAULT_MAX_PENDING_REQUESTS = 100;
 	const REQUEST_POLICY_EVERYONE = 0;
 	const REQUEST_POLICY_FRIENDS_OF_FRIENDS = 1;
@@ -1244,6 +1245,49 @@ class relationship_manager
 		$sql = 'SELECT COUNT(*) AS total
 			FROM ' . $this->requests_table . '
 			WHERE ' . $column . ' = ' . (int) $user_id;
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+
+		return $count;
+	}
+
+	/**
+	 * Return a board-wide, newest-first pending request report for the ACP.
+	 */
+	public function get_pending_request_report($limit = self::ACP_REPORT_PAGE_SIZE, $offset = 0)
+	{
+		$sql = 'SELECT r.request_id, r.requester_id, r.recipient_id,
+				r.request_time, r.request_message,
+				requester.username AS requester_username,
+				requester.user_colour AS requester_colour,
+				recipient.username AS recipient_username,
+				recipient.user_colour AS recipient_colour
+			FROM ' . $this->requests_table . ' r
+			INNER JOIN ' . $this->users_table . ' requester
+				ON requester.user_id = r.requester_id
+			INNER JOIN ' . $this->users_table . ' recipient
+				ON recipient.user_id = r.recipient_id
+			ORDER BY r.request_time DESC, r.request_id DESC';
+		$result = $this->db->sql_query_limit($sql, max(1, (int) $limit), max(0, (int) $offset));
+		$rows = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$rows[] = $row;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $rows;
+	}
+
+	public function count_pending_request_report()
+	{
+		$sql = 'SELECT COUNT(*) AS total
+			FROM ' . $this->requests_table . ' r
+			INNER JOIN ' . $this->users_table . ' requester
+				ON requester.user_id = r.requester_id
+			INNER JOIN ' . $this->users_table . ' recipient
+				ON recipient.user_id = r.recipient_id';
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);

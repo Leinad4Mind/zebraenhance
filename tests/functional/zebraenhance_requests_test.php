@@ -451,6 +451,32 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_acp_pending_request_report_is_read_only_and_escapes_messages()
+	{
+		$recipient = 'zeacpreport';
+		$this->create_user($recipient);
+		$this->send_request_as_admin($recipient);
+		$db = $this->get_db();
+		$message = '<script>alert("report")</script>';
+		$db->sql_query("UPDATE phpbb_zebra_requests
+			SET request_message = '" . $db->sql_escape($message) . "'");
+
+		$this->login();
+		$this->admin_login();
+		$this->add_lang_ext('anavaro/zebraenhance', 'info_acp_zebraenhance');
+		$url = 'adm/index.php?i=%5Canavaro%5Czebraenhance%5Cacp%5Creport_module&mode=report&sid=' . $this->sid;
+		$crawler = self::request('GET', $url);
+		$this->assertStringContainsString($this->lang('ACP_ZEBRA_ENHANCE_REPORT'), $crawler->filter('#main')->text());
+		$row = $crawler->filter('table.zebra-table tbody tr')->first();
+		$this->assertSame(1, $row->count());
+		$this->assertStringContainsString('admin', $row->text());
+		$this->assertStringContainsString($recipient, $row->text());
+		$this->assertStringContainsString($message, $row->text());
+		$this->assertSame(0, $row->filter('script')->count());
+		$this->assertSame(0, $row->filter('input, button')->count());
+		$this->logout();
+	}
+
 	public function test_email_is_an_opt_in_notification_method()
 	{
 		$this->login();
