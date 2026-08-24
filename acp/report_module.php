@@ -39,8 +39,8 @@ class report_module
 
 		foreach ($rows as $row)
 		{
-			$message = htmlspecialchars_decode((string) $row['request_message'], ENT_QUOTES);
-			$message = htmlspecialchars(censor_text($message), ENT_QUOTES, 'UTF-8');
+			$message = html_entity_decode((string) $row['request_message'], ENT_QUOTES, 'UTF-8');
+			$message = utf8_htmlspecialchars(censor_text($message));
 			$template->assign_block_vars('ze_requests', array(
 				'REQUEST_ID' => (int) $row['request_id'],
 				'REQUESTER'  => get_username_string('full', (int) $row['requester_id'], (string) $row['requester_username'], (string) $row['requester_colour']),

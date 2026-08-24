@@ -118,5 +118,5 @@ jobs:
       - name: Validate extension
         run: |
           mkdir -p "$RUNNER_TEMP/epv-stage/anavaro/zebraenhance"
-          rsync -a --exclude=.git "$GITHUB_WORKSPACE/" "$RUNNER_TEMP/epv-stage/anavaro/zebraenhance/"
+          rsync -a --exclude=.git --exclude=phpunit.xml.dist "$GITHUB_WORKSPACE/" "$RUNNER_TEMP/epv-stage/anavaro/zebraenhance/"
           php "$RUNNER_TEMP/epv/src/EPV.php" run --dir="$RUNNER_TEMP/epv-stage"

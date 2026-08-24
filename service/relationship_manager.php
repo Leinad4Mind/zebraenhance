@@ -466,8 +466,8 @@ class relationship_manager
 				FROM ' . $this->zebra_table . '
 				WHERE friend = 1
 					AND foe = 0
-					AND ((user_id = ' . $actor_id . ' AND zebra_id = ' . $requester_id . ')
-						OR (user_id = ' . $requester_id . ' AND zebra_id = ' . $actor_id . '))';
+					AND ((user_id = ' . (int) $actor_id . ' AND zebra_id = ' . (int) $requester_id . ')
+						OR (user_id = ' . (int) $requester_id . ' AND zebra_id = ' . (int) $actor_id . '))';
 			$result = $this->db->sql_query_limit($sql, 1);
 			$had_friendship = (bool) $this->db->sql_fetchfield('is_friend');
 			$this->db->sql_freeresult($result);
@@ -475,8 +475,8 @@ class relationship_manager
 			$this->db->sql_query('DELETE FROM ' . $this->zebra_table . '
 				WHERE friend = 1
 					AND foe = 0
-					AND ((user_id = ' . $actor_id . ' AND zebra_id = ' . $requester_id . ')
-						OR (user_id = ' . $requester_id . ' AND zebra_id = ' . $actor_id . '))');
+					AND ((user_id = ' . (int) $actor_id . ' AND zebra_id = ' . (int) $requester_id . ')
+						OR (user_id = ' . (int) $requester_id . ' AND zebra_id = ' . (int) $actor_id . '))');
 			if ($had_friendship)
 			{
 				$this->delete_circle_membership_between($actor_id, $requester_id);
@@ -484,8 +484,8 @@ class relationship_manager
 
 			// Replace only the actor-owned row; an existing foe owned by the requester is private state.
 			$this->db->sql_query('DELETE FROM ' . $this->zebra_table . '
-				WHERE user_id = ' . $actor_id . '
-					AND zebra_id = ' . $requester_id);
+				WHERE user_id = ' . (int) $actor_id . '
+					AND zebra_id = ' . (int) $requester_id);
 			$this->db->sql_query('INSERT INTO ' . $this->zebra_table . ' ' . $this->db->sql_build_array('INSERT', array(
 				'user_id'  => $actor_id,
 				'zebra_id' => $requester_id,
@@ -754,8 +754,8 @@ class relationship_manager
 				'circle_name'       => $names['display'],
 				'circle_name_clean' => $names['clean'],
 			)) . '
-			WHERE circle_id = ' . $circle_id . '
-				AND owner_id = ' . $owner_id);
+			WHERE circle_id = ' . (int) $circle_id . '
+				AND owner_id = ' . (int) $owner_id);
 		$sql_error = $result === false ? $this->db->get_sql_error_returned() : array();
 		$this->db->sql_return_on_error(false);
 		if ($result === false)
@@ -794,10 +794,10 @@ class relationship_manager
 		try
 		{
 			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
-				WHERE circle_id = ' . $circle_id);
+				WHERE circle_id = ' . (int) $circle_id);
 			$this->db->sql_query('DELETE FROM ' . $this->circles_table . '
-				WHERE circle_id = ' . $circle_id . '
-					AND owner_id = ' . $owner_id);
+				WHERE circle_id = ' . (int) $circle_id . '
+					AND owner_id = ' . (int) $owner_id);
 			$this->db->sql_transaction('commit');
 		}
 		catch (\Throwable $e)
@@ -901,7 +901,7 @@ class relationship_manager
 			if ($owned_ids)
 			{
 				$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
-					WHERE friend_id = ' . $friend_id . '
+					WHERE friend_id = ' . (int) $friend_id . '
 						AND ' . $this->db->sql_in_set('circle_id', $owned_ids));
 			}
 			if ($circle_ids)
@@ -1048,15 +1048,15 @@ class relationship_manager
 	 */
 	public function get_friends($owner_id, $limit = 0, $offset = 0, $search = '')
 	{
-		$search_sql = $this->friend_search_sql($search, 'u');
 		$sql = 'SELECT z.zebra_id, z.bff, u.username, u.user_colour
 			FROM ' . $this->zebra_table . ' z
 			INNER JOIN ' . $this->users_table . ' u
 				ON u.user_id = z.zebra_id
 			WHERE z.user_id = ' . (int) $owner_id . '
 				AND z.friend = 1
-				AND z.foe = 0' . $search_sql . '
-			ORDER BY u.username_clean ASC';
+				AND z.foe = 0';
+		$sql .= $this->friend_search_sql($search, 'u');
+		$sql .= ' ORDER BY u.username_clean ASC';
 		$result = $limit ? $this->db->sql_query_limit($sql, (int) $limit, max(0, (int) $offset)) : $this->db->sql_query($sql);
 		$rows = array();
 		while ($row = $this->db->sql_fetchrow($result))
@@ -1087,10 +1087,10 @@ class relationship_manager
 				ON second_friend.zebra_id = first_friend.zebra_id
 			INNER JOIN ' . $this->users_table . ' u
 				ON u.user_id = first_friend.zebra_id
-			WHERE first_friend.user_id = ' . $first_user_id . '
-				AND second_friend.user_id = ' . $second_user_id . '
-				AND first_friend.zebra_id <> ' . $first_user_id . '
-				AND first_friend.zebra_id <> ' . $second_user_id . '
+			WHERE first_friend.user_id = ' . (int) $first_user_id . '
+				AND second_friend.user_id = ' . (int) $second_user_id . '
+				AND first_friend.zebra_id <> ' . (int) $first_user_id . '
+				AND first_friend.zebra_id <> ' . (int) $second_user_id . '
 				AND first_friend.friend = 1
 				AND first_friend.foe = 0
 				AND second_friend.friend = 1
@@ -1126,7 +1126,7 @@ class relationship_manager
 		$candidate_limit_sql = $max_pending > 0
 			? ' AND (SELECT COUNT(*) FROM ' . $this->requests_table . ' candidate_pending
 				WHERE candidate_pending.requester_id = candidate.user_id
-					OR candidate_pending.recipient_id = candidate.user_id) < ' . $max_pending
+					OR candidate_pending.recipient_id = candidate.user_id) < ' . (int) $max_pending
 			: '';
 
 		$sql = 'SELECT candidate.user_id, candidate.username, candidate.user_colour,
@@ -1140,22 +1140,22 @@ class relationship_manager
 			INNER JOIN ' . $this->users_table . ' candidate
 				ON candidate.user_id = friend_candidate.zebra_id
 			LEFT JOIN ' . $this->zebra_table . ' viewer_relationship
-				ON viewer_relationship.user_id = ' . $viewer_id . '
+				ON viewer_relationship.user_id = ' . (int) $viewer_id . '
 					AND viewer_relationship.zebra_id = candidate.user_id
 			LEFT JOIN ' . $this->zebra_table . ' candidate_relationship
 				ON candidate_relationship.user_id = candidate.user_id
-					AND candidate_relationship.zebra_id = ' . $viewer_id . '
+					AND candidate_relationship.zebra_id = ' . (int) $viewer_id . '
 			LEFT JOIN ' . $this->requests_table . ' pending
-				ON (pending.requester_id = ' . $viewer_id . ' AND pending.recipient_id = candidate.user_id)
-					OR (pending.recipient_id = ' . $viewer_id . ' AND pending.requester_id = candidate.user_id)
+				ON (pending.requester_id = ' . (int) $viewer_id . ' AND pending.recipient_id = candidate.user_id)
+					OR (pending.recipient_id = ' . (int) $viewer_id . ' AND pending.requester_id = candidate.user_id)
 			LEFT JOIN ' . $this->cooldowns_table . ' active_cooldown
-				ON active_cooldown.requester_id = ' . $viewer_id . '
+				ON active_cooldown.requester_id = ' . (int) $viewer_id . '
 					AND active_cooldown.recipient_id = candidate.user_id
 					AND active_cooldown.expires_at > ' . time() . '
-			WHERE viewer_friend.user_id = ' . $viewer_id . '
+			WHERE viewer_friend.user_id = ' . (int) $viewer_id . '
 				AND viewer_friend.friend = 1
 				AND viewer_friend.foe = 0
-				AND candidate.user_id <> ' . $viewer_id . '
+				AND candidate.user_id <> ' . (int) $viewer_id . '
 				AND ' . $this->db->sql_in_set('candidate.user_type', array(USER_NORMAL, USER_FOUNDER)) . '
 				AND candidate.zebra_request_policy <> ' . self::REQUEST_POLICY_NOBODY . '
 				AND ' . $this->db->sql_in_set('candidate.profile_friend_show', array(0, 1, 2)) . '
@@ -1186,14 +1186,14 @@ class relationship_manager
 
 	public function count_friends($owner_id, $search = '')
 	{
-		$search_sql = $this->friend_search_sql($search, 'u');
 		$sql = 'SELECT COUNT(*) AS total
 			FROM ' . $this->zebra_table . ' z
 			INNER JOIN ' . $this->users_table . ' u
 				ON u.user_id = z.zebra_id
 			WHERE z.user_id = ' . (int) $owner_id . '
 				AND z.friend = 1
-				AND z.foe = 0' . $search_sql;
+				AND z.foe = 0';
+		$sql .= $this->friend_search_sql($search, 'u');
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);
