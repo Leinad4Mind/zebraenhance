@@ -540,6 +540,7 @@ class relationship_manager
 				'foe'      => 1,
 				'bff'      => 0,
 			)));
+			$this->register_foe_settings($actor_id, array($requester_id));
 			$this->delete_request_rows(array($request));
 			$this->delete_legacy_between($requester_id, $actor_id);
 			$this->delete_request_cooldown($requester_id, $actor_id, true);
@@ -901,9 +902,12 @@ class relationship_manager
 		}
 		$this->db->sql_freeresult($result);
 		$removed = 0;
-		foreach ($owners as $owner_id => $foe_ids)
+		foreach ($owners as $expired_owner_id => $foe_ids)
 		{
-			$removed += $this->remove_foes($owner_id, $foe_ids);
+			foreach (array_chunk($foe_ids, self::MAX_BULK_FOES) as $foe_batch)
+			{
+				$removed += $this->remove_foes($expired_owner_id, $foe_batch);
+			}
 		}
 
 		return $removed;

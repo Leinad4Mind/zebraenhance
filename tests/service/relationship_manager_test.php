@@ -520,6 +520,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 		$this->assertSame(1, $this->count_zebra_rows(3, 4, 0, 1));
 		$this->assertSame(1, $this->count_zebra_rows(4, 3, 0, 1));
+		$result = $this->db->sql_query('SELECT added_at FROM phpbb_zebra_foe_settings
+			WHERE owner_id = 3 AND foe_id = 4');
+		$this->assertGreaterThan(0, (int) $this->db->sql_fetchfield('added_at'));
+		$this->db->sql_freeresult($result);
 		$this->assertSame('blocked', $this->relationships->request_friendship(4, 3));
 	}
 
@@ -732,6 +736,36 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(0, $this->relationships->count_foes(4));
 		$result = $this->db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra_foe_settings
 			WHERE owner_id = 4 AND foe_id = 5');
+		$this->assertSame(0, (int) $this->db->sql_fetchfield('total'));
+		$this->db->sql_freeresult($result);
+	}
+
+	public function test_expiry_removes_more_than_the_manual_bulk_limit()
+	{
+		$zebra_rows = array();
+		$settings_rows = array();
+		for ($foe_id = 1000; $foe_id < 1105; $foe_id++)
+		{
+			$zebra_rows[] = array(
+				'user_id'  => 4,
+				'zebra_id' => $foe_id,
+				'friend'   => 0,
+				'foe'      => 1,
+				'bff'      => 0,
+			);
+			$settings_rows[] = array(
+				'owner_id'   => 4,
+				'foe_id'     => $foe_id,
+				'added_at'   => 1,
+				'expires_at' => 2,
+			);
+		}
+		$this->db->sql_multi_insert('phpbb_zebra', $zebra_rows);
+		$this->db->sql_multi_insert('phpbb_zebra_foe_settings', $settings_rows);
+
+		$this->assertSame(105, $this->relationships->expire_foes(3, 4));
+		$result = $this->db->sql_query('SELECT COUNT(*) AS total
+			FROM phpbb_zebra_foe_settings WHERE owner_id = 4 AND expires_at = 2');
 		$this->assertSame(0, (int) $this->db->sql_fetchfield('total'));
 		$this->db->sql_freeresult($result);
 	}
