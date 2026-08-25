@@ -45,12 +45,16 @@ jobs:
       matrix:
         include:
           - phpbb: '3.3.0'
+            ref: 'release-3.3.0'
             php: '7.4'
             composer: 'v1'
           - phpbb: '3.3.17'
+            ref: 'release-3.3.17'
             php: '7.4'
             composer: 'v2'
-          - phpbb: '3.3.17'
+          # phpBB 3.3.17 pins PHPUnit 7, which cannot run on PHP 8.1.
+          - phpbb: '3.3.x'
+            ref: '3.3.x'
             php: '8.1'
             composer: 'v2'
     steps:
@@ -63,7 +67,7 @@ jobs:
           tools: composer:${{ matrix.composer }}
       - name: Prepare phpBB ${{ matrix.phpbb }}
         run: |
-          git clone --depth 1 --branch release-${{ matrix.phpbb }} https://github.com/phpbb/phpbb.git phpbb
+          git clone --depth 1 --branch ${{ matrix.ref }} https://github.com/phpbb/phpbb.git phpbb
           composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
@@ -80,12 +84,16 @@ jobs:
       matrix:
         include:
           - phpbb: '3.3.0'
+            ref: 'release-3.3.0'
             php: '7.4'
             composer: 'v1'
           - phpbb: '3.3.17'
+            ref: 'release-3.3.17'
             php: '7.4'
             composer: 'v2'
-          - phpbb: '3.3.17'
+          # phpBB 3.3.17 pins PHPUnit 7, which cannot run on PHP 8.1.
+          - phpbb: '3.3.x'
+            ref: '3.3.x'
             php: '8.1'
             composer: 'v2'
     steps:
@@ -98,7 +106,7 @@ jobs:
           tools: composer:${{ matrix.composer }}
       - name: Prepare phpBB ${{ matrix.phpbb }}
         run: |
-          git clone --depth 1 --branch release-${{ matrix.phpbb }} https://github.com/phpbb/phpbb.git phpbb
+          git clone --depth 1 --branch ${{ matrix.ref }} https://github.com/phpbb/phpbb.git phpbb
           composer install --working-dir=phpbb/phpBB --no-interaction --no-progress
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
