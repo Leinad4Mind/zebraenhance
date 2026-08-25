@@ -6,7 +6,7 @@
 
 (function ($) {
 	'use strict';
-	var $controls = $('#ze-friend-controls');
+	var $controls = $('#ze-friend-controls, #ze-foe-controls').first();
 
 	function tokenPayload() {
 		var $token = $('#ze-form-token');
@@ -110,6 +110,49 @@
 			event.preventDefault();
 			$('.js-ze-search-friends').trigger('click');
 		}
+	});
+
+	$(document).on('click', '.js-ze-search-foes', function () {
+		var $button = $(this);
+		var value = $('#ze-foe-search').val();
+		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';
+		window.location.href = $button.attr('data-url') + separator + 'ze_foe_q=' + encodeURIComponent(value);
+	});
+
+	$(document).on('keydown', '#ze-foe-search', function (event) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			$('.js-ze-search-foes').trigger('click');
+		}
+	});
+
+	$(document).on('click', '.js-ze-save-foe', function () {
+		var $button = $(this);
+		var $row = $button.closest('.ze-foe-row');
+		$button.attr('data-url', $row.attr('data-save-url'));
+		postAndReload($button, {
+			note: $row.find('.js-ze-foe-note').val(),
+			duration: $row.find('.js-ze-foe-duration').val(),
+			pm_policy: $row.find('.js-ze-foe-pm-policy').val(),
+			content_policy: $row.find('.js-ze-foe-content-policy').val(),
+			notification_policy: $row.find('.js-ze-foe-notification-policy').val()
+		});
+	});
+
+	$(document).on('click', '.js-ze-remove-foes', function () {
+		var $button = $(this);
+		var foeIds = $('.js-ze-foe-select:checked').map(function () {
+			return $(this).val();
+		}).get();
+		if (!foeIds.length) {
+			showError({message: $controls.attr('data-select-foe')});
+			return;
+		}
+		phpbb.confirm($button.attr('data-confirm'), function (confirmed) {
+			if (confirmed) {
+				postAndReload($button, {foe_ids: foeIds});
+			}
+		});
 	});
 
 	$(document).on('click', '.js-ze-close-friend', function () {

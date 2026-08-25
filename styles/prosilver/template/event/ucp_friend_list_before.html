@@ -159,6 +159,36 @@
 	</select></dd>
 </dl>
 
+{% if S_ZE_FOE_PM_AVAILABLE %}
+<dl>
+	<dt><label>{{ lang('ZE_BLOCK_FOE_PM') }}</label><br><span>{{ lang('ZE_BLOCK_FOE_PM_EXPLAIN') }}</span></dt>
+	<dd>
+		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="1"{% if S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('YES') }}</label>
+		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="0"{% if not S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('NO') }}</label>
+	</dd>
+</dl>
+{% endif %}
+
+{% if S_ZE_FOE_CONTENT_AVAILABLE %}
+<dl>
+	<dt><label>{{ lang('ZE_HIDE_FOE_CONTENT') }}</label><br><span>{{ lang('ZE_HIDE_FOE_CONTENT_EXPLAIN') }}</span></dt>
+	<dd>
+		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="1"{% if S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('YES') }}</label>
+		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="0"{% if not S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('NO') }}</label>
+	</dd>
+</dl>
+{% endif %}
+
+{% if S_ZE_FOE_NOTIFICATIONS_AVAILABLE %}
+<dl>
+	<dt><label>{{ lang('ZE_MUTE_FOE_NOTIFICATIONS') }}</label><br><span>{{ lang('ZE_MUTE_FOE_NOTIFICATIONS_EXPLAIN') }}</span></dt>
+	<dd>
+		<label><input type="radio" class="radio" name="zebra_mute_foe_notifications" value="1"{% if S_ZEBRA_MUTE_FOE_NOTIFICATIONS %} checked{% endif %}> {{ lang('YES') }}</label>
+		<label><input type="radio" class="radio" name="zebra_mute_foe_notifications" value="0"{% if not S_ZEBRA_MUTE_FOE_NOTIFICATIONS %} checked{% endif %}> {{ lang('NO') }}</label>
+	</dd>
+</dl>
+{% endif %}
+
 <dl>
 	<dt><label for="zebra_profile_acl">{{ lang('ZE_FRIENDLIST') }}</label><br><span>{{ lang('ZE_FRIENDLIST_EXPLAIN') }}</span></dt>
 	<dd><select id="zebra_profile_acl" name="zebra_profile_acl">

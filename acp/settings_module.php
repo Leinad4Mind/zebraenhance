@@ -38,7 +38,24 @@ class settings_module
 			$cooldown_days = max(0, min(3650, $request->variable('ze_decline_cooldown_days', 7)));
 			$config->set('ze_max_pending_requests', $max_pending);
 			$config->set('ze_decline_cooldown_days', $cooldown_days);
-			$phpbb_log->add('admin', $user->data['user_id'], $user->ip, 'LOG_ZEBRA_ENHANCE_SETTINGS', false, array($max_pending, $cooldown_days));
+			$foe_settings = array(
+				'ze_foes_enhancement',
+				'ze_foe_pm',
+				'ze_foe_content',
+				'ze_foe_notifications',
+				'ze_foe_temporary',
+				'ze_foe_notes',
+				'ze_foe_exceptions',
+			);
+			foreach ($foe_settings as $setting)
+			{
+				$config->set($setting, (int) $request->variable($setting, 0));
+			}
+			$phpbb_log->add('admin', $user->data['user_id'], $user->ip, 'LOG_ZEBRA_ENHANCE_SETTINGS', false, array(
+				$max_pending,
+				$cooldown_days,
+				$user->lang(!empty($config['ze_foes_enhancement']) ? 'ENABLED' : 'DISABLED'),
+			));
 
 			trigger_error($user->lang('ACP_ZEBRA_ENHANCE_SAVED') . adm_back_link($this->u_action));
 		}
@@ -46,6 +63,13 @@ class settings_module
 		$template->assign_vars(array(
 			'ZE_MAX_PENDING_REQUESTS' => isset($config['ze_max_pending_requests']) ? (int) $config['ze_max_pending_requests'] : 100,
 			'ZE_DECLINE_COOLDOWN_DAYS' => isset($config['ze_decline_cooldown_days']) ? (int) $config['ze_decline_cooldown_days'] : 7,
+			'S_ZE_FOES_ENHANCEMENT' => !empty($config['ze_foes_enhancement']),
+			'S_ZE_FOE_PM' => !empty($config['ze_foe_pm']),
+			'S_ZE_FOE_CONTENT' => !empty($config['ze_foe_content']),
+			'S_ZE_FOE_NOTIFICATIONS' => !empty($config['ze_foe_notifications']),
+			'S_ZE_FOE_TEMPORARY' => !empty($config['ze_foe_temporary']),
+			'S_ZE_FOE_NOTES' => !empty($config['ze_foe_notes']),
+			'S_ZE_FOE_EXCEPTIONS' => !empty($config['ze_foe_exceptions']),
 			'U_ACTION' => $this->u_action,
 		));
 	}

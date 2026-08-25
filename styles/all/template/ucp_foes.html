@@ -1,0 +1,128 @@
+{% INCLUDE 'ucp_header.html' %}
+{% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
+{% INCLUDEJS '@anavaro_zebraenhance/zebraenhance.js' %}
+
+<form id="ucp-ze-foes" method="post" action="{{ U_FOE_SEARCH }}">
+<h2>{{ lang('ZE_UCP_FOE_MANAGER') }}</h2>
+<p>{{ lang('ZE_UCP_FOE_MANAGER_EXPLAIN') }}</p>
+
+<div id="ze-foe-controls" data-error-title="{{ lang('ZE_FOE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}" data-select-foe="{{ lang('ZE_SELECT_FOE') }}">
+	<div id="ze-form-token" class="hidden">{{ S_FORM_TOKEN_ZE }}</div>
+
+	<div class="ze-foe-toolbar">
+		<label class="sr-only" for="ze-foe-search">{{ lang('ZE_SEARCH_FOES') }}</label>
+		<input type="search" id="ze-foe-search" class="inputbox autowidth" value="{{ FOE_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FOES') }}">
+		<button type="button" class="button button-secondary js-ze-search-foes" data-url="{{ U_FOE_SEARCH }}">{{ lang('SEARCH') }}</button>
+		{% if FOE_SEARCH %}<a class="button button-secondary" href="{{ U_FOE_SEARCH }}">{{ lang('RESET') }}</a>{% endif %}
+		<a class="button button-secondary" href="{{ U_ADD_FOES }}">{{ lang('ZE_ADD_FOES') }}</a>
+	</div>
+
+	{% if S_FOE_PM_AVAILABLE or S_FOE_CONTENT_AVAILABLE or S_FOE_NOTIFICATIONS_AVAILABLE %}
+	<div class="panel bg2 ze-global-status">
+		<div class="inner">
+			<strong>{{ lang('ZE_GLOBAL_DEFAULTS') ~ lang('COLON') }}</strong>
+			{% if S_FOE_PM_AVAILABLE %}<span>{{ lang('ZE_PROTECTION_PM') }}: {{ lang(S_GLOBAL_PM ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
+			{% if S_FOE_CONTENT_AVAILABLE %}<span>{{ lang('ZE_PROTECTION_CONTENT') }}: {{ lang(S_GLOBAL_CONTENT ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
+			{% if S_FOE_NOTIFICATIONS_AVAILABLE %}<span>{{ lang('ZE_PROTECTION_NOTIFICATIONS') }}: {{ lang(S_GLOBAL_NOTIFICATIONS ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
+		</div>
+	</div>
+	{% endif %}
+
+	{% if ze_foes|length %}
+	<div class="ze-foe-list">
+	{% for foe in ze_foes %}
+		<section class="panel bg1 ze-foe-row" data-save-url="{{ foe.U_SAVE }}">
+			<div class="inner">
+				<div class="ze-foe-heading">
+					<label><input type="checkbox" class="js-ze-foe-select" value="{{ foe.USER_ID }}" aria-label="{{ lang('ZE_SELECT_FOE_ITEM') }}"> {{ foe.USERNAME_FULL }}</label>
+					<span>{{ lang('ZE_FOE_ADDED') }}: {{ foe.ADDED }}{% if S_FOE_TEMPORARY_AVAILABLE %} · {{ lang('ZE_FOE_EXPIRES') }}: {{ foe.EXPIRES }}{% endif %}</span>
+				</div>
+
+				{% if S_FOE_NOTES_AVAILABLE or S_FOE_TEMPORARY_AVAILABLE %}
+				<div class="ze-foe-fields">
+					{% if S_FOE_NOTES_AVAILABLE %}
+					<label>{{ lang('ZE_FOE_NOTE') }}
+						<input type="text" class="inputbox js-ze-foe-note" maxlength="255" value="{{ foe.NOTE }}" placeholder="{{ lang('ZE_FOE_NOTE_PLACEHOLDER') }}">
+					</label>
+					{% endif %}
+					{% if S_FOE_TEMPORARY_AVAILABLE %}
+					<label>{{ lang('ZE_FOE_DURATION') }}
+						<select class="inputbox js-ze-foe-duration">
+							<option value="-1" selected>{{ lang('ZE_FOE_DURATION_KEEP') }}</option>
+							<option value="0">{{ lang('ZE_FOE_PERMANENT') }}</option>
+							<option value="86400">{{ lang('ZE_FOE_24_HOURS') }}</option>
+							<option value="604800">{{ lang('ZE_FOE_7_DAYS') }}</option>
+							<option value="2592000">{{ lang('ZE_FOE_30_DAYS') }}</option>
+						</select>
+					</label>
+					{% endif %}
+				</div>
+				{% endif %}
+
+				{% if S_FOE_PM_AVAILABLE or S_FOE_CONTENT_AVAILABLE or S_FOE_NOTIFICATIONS_AVAILABLE %}
+				<div class="ze-foe-policies">
+					{% if S_FOE_PM_AVAILABLE %}
+					<label>{{ lang('ZE_PROTECTION_PM') }} <span class="ze-status {{ foe.S_PM_ACTIVE ? 'ze-status-active' : '' }}">{{ lang(foe.S_PM_ACTIVE ? 'ENABLED' : 'DISABLED') }}</span>
+						{% if S_FOE_EXCEPTIONS_AVAILABLE %}
+						<select class="inputbox js-ze-foe-pm-policy">
+							<option value="0"{% if foe.PM_POLICY == 0 %} selected{% endif %}>{{ lang('ZE_POLICY_INHERIT') }}</option>
+							<option value="1"{% if foe.PM_POLICY == 1 %} selected{% endif %}>{{ lang('ZE_POLICY_ALLOW') }}</option>
+							<option value="2"{% if foe.PM_POLICY == 2 %} selected{% endif %}>{{ lang('ZE_POLICY_BLOCK') }}</option>
+						</select>
+						{% endif %}
+					</label>
+					{% endif %}
+					{% if S_FOE_CONTENT_AVAILABLE %}
+					<label>{{ lang('ZE_PROTECTION_CONTENT') }} <span class="ze-status {{ foe.S_CONTENT_ACTIVE ? 'ze-status-active' : '' }}">{{ lang(foe.S_CONTENT_ACTIVE ? 'ENABLED' : 'DISABLED') }}</span>
+						{% if S_FOE_EXCEPTIONS_AVAILABLE %}
+						<select class="inputbox js-ze-foe-content-policy">
+							<option value="0"{% if foe.CONTENT_POLICY == 0 %} selected{% endif %}>{{ lang('ZE_POLICY_INHERIT') }}</option>
+							<option value="1"{% if foe.CONTENT_POLICY == 1 %} selected{% endif %}>{{ lang('ZE_POLICY_ALLOW') }}</option>
+							<option value="2"{% if foe.CONTENT_POLICY == 2 %} selected{% endif %}>{{ lang('ZE_POLICY_BLOCK') }}</option>
+						</select>
+						{% endif %}
+					</label>
+					{% endif %}
+					{% if S_FOE_NOTIFICATIONS_AVAILABLE %}
+					<label>{{ lang('ZE_PROTECTION_NOTIFICATIONS') }} <span class="ze-status {{ foe.S_NOTIFICATIONS_ACTIVE ? 'ze-status-active' : '' }}">{{ lang(foe.S_NOTIFICATIONS_ACTIVE ? 'ENABLED' : 'DISABLED') }}</span>
+						{% if S_FOE_EXCEPTIONS_AVAILABLE %}
+						<select class="inputbox js-ze-foe-notification-policy">
+							<option value="0"{% if foe.NOTIFICATION_POLICY == 0 %} selected{% endif %}>{{ lang('ZE_POLICY_INHERIT') }}</option>
+							<option value="1"{% if foe.NOTIFICATION_POLICY == 1 %} selected{% endif %}>{{ lang('ZE_POLICY_ALLOW') }}</option>
+							<option value="2"{% if foe.NOTIFICATION_POLICY == 2 %} selected{% endif %}>{{ lang('ZE_POLICY_BLOCK') }}</option>
+						</select>
+						{% endif %}
+					</label>
+					{% endif %}
+				</div>
+				{% endif %}
+				{% if S_FOE_CAN_SAVE %}
+				<button type="button" class="button button-secondary js-ze-save-foe">{{ lang('SAVE') }}</button>
+				{% endif %}
+			</div>
+		</section>
+	{% endfor %}
+	</div>
+	<div class="ze-bulk-actions">
+		<label><input type="checkbox" class="js-ze-check-all" data-target=".js-ze-foe-select"> {{ lang('ZE_SELECT_ALL') }}</label>
+		<button type="button" class="button button-secondary js-ze-remove-foes" data-url="{{ U_REMOVE_FOES }}" data-confirm="{{ lang('ZE_CONFIRM_REMOVE_FOES') }}">{{ lang('ZE_REMOVE_SELECTED_FOES') }}</button>
+	</div>
+	{% else %}
+	<div class="panel"><div class="inner"><p>{{ lang(FOE_SEARCH ? 'ZE_NO_MATCHING_FOES' : 'ZE_NO_FOES') }}</p></div></div>
+	{% endif %}
+</div>
+</form>
+
+{% if pagination|length %}
+<div class="pagination ze-pagination"><ul>
+	{% for page in pagination %}
+		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
+		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
+		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
+		{% elseif page.S_IS_NEXT %}<li class="arrow next"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="next"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_END }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('NEXT') }}</span></a></li>
+		{% else %}<li><a class="button" href="{{ page.PAGE_URL }}">{{ page.PAGE_NUMBER }}</a></li>{% endif %}
+	{% endfor %}
+</ul></div>
+{% endif %}
+
+{% INCLUDE 'ucp_footer.html' %}

@@ -129,3 +129,50 @@
 	margin-bottom: 1rem;
 	padding-bottom: 1rem;
 }
+
+.ze-foe-toolbar,
+.ze-global-status .inner,
+.ze-foe-heading,
+.ze-foe-fields,
+.ze-foe-policies {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+}
+
+.ze-foe-toolbar {
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.ze-global-status .inner {
+	justify-content: space-between;
+}
+
+.ze-foe-heading {
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: .75rem;
+}
+
+.ze-foe-fields,
+.ze-foe-policies {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	margin-bottom: .75rem;
+}
+
+.ze-foe-fields label,
+.ze-foe-policies label {
+	display: grid;
+	gap: .25rem;
+}
+
+.ze-status {
+	color: #a00;
+	font-size: .9em;
+}
+
+.ze-status-active {
+	color: #087b00;
+}

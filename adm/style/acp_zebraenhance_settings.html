@@ -1,4 +1,5 @@
 {% INCLUDE 'overall_header.html' %}
+{% INCLUDEJS '@anavaro_zebraenhance/zebraenhance_acp.js' %}
 
 <h1>{{ lang('ACP_ZEBRA_ENHANCE_SETTINGS') }}</h1>
 <p>{{ lang('ACP_ZEBRA_ENHANCE_SETTINGS_EXPLAIN') }}</p>
@@ -14,6 +15,36 @@
 			<dt><label for="ze_decline_cooldown_days">{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS') }}</label><br><span>{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS_EXPLAIN') }}</span></dt>
 			<dd><input id="ze_decline_cooldown_days" name="ze_decline_cooldown_days" type="number" min="0" max="3650" value="{{ ZE_DECLINE_COOLDOWN_DAYS }}"></dd>
 		</dl>
+	</fieldset>
+
+	<fieldset>
+		<legend>{{ lang('ACP_ZEBRA_ENHANCE_FOES') }}</legend>
+		<dl>
+			<dt><label>{{ lang('ACP_ZE_FOES_ENHANCEMENT') }}</label><br><span>{{ lang('ACP_ZE_FOES_ENHANCEMENT_EXPLAIN') }}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio js-ze-foes-master" name="ze_foes_enhancement" value="1"{% if S_ZE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('YES') }}</label>
+				<label><input type="radio" class="radio js-ze-foes-master" name="ze_foes_enhancement" value="0"{% if not S_ZE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('NO') }}</label>
+			</dd>
+		</dl>
+		<div id="ze-foe-feature-options"{% if not S_ZE_FOES_ENHANCEMENT %} class="hidden"{% endif %}>
+		{% set foe_options = [
+			['ze_foe_pm', 'ACP_ZE_FOE_PM', 'ACP_ZE_FOE_PM_EXPLAIN', S_ZE_FOE_PM],
+			['ze_foe_content', 'ACP_ZE_FOE_CONTENT', 'ACP_ZE_FOE_CONTENT_EXPLAIN', S_ZE_FOE_CONTENT],
+			['ze_foe_notifications', 'ACP_ZE_FOE_NOTIFICATIONS', 'ACP_ZE_FOE_NOTIFICATIONS_EXPLAIN', S_ZE_FOE_NOTIFICATIONS],
+			['ze_foe_temporary', 'ACP_ZE_FOE_TEMPORARY', 'ACP_ZE_FOE_TEMPORARY_EXPLAIN', S_ZE_FOE_TEMPORARY],
+			['ze_foe_notes', 'ACP_ZE_FOE_NOTES', 'ACP_ZE_FOE_NOTES_EXPLAIN', S_ZE_FOE_NOTES],
+			['ze_foe_exceptions', 'ACP_ZE_FOE_EXCEPTIONS', 'ACP_ZE_FOE_EXCEPTIONS_EXPLAIN', S_ZE_FOE_EXCEPTIONS]
+		] %}
+		{% for option in foe_options %}
+			<dl>
+				<dt><label>{{ lang(option[1]) }}</label><br><span>{{ lang(option[2]) }}</span></dt>
+				<dd>
+					<label><input type="radio" class="radio" name="{{ option[0] }}" value="1"{% if option[3] %} checked{% endif %}> {{ lang('YES') }}</label>
+					<label><input type="radio" class="radio" name="{{ option[0] }}" value="0"{% if not option[3] %} checked{% endif %}> {{ lang('NO') }}</label>
+				</dd>
+			</dl>
+		{% endfor %}
+		</div>
 	</fieldset>
 
 	<fieldset class="submit-buttons">
