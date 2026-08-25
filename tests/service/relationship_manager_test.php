@@ -959,6 +959,11 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(2, $this->relationships->count_requests(2, false));
 		$this->assertSame(0, $this->relationships->count_requests(2, true));
 		$this->assertSame(1, count($this->relationships->get_requests(2, false, 1, 1)));
+		$this->db->sql_query('INSERT INTO phpbb_zebra_requests
+			(requester_id, recipient_id, user_low, user_high, request_time)
+			VALUES (2, 999, 2, 999, 103)');
+		$this->assertSame(2, $this->relationships->count_requests(2, false));
+		$this->assertCount(2, $this->relationships->get_requests(2, false));
 
 		$this->db->sql_query('INSERT INTO phpbb_zebra
 			(user_id, zebra_id, friend, foe, bff)

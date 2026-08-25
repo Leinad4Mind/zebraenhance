@@ -1778,10 +1778,13 @@ class relationship_manager
 
 	public function count_requests($user_id, $incoming)
 	{
-		$column = $incoming ? 'recipient_id' : 'requester_id';
+		$user_column = $incoming ? 'r.requester_id' : 'r.recipient_id';
+		$match_column = $incoming ? 'r.recipient_id' : 'r.requester_id';
 		$sql = 'SELECT COUNT(*) AS total
-			FROM ' . $this->requests_table . '
-			WHERE ' . $column . ' = ' . (int) $user_id;
+			FROM ' . $this->requests_table . ' r
+			INNER JOIN ' . $this->users_table . ' u
+				ON u.user_id = ' . $user_column . '
+			WHERE ' . $match_column . ' = ' . (int) $user_id;
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);
@@ -2077,47 +2080,57 @@ class relationship_manager
 
 		$sql_in = $this->db->sql_in_set('requester_id', $user_ids);
 		$sql_out = $this->db->sql_in_set('recipient_id', $user_ids);
-		$sql = 'SELECT request_id, recipient_id
-			FROM ' . $this->requests_table . '
-			WHERE ' . $sql_in . ' OR ' . $sql_out;
-		$result = $this->db->sql_query($sql);
 		$requests = array();
-		while ($row = $this->db->sql_fetchrow($result))
+		$this->db->sql_transaction('begin');
+		try
 		{
-			$requests[] = $row;
-		}
-		$this->db->sql_freeresult($result);
+			$sql = 'SELECT request_id, recipient_id
+				FROM ' . $this->requests_table . '
+				WHERE ' . $sql_in . ' OR ' . $sql_out;
+			$result = $this->db->sql_query($sql);
+			while ($row = $this->db->sql_fetchrow($result))
+			{
+				$requests[] = $row;
+			}
+			$this->db->sql_freeresult($result);
 
-		$this->db->sql_query('DELETE FROM ' . $this->requests_table . '
-			WHERE ' . $sql_in . ' OR ' . $sql_out);
-		$this->db->sql_query('DELETE FROM ' . $this->legacy_requests_table . '
-			WHERE ' . $this->db->sql_in_set('user_id', $user_ids) . '
-				OR ' . $this->db->sql_in_set('zebra_id', $user_ids));
-		$this->db->sql_query('DELETE FROM ' . $this->cooldowns_table . '
-			WHERE ' . $this->db->sql_in_set('requester_id', $user_ids) . '
-				OR ' . $this->db->sql_in_set('recipient_id', $user_ids));
-		$this->db->sql_query('DELETE FROM ' . $this->foe_settings_table . '
-			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids) . '
-				OR ' . $this->db->sql_in_set('foe_id', $user_ids));
+			$this->db->sql_query('DELETE FROM ' . $this->requests_table . '
+				WHERE ' . $sql_in . ' OR ' . $sql_out);
+			$this->db->sql_query('DELETE FROM ' . $this->legacy_requests_table . '
+				WHERE ' . $this->db->sql_in_set('user_id', $user_ids) . '
+					OR ' . $this->db->sql_in_set('zebra_id', $user_ids));
+			$this->db->sql_query('DELETE FROM ' . $this->cooldowns_table . '
+				WHERE ' . $this->db->sql_in_set('requester_id', $user_ids) . '
+					OR ' . $this->db->sql_in_set('recipient_id', $user_ids));
+			$this->db->sql_query('DELETE FROM ' . $this->foe_settings_table . '
+				WHERE ' . $this->db->sql_in_set('owner_id', $user_ids) . '
+					OR ' . $this->db->sql_in_set('foe_id', $user_ids));
 
-		$owned_circle_ids = array();
-		$result = $this->db->sql_query('SELECT circle_id
-			FROM ' . $this->circles_table . '
-			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
-		while (($circle_id = $this->db->sql_fetchfield('circle_id')) !== false)
-		{
-			$owned_circle_ids[] = (int) $circle_id;
-		}
-		$this->db->sql_freeresult($result);
-		if ($owned_circle_ids)
-		{
+			$owned_circle_ids = array();
+			$result = $this->db->sql_query('SELECT circle_id
+				FROM ' . $this->circles_table . '
+				WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
+			while (($circle_id = $this->db->sql_fetchfield('circle_id')) !== false)
+			{
+				$owned_circle_ids[] = (int) $circle_id;
+			}
+			$this->db->sql_freeresult($result);
+			if ($owned_circle_ids)
+			{
+				$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
+					WHERE ' . $this->db->sql_in_set('circle_id', $owned_circle_ids));
+			}
 			$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
-				WHERE ' . $this->db->sql_in_set('circle_id', $owned_circle_ids));
+				WHERE ' . $this->db->sql_in_set('friend_id', $user_ids));
+			$this->db->sql_query('DELETE FROM ' . $this->circles_table . '
+				WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
+			$this->db->sql_transaction('commit');
 		}
-		$this->db->sql_query('DELETE FROM ' . $this->circle_members_table . '
-			WHERE ' . $this->db->sql_in_set('friend_id', $user_ids));
-		$this->db->sql_query('DELETE FROM ' . $this->circles_table . '
-			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids));
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
 
 		$this->delete_request_notifications($requests);
 		$this->delete_user_notifications($user_ids);
