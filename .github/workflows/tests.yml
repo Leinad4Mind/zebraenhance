@@ -75,13 +75,15 @@ jobs:
       - name: Install PHP 8.1-compatible test dependencies
         if: matrix.php == '8.1'
         run: |
+          # This discarded phpBB clone needs an EOL YAML release for DbUnit.
+          # Exact versions keep --no-blocking scoped to test-only dependencies.
           composer remove --working-dir=phpbb/phpBB --dev phpunit/dbunit --no-update --no-interaction
           composer require --working-dir=phpbb/phpBB --dev \
             phpunit/phpunit:9.6.35 \
             misantron/dbunit:5.2.1 \
             symfony/yaml:4.4.45 \
             doctrine/instantiator:1.5.0 \
-            --with-all-dependencies --ignore-platform-req=php --no-interaction --no-progress
+            --with-all-dependencies --ignore-platform-req=php --no-blocking --no-interaction --no-progress
       - name: Run extension tests
         working-directory: phpbb
         run: phpBB/vendor/bin/phpunit -c phpBB/ext/anavaro/zebraenhance/phpunit.xml.dist --testsuite 'Extension Test Suite' --colors=always
@@ -124,13 +126,15 @@ jobs:
       - name: Install PHP 8.1-compatible test dependencies
         if: matrix.php == '8.1'
         run: |
+          # This discarded phpBB clone needs an EOL YAML release for DbUnit.
+          # Exact versions keep --no-blocking scoped to test-only dependencies.
           composer remove --working-dir=phpbb/phpBB --dev phpunit/dbunit --no-update --no-interaction
           composer require --working-dir=phpbb/phpBB --dev \
             phpunit/phpunit:9.6.35 \
             misantron/dbunit:5.2.1 \
             symfony/yaml:4.4.45 \
             doctrine/instantiator:1.5.0 \
-            --with-all-dependencies --ignore-platform-req=php --no-interaction --no-progress
+            --with-all-dependencies --ignore-platform-req=php --no-blocking --no-interaction --no-progress
       - name: Run functional tests
         working-directory: phpbb
         run: |
