@@ -68,7 +68,7 @@ The migration copies valid rows from the legacy `zebra_confirm` table into the n
 
 ## Development
 
-The test suite targets both the first and latest supported phpBB 3.3 releases. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
+The test suite targets both the first and latest supported phpBB 3.3 releases. The latest phpBB suite runs on PHP 7.4 and PHP 8.1. Production code is checked against the phpBB extension coding standard, and all PHP files are syntax-checked from PHP 7.4 through current PHP 8 releases in CI.
 
 The complete local verification also exercises the functional suite with phpBB served by PHP 7.4 and PHP 8.4. phpBB 3.3's bundled PHPUnit is run with PHP 7.4 because that legacy test runner cannot start on PHP 8.4; this does not affect the PHP 8.4 web-runtime test.
 
