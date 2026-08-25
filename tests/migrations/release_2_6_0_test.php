@@ -43,6 +43,21 @@ class release_2_6_0_test extends \phpbb_test_case
 	public function test_data_registers_cron_module_and_version()
 	{
 		$data = $this->migration()->update_data();
+		$this->assertContains(
+			array('permission.add', array('u_zebraenhance_use_friend_requests', true, 'u_ze_use')),
+			$data
+		);
+		$this->assertContains(
+			array('permission.add', array('u_zebraenhance_manage_close_friends', true, 'u_ze_close_friends')),
+			$data
+		);
+		$this->assertContains(
+			array('permission.add', array('m_zebraenhance_view_private_friendlists', true, 'm_ze_view_private_friendlists')),
+			$data
+		);
+		$this->assertContains(array('permission.remove', array('u_ze_use')), $data);
+		$this->assertContains(array('permission.remove', array('u_ze_close_friends')), $data);
+		$this->assertContains(array('permission.remove', array('m_ze_view_private_friendlists')), $data);
 		$this->assertContains(array('config.add', array('ze_foes_enhancement', 0)), $data);
 		$this->assertContains(array('config.add', array('ze_foe_pm', 1)), $data);
 		$this->assertContains(array('config.add', array('ze_foe_content', 1)), $data);

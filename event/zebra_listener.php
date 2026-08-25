@@ -119,7 +119,7 @@ class zebra_listener implements EventSubscriberInterface
 	{
 		$mode = $event['mode'];
 		$sql_ary = $event['sql_ary'];
-		if ($mode === 'friends' && !$this->auth->acl_get('u_ze_use'))
+		if ($mode === 'friends' && !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			$event['sql_ary'] = array();
 			trigger_error('ZE_FRIEND_REQUEST_NOT_AUTHORIZED');
@@ -160,7 +160,7 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function module_display($event)
 	{
-		if (!$this->is_zebra_friends_module($event) || !$this->auth->acl_get('u_ze_use'))
+		if (!$this->is_zebra_friends_module($event) || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			return;
 		}
@@ -238,7 +238,7 @@ class zebra_listener implements EventSubscriberInterface
 			'S_ZE_FOE_PM_AVAILABLE' => $this->relationships->foe_feature_enabled('pm'),
 			'S_ZE_FOE_CONTENT_AVAILABLE' => $this->relationships->foe_feature_enabled('content'),
 			'S_ZE_FOE_NOTIFICATIONS_AVAILABLE' => $this->relationships->foe_feature_enabled('notifications'),
-			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
+			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_zebraenhance_manage_close_friends'),
 			'FRIEND_SEARCH'       => $friend_search,
 			'U_FRIEND_SEARCH'     => $this->ucp_friend_url(''),
 			'U_CREATE_CIRCLE'     => $this->controller_helper->route('anavaro_zebraenhance_create_circle'),
@@ -549,7 +549,7 @@ class zebra_listener implements EventSubscriberInterface
 		$viewer_id = (int) $this->user->data['user_id'];
 		$viewer_registered = (bool) $this->user->data['is_registered']
 			&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE);
-		$can_use = $this->auth->acl_get('u_ze_use');
+		$can_use = $this->auth->acl_get('u_zebraenhance_use_friend_requests');
 		$this->profile_context_ready = true;
 		$this->profile_hide_native_add = !$can_use || !$viewer_registered;
 
@@ -585,7 +585,7 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$override = $this->auth->acl_get('a_user') || $this->auth->acl_get('m_ze_view_private_friendlists');
+		$override = $this->auth->acl_get('a_user') || $this->auth->acl_get('m_zebraenhance_view_private_friendlists');
 		$can_view = $this->relationships->can_view_friend_list(
 			$owner_id,
 			$viewer_id,

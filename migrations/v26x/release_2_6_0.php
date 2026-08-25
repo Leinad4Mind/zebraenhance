@@ -72,6 +72,12 @@ class release_2_6_0 extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
+			array('permission.add', array('u_zebraenhance_use_friend_requests', true, 'u_ze_use')),
+			array('permission.add', array('u_zebraenhance_manage_close_friends', true, 'u_ze_close_friends')),
+			array('permission.add', array('m_zebraenhance_view_private_friendlists', true, 'm_ze_view_private_friendlists')),
+			array('permission.remove', array('u_ze_use')),
+			array('permission.remove', array('u_ze_close_friends')),
+			array('permission.remove', array('m_ze_view_private_friendlists')),
 			array('config.add', array('ze_foes_enhancement', 0)),
 			array('config.add', array('ze_foe_pm', 1)),
 			array('config.add', array('ze_foe_content', 1)),

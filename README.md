@@ -44,9 +44,9 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 
 The 2.0 migration adds these ACP permissions:
 
-- `u_ze_use` — use friend requests and enhanced friend lists
-- `u_ze_close_friends` — manage Close Friends
-- `m_ze_view_private_friendlists` — view private profile friend lists
+- `u_zebraenhance_use_friend_requests` — use friend requests and enhanced friend lists
+- `u_zebraenhance_manage_close_friends` — manage Close Friends
+- `m_zebraenhance_view_private_friendlists` — view private profile friend lists
 
 The two user permissions are granted to the standard registered-user groups during upgrade. The moderator override is granted to Global Moderators.
 

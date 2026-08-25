@@ -97,7 +97,7 @@ class zebra_listener_test extends \phpbb_test_case
 	{
 		$mode = 'friends';
 		$sql_ary = array(array('user_id' => 2, 'zebra_id' => 3, 'friend' => 1));
-		$this->auth->expects($this->once())->method('acl_get')->with('u_ze_use')->willReturn(true);
+		$this->auth->expects($this->once())->method('acl_get')->with('u_zebraenhance_use_friend_requests')->willReturn(true);
 		$this->relationships->expects($this->once())
 			->method('process_additions')
 			->willReturnCallback(function ($actual_mode, $actual_rows, &$results) use ($mode, $sql_ary)

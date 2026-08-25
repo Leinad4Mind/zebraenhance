@@ -72,14 +72,14 @@ class release_2_0_0 extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
-			array('permission.add', array('u_ze_use')),
-			array('permission.add', array('u_ze_close_friends')),
-			array('permission.add', array('m_ze_view_private_friendlists', true)),
-			array('permission.permission_set', array('REGISTERED', 'u_ze_use', 'group')),
-			array('permission.permission_set', array('REGISTERED', 'u_ze_close_friends', 'group')),
-			array('permission.permission_set', array('REGISTERED_COPPA', 'u_ze_use', 'group')),
-			array('permission.permission_set', array('REGISTERED_COPPA', 'u_ze_close_friends', 'group')),
-			array('permission.permission_set', array('GLOBAL_MODERATORS', 'm_ze_view_private_friendlists', 'group')),
+			array('permission.add', array('u_zebraenhance_use_friend_requests')),
+			array('permission.add', array('u_zebraenhance_manage_close_friends')),
+			array('permission.add', array('m_zebraenhance_view_private_friendlists', true)),
+			array('permission.permission_set', array('REGISTERED', 'u_zebraenhance_use_friend_requests', 'group')),
+			array('permission.permission_set', array('REGISTERED', 'u_zebraenhance_manage_close_friends', 'group')),
+			array('permission.permission_set', array('REGISTERED_COPPA', 'u_zebraenhance_use_friend_requests', 'group')),
+			array('permission.permission_set', array('REGISTERED_COPPA', 'u_zebraenhance_manage_close_friends', 'group')),
+			array('permission.permission_set', array('GLOBAL_MODERATORS', 'm_zebraenhance_view_private_friendlists', 'group')),
 			array('custom', array(array($this, 'migrate_legacy_requests'))),
 			array('custom', array(array($this, 'purge_legacy_notifications'))),
 			array('config.remove', array('zebra_module_id')),

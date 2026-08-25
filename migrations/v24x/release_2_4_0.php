@@ -28,7 +28,7 @@ class release_2_4_0 extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
-			array('permission.permission_set', array('ADMINISTRATORS', 'm_ze_view_private_friendlists', 'group')),
+			array('permission.permission_set', array('ADMINISTRATORS', 'm_zebraenhance_view_private_friendlists', 'group')),
 			array('module.add', array(
 				'acp',
 				'ACP_ZEBRA_ENHANCE_TITLE',

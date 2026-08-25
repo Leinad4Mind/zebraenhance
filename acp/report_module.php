@@ -22,7 +22,7 @@ class report_module
 		global $auth, $phpbb_container, $request, $template, $user;
 
 		$user->add_lang_ext('anavaro/zebraenhance', 'info_acp_zebraenhance');
-		if (!$auth->acl_get('m_ze_view_private_friendlists'))
+		if (!$auth->acl_get('m_zebraenhance_view_private_friendlists'))
 		{
 			trigger_error('NO_AUTH_OPERATION', E_USER_WARNING);
 		}

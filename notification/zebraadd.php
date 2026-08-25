@@ -50,7 +50,7 @@ class zebraadd extends \phpbb\notification\type\base
 	 */
 	public function is_available()
 	{
-		return $this->auth->acl_get('u_ze_use');
+		return $this->auth->acl_get('u_zebraenhance_use_friend_requests');
 	}
 
 	/**

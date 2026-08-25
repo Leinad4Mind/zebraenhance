@@ -22,7 +22,7 @@ class foes_info
 			'modes'    => array(
 				'manage' => array(
 					'title' => 'ZE_UCP_FOE_MANAGER',
-					'auth'  => 'ext_anavaro/zebraenhance && cfg_ze_foes_enhancement && acl_u_ze_use',
+					'auth'  => 'ext_anavaro/zebraenhance && cfg_ze_foes_enhancement && acl_u_zebraenhance_use_friend_requests',
 					'cat'   => array('UCP_ZEBRA'),
 				),
 			),

@@ -27,7 +27,7 @@ class notification_types_test extends \phpbb_test_case
 	public function test_availability_requires_extension_permission($class)
 	{
 		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
-		$auth->expects($this->once())->method('acl_get')->with('u_ze_use')->willReturn(false);
+		$auth->expects($this->once())->method('acl_get')->with('u_zebraenhance_use_friend_requests')->willReturn(false);
 		$notification = $this->notification($class, $auth);
 
 		$this->assertFalse($notification->is_available());

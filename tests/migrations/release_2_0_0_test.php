@@ -58,6 +58,27 @@ class release_2_0_0_test extends \phpbb_database_test_case
 		$db->sql_freeresult($result);
 	}
 
+	public function test_fresh_install_uses_descriptive_permission_names()
+	{
+		global $phpbb_root_path;
+
+		$db = $this->new_dbal();
+		$factory = new \phpbb\db\tools\factory();
+		$migration = new \anavaro\zebraenhance\migrations\v20x\release_2_0_0(
+			new \phpbb\config\config(array('zebra_enhance_version' => '1.0.4')),
+			$db,
+			$factory->get($db),
+			$phpbb_root_path,
+			'php',
+			'phpbb_'
+		);
+		$data = $migration->update_data();
+
+		$this->assertContains(array('permission.add', array('u_zebraenhance_use_friend_requests')), $data);
+		$this->assertContains(array('permission.add', array('u_zebraenhance_manage_close_friends')), $data);
+		$this->assertContains(array('permission.add', array('m_zebraenhance_view_private_friendlists', true)), $data);
+	}
+
 	public function test_downgrade_restores_legacy_module_marker()
 	{
 		global $phpbb_root_path;

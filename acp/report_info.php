@@ -21,7 +21,7 @@ class report_info
 			'modes'    => array(
 				'report' => array(
 					'title' => 'ACP_ZEBRA_ENHANCE_REPORT',
-					'auth'  => 'ext_anavaro/zebraenhance && acl_m_ze_view_private_friendlists',
+					'auth'  => 'ext_anavaro/zebraenhance && acl_m_zebraenhance_view_private_friendlists',
 					'cat'   => array('ACP_ZEBRA_ENHANCE_TITLE'),
 				),
 			),

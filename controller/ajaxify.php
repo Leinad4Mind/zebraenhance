@@ -53,8 +53,8 @@ class ajaxify
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
 		if ((int) $this->user->data['user_id'] === ANONYMOUS
-			|| !$this->auth->acl_get('u_ze_use')
-			|| !$this->auth->acl_get('u_ze_close_friends'))
+			|| !$this->auth->acl_get('u_zebraenhance_use_friend_requests')
+			|| !$this->auth->acl_get('u_zebraenhance_manage_close_friends'))
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}
@@ -84,7 +84,7 @@ class ajaxify
 	public function manage_request($requestid, $action)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
-		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}
@@ -159,7 +159,7 @@ class ajaxify
 	public function create_request($userid)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
-		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}
@@ -318,7 +318,7 @@ class ajaxify
 	protected function authorize_relationship_change($foe_enhancement = false)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
-		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}
