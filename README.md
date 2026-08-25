@@ -24,6 +24,13 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Profiles show mutual friends only when the viewer may see that profile's friend list.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
+- Users can optionally block private messages from people on their foe list.
+- Users can optionally remove foe-authored posts from topics, reply reviews, and post-search results, along with identifiable quotes wherever phpBB renders them.
+- Users can suppress quote, mention, reply, topic, and bookmark notifications created by foes.
+- Foes can expire automatically after 24 hours, 7 days, or 30 days, or remain permanent.
+- An enhanced UCP foe manager adds search, pagination, recorded dates, private notes, bulk removal, and a clear protection summary.
+- PM, content, and notification protection can inherit the global default or be explicitly allowed/blocked for each foe.
+- Administrators can enable the foe enhancement suite and independently expose PM, content, notification, temporary-foe, private-note, and per-foe exception controls.
 - Friend acceptance/removal is symmetric and transactional.
 - Friend and request lists are paginated. Administrators can configure the maximum pending requests per account.
 - UCP users can search accepted friends and process selected incoming or outgoing requests in one action.
@@ -47,7 +54,7 @@ The two user permissions are granted to the standard registered-user groups duri
 
 Copy the extension to `ext/anavaro/zebraenhance`, then enable **Zebra Enhance** in ACP > Customise > Manage extensions.
 
-Board-wide request limits are available in ACP > Customise > Zebra Enhance. Individual request privacy is available in UCP > Friends.
+Board-wide request limits and foe feature availability are configured in ACP > Customise > Zebra Enhance. Foe enhancements are disabled by default until an administrator enables them. Global relationship privacy is then available in UCP > Friends, and per-user foe settings are available in UCP > Friends & Foes > Enhanced foe management.
 
 ## Upgrade from 1.x
 

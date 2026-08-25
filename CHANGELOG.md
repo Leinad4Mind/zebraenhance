@@ -2,6 +2,23 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
+## 2.6.0 - 2026-08-25
+
+### Added
+
+- Added optional suppression of quote, mention, reply, topic, and bookmark notifications created by foes.
+- Added temporary foes for 24 hours, 7 days, 30 days, or a permanent duration, with automatic expiry.
+- Added an enhanced UCP foe manager with search, pagination, recorded dates, private notes, bulk removal, and protection status.
+- Added per-foe PM, content, and notification exceptions that can inherit or override the user's global privacy preferences.
+- Added an ACP master switch and individual availability controls for every enhanced foe capability; the suite is disabled by default on upgrade.
+
+## 2.5.0 - 2026-08-24
+
+### Added
+
+- Added a UCP preference that blocks private messages from foes, including group-message and nonstandard submission safeguards.
+- Added a separate UCP preference that completely hides foe-authored posts from topics, reply reviews, and post-search results, plus identifiable quotes wherever phpBB renders them.
+
 ## 2.4.0 - 2026-08-24
 
 ### Added
