@@ -1,15 +1,15 @@
 {% if FRIENDLIST %}
 {% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
-<div class="panel bg1" id="ze-friend-list">
+<div class="panel bg1" id="zebraenhance-friend-list">
 	<div class="inner">
 		<h3>{{ lang('FRIENDLIST_TITLE') }}</h3>
 		{% if FRIENDLIST_ERROR_ACCESS %}
 		<p class="responsive-center">{{ lang('FRIENDLIST_ERROR_ACCESS') }}</p>
 		{% elseif zebra_friendslist|length %}
 		{% if zebra_mutual_friends|length %}
-		<section id="ze-mutual-friends" class="ze-mutual-friends">
-			<h4>{{ lang('ZE_MUTUAL_FRIENDS') }}</h4>
-			<ul class="ze-profile-friends">
+		<section id="zebraenhance-mutual-friends" class="zebraenhance-mutual-friends">
+			<h4>{{ lang('ZEBRAENHANCE_MUTUAL_FRIENDS') }}</h4>
+			<ul class="zebraenhance-profile-friends">
 			{% for friend in zebra_mutual_friends %}
 				<li>
 					<a href="{{ friend.U_PROFILE }}" class="header-avatar">{{ friend.USER_AVATAR }}</a>
@@ -19,7 +19,7 @@
 			</ul>
 		</section>
 		{% endif %}
-		<ul class="ze-profile-friends">
+		<ul class="zebraenhance-profile-friends">
 		{% for friend in zebra_friendslist %}
 			<li>
 				<a href="{{ friend.U_PROFILE }}" class="header-avatar">{{ friend.USER_AVATAR }}</a>
@@ -28,7 +28,7 @@
 		{% endfor %}
 		</ul>
 		{% else %}
-		<p>{{ lang('ZE_NO_FRIENDS') }}</p>
+		<p>{{ lang('ZEBRAENHANCE_NO_FRIENDS') }}</p>
 		{% endif %}
 	</div>
 </div>

@@ -32,7 +32,7 @@ class foes_module
 		$user_id = (int) $user->data['user_id'];
 		$relationships->expire_foes(time(), $user_id);
 		$search = utf8_substr(
-			trim($request->variable('ze_foe_q', '', true)),
+			trim($request->variable('zebraenhance_foe_q', '', true)),
 			0,
 			\anavaro\zebraenhance\service\relationship_manager::MAX_FOE_SEARCH_LENGTH
 		);
@@ -41,13 +41,13 @@ class foes_module
 		$total = $relationships->count_foes($user_id, $search);
 		$foes = $relationships->get_foes($user_id, $page_size, $start, $search);
 
-		add_form_key('anavaro_zebraenhance', '_ZE');
+		add_form_key('anavaro_zebraenhance', '_ZEBRAENHANCE');
 		$this->tpl_name = 'ucp_foes';
-		$this->page_title = 'ZE_UCP_FOE_MANAGER';
+		$this->page_title = 'ZEBRAENHANCE_UCP_FOE_MANAGER';
 		$base_url = $this->u_action;
 		if ($search !== '')
 		{
-			$base_url .= (strpos($base_url, '?') === false ? '?' : '&') . 'ze_foe_q=' . rawurlencode($search);
+			$base_url .= (strpos($base_url, '?') === false ? '?' : '&') . 'zebraenhance_foe_q=' . rawurlencode($search);
 		}
 		$pagination->generate_template_pagination($base_url, 'pagination', 'start', $total, $page_size, $start);
 
@@ -78,12 +78,12 @@ class foes_module
 		{
 			$foe_id = (int) $foe['zebra_id'];
 			$expires_at = (int) $foe['expires_at'];
-			$template->assign_block_vars('ze_foes', array(
+			$template->assign_block_vars('zebraenhance_foes', array(
 				'USER_ID'        => $foe_id,
 				'USERNAME'       => (string) $foe['username'],
 				'USERNAME_FULL'  => get_username_string('full', $foe_id, $foe['username'], $foe['user_colour']),
-				'ADDED'          => (int) $foe['added_at'] ? $user->format_date((int) $foe['added_at']) : $user->lang('ZE_FOE_DATE_UNKNOWN'),
-				'EXPIRES'        => $expires_at ? $user->format_date($expires_at) : $user->lang('ZE_FOE_PERMANENT'),
+				'ADDED'          => (int) $foe['added_at'] ? $user->format_date((int) $foe['added_at']) : $user->lang('ZEBRAENHANCE_FOE_DATE_UNKNOWN'),
+				'EXPIRES'        => $expires_at ? $user->format_date($expires_at) : $user->lang('ZEBRAENHANCE_FOE_PERMANENT'),
 				'NOTE'           => (string) $foe['foe_note'],
 				'PM_POLICY'      => (int) $foe['pm_policy'],
 				'CONTENT_POLICY' => (int) $foe['content_policy'],

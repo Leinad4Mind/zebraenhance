@@ -2,22 +2,22 @@
 {% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
 {% INCLUDEJS '@anavaro_zebraenhance/zebraenhance.js' %}
 
-<div id="ze-friend-controls" data-error-title="{{ lang('ZE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}" data-select-request="{{ lang('ZE_SELECT_REQUEST') }}">
-	<div id="ze-form-token" class="hidden">{{ S_FORM_TOKEN_ZE }}</div>
+<div id="zebraenhance-friend-controls" data-error-title="{{ lang('ZEBRAENHANCE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZEBRAENHANCE_REQUEST_FAILED') }}" data-select-request="{{ lang('ZEBRAENHANCE_SELECT_REQUEST') }}">
+	<div id="zebraenhance-form-token" class="hidden">{{ S_FORM_TOKEN_ZEBRAENHANCE }}</div>
 
 <dl>
-	<dt><label for="ze-new-circle-name">{{ lang('ZE_CIRCLES') }}</label><br><span>{{ lang('ZE_CIRCLES_EXPLAIN') }}</span></dt>
-	<dd id="ze-circles" class="ze-circle-manager">
-		<div class="ze-circle-create">
-			<input type="text" id="ze-new-circle-name" class="inputbox autowidth" maxlength="50" placeholder="{{ lang('ZE_CIRCLE_NAME') }}">
-			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ U_CREATE_CIRCLE }}" data-name-input="#ze-new-circle-name">{{ lang('ZE_CREATE_CIRCLE') }}</button>
+	<dt><label for="zebraenhance-new-circle-name">{{ lang('ZEBRAENHANCE_CIRCLES') }}</label><br><span>{{ lang('ZEBRAENHANCE_CIRCLES_EXPLAIN') }}</span></dt>
+	<dd id="zebraenhance-circles" class="zebraenhance-circle-manager">
+		<div class="zebraenhance-circle-create">
+			<input type="text" id="zebraenhance-new-circle-name" class="inputbox autowidth" maxlength="50" placeholder="{{ lang('ZEBRAENHANCE_CIRCLE_NAME') }}">
+			<button type="button" class="button button-secondary js-zebraenhance-circle" data-url="{{ U_CREATE_CIRCLE }}" data-name-input="#zebraenhance-new-circle-name">{{ lang('ZEBRAENHANCE_CREATE_CIRCLE') }}</button>
 		</div>
-	{% for circle in ze_circles %}
-		<div class="ze-circle-row" data-circle-id="{{ circle.ID }}">
-			<input type="text" id="ze-circle-name-{{ circle.ID }}" class="inputbox autowidth" maxlength="50" value="{{ circle.NAME }}">
-			<span class="ze-circle-count">{{ circle.MEMBER_COUNT }} {{ lang('ZE_MEMBERS') }}</span>
-			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ circle.U_RENAME }}" data-name-input="#ze-circle-name-{{ circle.ID }}">{{ lang('ZE_RENAME_CIRCLE') }}</button>
-			<button type="button" class="button button-secondary js-ze-circle" data-url="{{ circle.U_DELETE }}" data-confirm="{{ lang('ZE_CONFIRM_DELETE_CIRCLE') }}">{{ lang('ZE_DELETE_CIRCLE') }}</button>
+	{% for circle in zebraenhance_circles %}
+		<div class="zebraenhance-circle-row" data-circle-id="{{ circle.ID }}">
+			<input type="text" id="zebraenhance-circle-name-{{ circle.ID }}" class="inputbox autowidth" maxlength="50" value="{{ circle.NAME }}">
+			<span class="zebraenhance-circle-count">{{ circle.MEMBER_COUNT }} {{ lang('ZEBRAENHANCE_MEMBERS') }}</span>
+			<button type="button" class="button button-secondary js-zebraenhance-circle" data-url="{{ circle.U_RENAME }}" data-name-input="#zebraenhance-circle-name-{{ circle.ID }}">{{ lang('ZEBRAENHANCE_RENAME_CIRCLE') }}</button>
+			<button type="button" class="button button-secondary js-zebraenhance-circle" data-url="{{ circle.U_DELETE }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DELETE_CIRCLE') }}">{{ lang('ZEBRAENHANCE_DELETE_CIRCLE') }}</button>
 		</div>
 	{% endfor %}
 	</dd>
@@ -26,28 +26,28 @@
 {% if pending_requests|length %}
 <dl>
 	<dt><label>{{ lang('UCP_ZEBRA_PENDING_IN') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_IN_EXP') }}</span></dt>
-	<dd id="ze-incoming-requests" class="ze-scroll-list">
+	<dd id="zebraenhance-incoming-requests" class="zebraenhance-scroll-list">
 	{% for request in pending_requests %}
-		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
-			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
-			<span class="ze-actions">
-				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
-				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
-				<button type="button" class="button button-secondary ze-icon-button js-ze-request js-ze-decline-block" data-url="{{ request.U_DECLINE_BLOCK }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
+		<div class="zebraenhance-list-row" data-user-id="{{ request.USER_ID }}">
+			<input type="checkbox" class="js-zebraenhance-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZEBRAENHANCE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
+			<span class="zebraenhance-actions">
+				<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZEBRAENHANCE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
+				<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+				<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request js-zebraenhance-decline-block" data-url="{{ request.U_DECLINE_BLOCK }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
 			</span>
-			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
+			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="zebraenhance-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
-		<div class="ze-bulk-actions">
-			<label><input type="checkbox" class="js-ze-check-all" data-target="#ze-incoming-requests .js-ze-request-select"> {{ lang('ZE_SELECT_ALL') }}</label>
-			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_ACCEPT }}" data-target="#ze-incoming-requests .js-ze-request-select">{{ lang('ZE_ACCEPT_SELECTED') }}</button>
-			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_DECLINE }}" data-target="#ze-incoming-requests .js-ze-request-select" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_SELECTED') }}">{{ lang('ZE_DECLINE_SELECTED') }}</button>
+		<div class="zebraenhance-bulk-actions">
+			<label><input type="checkbox" class="js-zebraenhance-check-all" data-target="#zebraenhance-incoming-requests .js-zebraenhance-request-select"> {{ lang('ZEBRAENHANCE_SELECT_ALL') }}</label>
+			<button type="button" class="button button-secondary js-zebraenhance-bulk-requests" data-url="{{ U_BULK_ACCEPT }}" data-target="#zebraenhance-incoming-requests .js-zebraenhance-request-select">{{ lang('ZEBRAENHANCE_ACCEPT_SELECTED') }}</button>
+			<button type="button" class="button button-secondary js-zebraenhance-bulk-requests" data-url="{{ U_BULK_DECLINE }}" data-target="#zebraenhance-incoming-requests .js-zebraenhance-request-select" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DECLINE_SELECTED') }}">{{ lang('ZEBRAENHANCE_DECLINE_SELECTED') }}</button>
 		</div>
 	</dd>
 </dl>
-{% if ze_in_pagination|length %}
-<div class="pagination ze-pagination"><ul>
-	{% for page in ze_in_pagination %}
+{% if zebraenhance_in_pagination|length %}
+<div class="pagination zebraenhance-pagination"><ul>
+	{% for page in zebraenhance_in_pagination %}
 		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
 		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
 		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
@@ -58,45 +58,45 @@
 {% endif %}
 {% endif %}
 
-<div class="ze-friend-search">
-	<label class="sr-only" for="ze-friend-search">{{ lang('ZE_SEARCH_FRIENDS') }}</label>
-	<input type="search" id="ze-friend-search" name="ze_friend_q" class="inputbox autowidth" value="{{ FRIEND_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FRIENDS') }}">
-	<button type="submit" class="button button-secondary js-ze-search-friends" data-url="{{ U_FRIEND_SEARCH }}" data-input="#ze-friend-search">{{ lang('SEARCH') }}</button>
+<div class="zebraenhance-friend-search">
+	<label class="sr-only" for="zebraenhance-friend-search">{{ lang('ZEBRAENHANCE_SEARCH_FRIENDS') }}</label>
+	<input type="search" id="zebraenhance-friend-search" name="zebraenhance_friend_q" class="inputbox autowidth" value="{{ FRIEND_SEARCH }}" maxlength="100" placeholder="{{ lang('ZEBRAENHANCE_SEARCH_FRIENDS') }}">
+	<button type="submit" class="button button-secondary js-zebraenhance-search-friends" data-url="{{ U_FRIEND_SEARCH }}" data-input="#zebraenhance-friend-search">{{ lang('SEARCH') }}</button>
 	{% if FRIEND_SEARCH %}<a class="button button-secondary" href="{{ U_FRIEND_SEARCH }}">{{ lang('RESET') }}</a>{% endif %}
 </div>
 
 <dl>
 	<dt><label>{{ lang('YOUR_FRIENDS') ~ lang('COLON') }}</label><br><span>{{ lang('YOUR_FRIENDS_EXPLAIN') }}</span></dt>
-	<dd id="ze-friends" class="ze-scroll-list">
+	<dd id="zebraenhance-friends" class="zebraenhance-scroll-list">
 	{% for friend in pretty_zebra %}
-		<div class="ze-list-row ze-friend-row" data-user-id="{{ friend.USER_ID }}">
-			<span class="ze-actions">
+		<div class="zebraenhance-list-row zebraenhance-friend-row" data-user-id="{{ friend.USER_ID }}">
+			<span class="zebraenhance-actions">
 			{% if S_CAN_CLOSE_FRIENDS %}
-				<button type="button" class="button button-secondary ze-icon-button js-ze-close-friend" data-add-url="{{ friend.U_CLOSE_ADD }}" data-remove-url="{{ friend.U_CLOSE_REMOVE }}" data-url="{{ friend.S_CLOSE ? friend.U_CLOSE_REMOVE : friend.U_CLOSE_ADD }}" aria-pressed="{{ friend.S_CLOSE ? 'true' : 'false' }}" title="{{ friend.L_CLOSE_ACTION }}" aria-label="{{ friend.L_CLOSE_ACTION }}"><i class="icon {{ friend.S_CLOSE ? 'fa-star' : 'fa-star-o' }} fa-fw" aria-hidden="true"></i></button>
+				<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-close-friend" data-add-url="{{ friend.U_CLOSE_ADD }}" data-remove-url="{{ friend.U_CLOSE_REMOVE }}" data-url="{{ friend.S_CLOSE ? friend.U_CLOSE_REMOVE : friend.U_CLOSE_ADD }}" aria-pressed="{{ friend.S_CLOSE ? 'true' : 'false' }}" title="{{ friend.L_CLOSE_ACTION }}" aria-label="{{ friend.L_CLOSE_ACTION }}"><i class="icon {{ friend.S_CLOSE ? 'fa-star' : 'fa-star-o' }} fa-fw" aria-hidden="true"></i></button>
 			{% endif %}
-				<a href="{{ friend.U_CANCEL }}" data-ajax="true" data-refresh="true" title="{{ lang('ZE_REMOVE_FRIEND') }}" aria-label="{{ lang('ZE_REMOVE_FRIEND') }}"><i class="icon fa-user-times fa-fw" aria-hidden="true"></i></a>
+				<a href="{{ friend.U_CANCEL }}" data-ajax="true" data-refresh="true" title="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}" aria-label="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}"><i class="icon fa-user-times fa-fw" aria-hidden="true"></i></a>
 			</span>
-			<span class="ze-friend-name">{{ friend.USERNAME_FULL }}</span>
+			<span class="zebraenhance-friend-name">{{ friend.USERNAME_FULL }}</span>
 		{% if friend.circles|length %}
-			<span class="ze-circle-assignment">
-				<label class="sr-only" for="ze-friend-circles-{{ friend.USER_ID }}">{{ lang('ZE_CIRCLES') }}</label>
-				<select id="ze-friend-circles-{{ friend.USER_ID }}" class="inputbox js-ze-circle-select" multiple size="{{ friend.circles|length > 3 ? 3 : friend.circles|length }}">
+			<span class="zebraenhance-circle-assignment">
+				<label class="sr-only" for="zebraenhance-friend-circles-{{ friend.USER_ID }}">{{ lang('ZEBRAENHANCE_CIRCLES') }}</label>
+				<select id="zebraenhance-friend-circles-{{ friend.USER_ID }}" class="inputbox js-zebraenhance-circle-select" multiple size="{{ friend.circles|length > 3 ? 3 : friend.circles|length }}">
 				{% for circle in friend.circles %}
 					<option value="{{ circle.ID }}"{% if circle.S_SELECTED %} selected{% endif %}>{{ circle.NAME }}</option>
 				{% endfor %}
 				</select>
-				<button type="button" class="button button-secondary js-ze-save-circles" data-url="{{ friend.U_CIRCLES }}" data-select="#ze-friend-circles-{{ friend.USER_ID }}">{{ lang('ZE_SAVE_CIRCLES') }}</button>
+				<button type="button" class="button button-secondary js-zebraenhance-save-circles" data-url="{{ friend.U_CIRCLES }}" data-select="#zebraenhance-friend-circles-{{ friend.USER_ID }}">{{ lang('ZEBRAENHANCE_SAVE_CIRCLES') }}</button>
 			</span>
 		{% endif %}
 		</div>
 	{% else %}
-		<p>{{ lang('ZE_NO_FRIENDS') }}</p>
+		<p>{{ lang('ZEBRAENHANCE_NO_FRIENDS') }}</p>
 	{% endfor %}
 	</dd>
 </dl>
-{% if ze_friend_pagination|length %}
-<div class="pagination ze-pagination"><ul>
-	{% for page in ze_friend_pagination %}
+{% if zebraenhance_friend_pagination|length %}
+<div class="pagination zebraenhance-pagination"><ul>
+	{% for page in zebraenhance_friend_pagination %}
 		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
 		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
 		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
@@ -106,14 +106,14 @@
 </ul></div>
 {% endif %}
 
-{% if ze_friend_suggestions|length %}
+{% if zebraenhance_friend_suggestions|length %}
 <dl>
-	<dt><label>{{ lang('ZE_FRIEND_SUGGESTIONS') }}</label><br><span>{{ lang('ZE_FRIEND_SUGGESTIONS_EXPLAIN') }}</span></dt>
-	<dd id="ze-friend-suggestions" class="ze-scroll-list">
-	{% for suggestion in ze_friend_suggestions %}
-		<div class="ze-list-row" data-user-id="{{ suggestion.USER_ID }}">
-			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ suggestion.U_REQUEST }}" title="{{ lang('ZE_SEND_FRIEND_REQUEST') }}" aria-label="{{ lang('ZE_SEND_FRIEND_REQUEST') }}"><i class="icon fa-user-plus fa-fw" aria-hidden="true"></i></button>
-			<span>{{ suggestion.USERNAME_FULL }}<span class="ze-mutual-count">{{ lang('ZE_MUTUAL_FRIEND_COUNT', suggestion.MUTUAL_COUNT) }}</span></span>
+	<dt><label>{{ lang('ZEBRAENHANCE_FRIEND_SUGGESTIONS') }}</label><br><span>{{ lang('ZEBRAENHANCE_FRIEND_SUGGESTIONS_EXPLAIN') }}</span></dt>
+	<dd id="zebraenhance-friend-suggestions" class="zebraenhance-scroll-list">
+	{% for suggestion in zebraenhance_friend_suggestions %}
+		<div class="zebraenhance-list-row" data-user-id="{{ suggestion.USER_ID }}">
+			<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ suggestion.U_REQUEST }}" title="{{ lang('ZEBRAENHANCE_SEND_FRIEND_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_SEND_FRIEND_REQUEST') }}"><i class="icon fa-user-plus fa-fw" aria-hidden="true"></i></button>
+			<span>{{ suggestion.USERNAME_FULL }}<span class="zebraenhance-mutual-count">{{ lang('ZEBRAENHANCE_MUTUAL_FRIEND_COUNT', suggestion.MUTUAL_COUNT) }}</span></span>
 		</div>
 	{% endfor %}
 	</dd>
@@ -123,23 +123,23 @@
 {% if pending_awaits|length %}
 <dl>
 	<dt><label>{{ lang('UCP_ZEBRA_PENDING_OUT') }}</label><br><span>{{ lang('UCP_ZEBRA_PENDING_OUT_EXP') }}</span></dt>
-	<dd id="ze-outgoing-requests" class="ze-scroll-list">
+	<dd id="zebraenhance-outgoing-requests" class="zebraenhance-scroll-list">
 	{% for request in pending_awaits %}
-		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
-			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
-			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_CANCEL }}" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
-			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
+		<div class="zebraenhance-list-row" data-user-id="{{ request.USER_ID }}">
+			<input type="checkbox" class="js-zebraenhance-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZEBRAENHANCE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
+			<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ request.U_CANCEL }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="zebraenhance-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>
 	{% endfor %}
-		<div class="ze-bulk-actions">
-			<label><input type="checkbox" class="js-ze-check-all" data-target="#ze-outgoing-requests .js-ze-request-select"> {{ lang('ZE_SELECT_ALL') }}</label>
-			<button type="button" class="button button-secondary js-ze-bulk-requests" data-url="{{ U_BULK_CANCEL }}" data-target="#ze-outgoing-requests .js-ze-request-select" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_SELECTED') }}">{{ lang('ZE_CANCEL_SELECTED') }}</button>
+		<div class="zebraenhance-bulk-actions">
+			<label><input type="checkbox" class="js-zebraenhance-check-all" data-target="#zebraenhance-outgoing-requests .js-zebraenhance-request-select"> {{ lang('ZEBRAENHANCE_SELECT_ALL') }}</label>
+			<button type="button" class="button button-secondary js-zebraenhance-bulk-requests" data-url="{{ U_BULK_CANCEL }}" data-target="#zebraenhance-outgoing-requests .js-zebraenhance-request-select" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_CANCEL_SELECTED') }}">{{ lang('ZEBRAENHANCE_CANCEL_SELECTED') }}</button>
 		</div>
 	</dd>
 </dl>
-{% if ze_out_pagination|length %}
-<div class="pagination ze-pagination"><ul>
-	{% for page in ze_out_pagination %}
+{% if zebraenhance_out_pagination|length %}
+<div class="pagination zebraenhance-pagination"><ul>
+	{% for page in zebraenhance_out_pagination %}
 		{% if page.S_IS_PREV %}<li class="arrow previous"><a class="button button-icon-only" href="{{ page.PAGE_URL }}" rel="prev"><i class="icon fa-chevron-{{ S_CONTENT_FLOW_BEGIN }} fa-fw" aria-hidden="true"></i><span class="sr-only">{{ lang('PREVIOUS') }}</span></a></li>
 		{% elseif page.S_IS_CURRENT %}<li class="active"><span>{{ page.PAGE_NUMBER }}</span></li>
 		{% elseif page.S_IS_ELLIPSIS %}<li class="ellipsis"><span>{{ lang('ELLIPSIS') }}</span></li>
@@ -151,17 +151,17 @@
 {% endif %}
 
 <dl>
-	<dt><label for="zebra_request_policy">{{ lang('ZE_REQUEST_POLICY') }}</label><br><span>{{ lang('ZE_REQUEST_POLICY_EXPLAIN') }}</span></dt>
+	<dt><label for="zebra_request_policy">{{ lang('ZEBRAENHANCE_REQUEST_POLICY') }}</label><br><span>{{ lang('ZEBRAENHANCE_REQUEST_POLICY_EXPLAIN') }}</span></dt>
 	<dd><select id="zebra_request_policy" name="zebra_request_policy">
-		<option value="0"{% if ZEBRA_REQUEST_POLICY == 0 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_EVERYONE') }}</option>
-		<option value="1"{% if ZEBRA_REQUEST_POLICY == 1 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_FRIENDS_OF_FRIENDS') }}</option>
-		<option value="2"{% if ZEBRA_REQUEST_POLICY == 2 %} selected{% endif %}>{{ lang('ZE_REQUEST_POLICY_NOBODY') }}</option>
+		<option value="0"{% if ZEBRA_REQUEST_POLICY == 0 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_REQUEST_POLICY_EVERYONE') }}</option>
+		<option value="1"{% if ZEBRA_REQUEST_POLICY == 1 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_REQUEST_POLICY_FRIENDS_OF_FRIENDS') }}</option>
+		<option value="2"{% if ZEBRA_REQUEST_POLICY == 2 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_REQUEST_POLICY_NOBODY') }}</option>
 	</select></dd>
 </dl>
 
-{% if S_ZE_FOE_PM_AVAILABLE %}
+{% if S_ZEBRAENHANCE_FOE_PM_AVAILABLE %}
 <dl>
-	<dt><label>{{ lang('ZE_BLOCK_FOE_PM') }}</label><br><span>{{ lang('ZE_BLOCK_FOE_PM_EXPLAIN') }}</span></dt>
+	<dt><label>{{ lang('ZEBRAENHANCE_BLOCK_FOE_PM') }}</label><br><span>{{ lang('ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN') }}</span></dt>
 	<dd>
 		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="1"{% if S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('YES') }}</label>
 		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="0"{% if not S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('NO') }}</label>
@@ -169,9 +169,9 @@
 </dl>
 {% endif %}
 
-{% if S_ZE_FOE_CONTENT_AVAILABLE %}
+{% if S_ZEBRAENHANCE_FOE_CONTENT_AVAILABLE %}
 <dl>
-	<dt><label>{{ lang('ZE_HIDE_FOE_CONTENT') }}</label><br><span>{{ lang('ZE_HIDE_FOE_CONTENT_EXPLAIN') }}</span></dt>
+	<dt><label>{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT') }}</label><br><span>{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN') }}</span></dt>
 	<dd>
 		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="1"{% if S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('YES') }}</label>
 		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="0"{% if not S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('NO') }}</label>
@@ -179,9 +179,9 @@
 </dl>
 {% endif %}
 
-{% if S_ZE_FOE_NOTIFICATIONS_AVAILABLE %}
+{% if S_ZEBRAENHANCE_FOE_NOTIFICATIONS_AVAILABLE %}
 <dl>
-	<dt><label>{{ lang('ZE_MUTE_FOE_NOTIFICATIONS') }}</label><br><span>{{ lang('ZE_MUTE_FOE_NOTIFICATIONS_EXPLAIN') }}</span></dt>
+	<dt><label>{{ lang('ZEBRAENHANCE_MUTE_FOE_NOTIFICATIONS') }}</label><br><span>{{ lang('ZEBRAENHANCE_MUTE_FOE_NOTIFICATIONS_EXPLAIN') }}</span></dt>
 	<dd>
 		<label><input type="radio" class="radio" name="zebra_mute_foe_notifications" value="1"{% if S_ZEBRA_MUTE_FOE_NOTIFICATIONS %} checked{% endif %}> {{ lang('YES') }}</label>
 		<label><input type="radio" class="radio" name="zebra_mute_foe_notifications" value="0"{% if not S_ZEBRA_MUTE_FOE_NOTIFICATIONS %} checked{% endif %}> {{ lang('NO') }}</label>
@@ -190,14 +190,14 @@
 {% endif %}
 
 <dl>
-	<dt><label for="zebra_profile_acl">{{ lang('ZE_FRIENDLIST') }}</label><br><span>{{ lang('ZE_FRIENDLIST_EXPLAIN') }}</span></dt>
+	<dt><label for="zebra_profile_acl">{{ lang('ZEBRAENHANCE_FRIENDLIST') }}</label><br><span>{{ lang('ZEBRAENHANCE_FRIENDLIST_EXPLAIN') }}</span></dt>
 	<dd><select id="zebra_profile_acl" name="zebra_profile_acl">
-		<option value="0"{% if ZEBRA_ACL == 0 %} selected{% endif %}>{{ lang('ZE_VIS_EVERYONE') }}</option>
-		<option value="1"{% if ZEBRA_ACL == 1 %} selected{% endif %}>{{ lang('ZE_VIS_REGISTERED') }}</option>
-		<option value="2"{% if ZEBRA_ACL == 2 %} selected{% endif %}>{{ lang('ZE_VIS_NON_FOES') }}</option>
-		<option value="3"{% if ZEBRA_ACL == 3 %} selected{% endif %}>{{ lang('ZE_VIS_FRIENDS') }}</option>
-		<option value="4"{% if ZEBRA_ACL == 4 %} selected{% endif %}>{{ lang('ZE_VIS_CLOSE_FRIENDS') }}</option>
-		<option value="5"{% if ZEBRA_ACL == 5 %} selected{% endif %}>{{ lang('ZE_VIS_NOBODY') }}</option>
+		<option value="0"{% if ZEBRA_ACL == 0 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_EVERYONE') }}</option>
+		<option value="1"{% if ZEBRA_ACL == 1 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_REGISTERED') }}</option>
+		<option value="2"{% if ZEBRA_ACL == 2 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NON_FOES') }}</option>
+		<option value="3"{% if ZEBRA_ACL == 3 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_FRIENDS') }}</option>
+		<option value="4"{% if ZEBRA_ACL == 4 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_CLOSE_FRIENDS') }}</option>
+		<option value="5"{% if ZEBRA_ACL == 5 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NOBODY') }}</option>
 	</select></dd>
 </dl>
 </div>

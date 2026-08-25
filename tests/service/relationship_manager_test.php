@@ -49,15 +49,15 @@ class relationship_manager_test extends \phpbb_database_test_case
 			->getMock();
 		$this->dispatcher = $this->getMockBuilder('\phpbb\event\dispatcher_interface')->getMock();
 		$this->config = new \phpbb\config\config(array(
-			'ze_max_pending_requests' => 100,
-			'ze_decline_cooldown_days' => 7,
-			'ze_foes_enhancement' => 1,
-			'ze_foe_pm' => 1,
-			'ze_foe_content' => 1,
-			'ze_foe_notifications' => 1,
-			'ze_foe_temporary' => 1,
-			'ze_foe_notes' => 1,
-			'ze_foe_exceptions' => 1,
+			'zebraenhance_max_pending_requests' => 100,
+			'zebraenhance_decline_cooldown_days' => 7,
+			'zebraenhance_foes_enhancement' => 1,
+			'zebraenhance_foe_pm' => 1,
+			'zebraenhance_foe_content' => 1,
+			'zebraenhance_foe_notifications' => 1,
+			'zebraenhance_foe_temporary' => 1,
+			'zebraenhance_foe_notes' => 1,
+			'zebraenhance_foe_exceptions' => 1,
 		));
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
@@ -539,7 +539,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_zero_cooldown_allows_a_new_request_after_decline()
 	{
-		$this->config->set('ze_decline_cooldown_days', 0);
+		$this->config->set('zebraenhance_decline_cooldown_days', 0);
 		$this->assertSame('declined', $this->relationships->manage_request(1, 3, 'decline'));
 		$this->assertSame(0, $this->count_rows('phpbb_zebra_request_cooldowns'));
 		$this->assertSame('created', $this->relationships->request_friendship(2, 3));
@@ -648,7 +648,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_master_switch_bypasses_all_enhanced_foe_behaviour()
 	{
-		$this->config->set('ze_foes_enhancement', 0);
+		$this->config->set('zebraenhance_foes_enhancement', 0);
 		$this->db->sql_query('UPDATE phpbb_users
 			SET zebra_block_foe_pm = 1, zebra_hide_foe_content = 1, zebra_mute_foe_notifications = 1
 			WHERE user_id = 4');
@@ -665,7 +665,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_disabled_exceptions_use_only_the_global_preference()
 	{
-		$this->config->set('ze_foe_exceptions', 0);
+		$this->config->set('zebraenhance_foe_exceptions', 0);
 		$this->relationships->register_foe_settings(4, array(5));
 		$this->db->sql_query('UPDATE phpbb_zebra_foe_settings
 			SET content_policy = 2
@@ -1031,7 +1031,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_pending_request_limit_is_applied_separately_by_direction()
 	{
-		$this->config->set('ze_max_pending_requests', 1);
+		$this->config->set('zebraenhance_max_pending_requests', 1);
 		$this->notifications->expects($this->once())->method('add_notifications');
 
 		$this->assertSame('limited', $this->relationships->request_friendship(2, 4));
@@ -1041,7 +1041,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_zero_pending_request_limit_is_unlimited()
 	{
-		$this->config->set('ze_max_pending_requests', 0);
+		$this->config->set('zebraenhance_max_pending_requests', 0);
 		$this->assertSame('created', $this->relationships->request_friendship(3, 4));
 	}
 

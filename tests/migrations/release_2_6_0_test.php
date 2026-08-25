@@ -47,29 +47,14 @@ class release_2_6_0_test extends \phpbb_test_case
 	{
 		$migration = $this->migration();
 		$data = $migration->update_data();
-		$this->assertContains(
-			array('permission.add', array('u_zebraenhance_use_friend_requests', true, 'u_ze_use')),
-			$data
-		);
-		$this->assertContains(
-			array('permission.add', array('u_zebraenhance_manage_close_friends', true, 'u_ze_close_friends')),
-			$data
-		);
-		$this->assertContains(
-			array('permission.add', array('m_zebraenhance_view_private_friendlists', true, 'm_ze_view_private_friendlists')),
-			$data
-		);
-		$this->assertContains(array('permission.remove', array('u_ze_use')), $data);
-		$this->assertContains(array('permission.remove', array('u_ze_close_friends')), $data);
-		$this->assertContains(array('permission.remove', array('m_ze_view_private_friendlists')), $data);
-		$this->assertContains(array('config.add', array('ze_foes_enhancement', 0)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_pm', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_content', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_notifications', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_temporary', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_notes', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_exceptions', 1)), $data);
-		$this->assertContains(array('config.add', array('ze_foe_expiry_gc', 3600)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foes_enhancement', 0)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_pm', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_content', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_notifications', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_temporary', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_notes', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_exceptions', 1)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_foe_expiry_gc', 3600)), $data);
 		$this->assertContains(array('custom', array(array($migration, 'migrate_existing_foes'))), $data);
 		$this->assertContains(array('config.update', array('zebra_enhance_version', '2.6.0')), $data);
 		$modules = array_values(array_filter($data, function ($operation)

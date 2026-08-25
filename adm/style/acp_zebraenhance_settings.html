@@ -8,32 +8,32 @@
 	<fieldset>
 		<legend>{{ lang('ACP_ZEBRA_ENHANCE_REQUESTS') }}</legend>
 		<dl>
-			<dt><label for="ze_max_pending_requests">{{ lang('ACP_ZE_MAX_PENDING_REQUESTS') }}</label><br><span>{{ lang('ACP_ZE_MAX_PENDING_REQUESTS_EXPLAIN') }}</span></dt>
-			<dd><input id="ze_max_pending_requests" name="ze_max_pending_requests" type="number" min="0" max="1000" value="{{ ZE_MAX_PENDING_REQUESTS }}"></dd>
+			<dt><label for="zebraenhance_max_pending_requests">{{ lang('ACP_ZEBRAENHANCE_MAX_PENDING_REQUESTS') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_MAX_PENDING_REQUESTS_EXPLAIN') }}</span></dt>
+			<dd><input id="zebraenhance_max_pending_requests" name="zebraenhance_max_pending_requests" type="number" min="0" max="1000" value="{{ ZEBRAENHANCE_MAX_PENDING_REQUESTS }}"></dd>
 		</dl>
 		<dl>
-			<dt><label for="ze_decline_cooldown_days">{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS') }}</label><br><span>{{ lang('ACP_ZE_DECLINE_COOLDOWN_DAYS_EXPLAIN') }}</span></dt>
-			<dd><input id="ze_decline_cooldown_days" name="ze_decline_cooldown_days" type="number" min="0" max="3650" value="{{ ZE_DECLINE_COOLDOWN_DAYS }}"></dd>
+			<dt><label for="zebraenhance_decline_cooldown_days">{{ lang('ACP_ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS_EXPLAIN') }}</span></dt>
+			<dd><input id="zebraenhance_decline_cooldown_days" name="zebraenhance_decline_cooldown_days" type="number" min="0" max="3650" value="{{ ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS }}"></dd>
 		</dl>
 	</fieldset>
 
 	<fieldset>
 		<legend>{{ lang('ACP_ZEBRA_ENHANCE_FOES') }}</legend>
 		<dl>
-			<dt><label>{{ lang('ACP_ZE_FOES_ENHANCEMENT') }}</label><br><span>{{ lang('ACP_ZE_FOES_ENHANCEMENT_EXPLAIN') }}</span></dt>
+			<dt><label>{{ lang('ACP_ZEBRAENHANCE_FOES_ENHANCEMENT') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_FOES_ENHANCEMENT_EXPLAIN') }}</span></dt>
 			<dd>
-				<label><input type="radio" class="radio js-ze-foes-master" name="ze_foes_enhancement" value="1"{% if S_ZE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('YES') }}</label>
-				<label><input type="radio" class="radio js-ze-foes-master" name="ze_foes_enhancement" value="0"{% if not S_ZE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('NO') }}</label>
+				<label><input type="radio" class="radio js-zebraenhance-foes-master" name="zebraenhance_foes_enhancement" value="1"{% if S_ZEBRAENHANCE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('YES') }}</label>
+				<label><input type="radio" class="radio js-zebraenhance-foes-master" name="zebraenhance_foes_enhancement" value="0"{% if not S_ZEBRAENHANCE_FOES_ENHANCEMENT %} checked{% endif %}> {{ lang('NO') }}</label>
 			</dd>
 		</dl>
-		<div id="ze-foe-feature-options"{% if not S_ZE_FOES_ENHANCEMENT %} class="hidden"{% endif %}>
+		<div id="zebraenhance-foe-feature-options"{% if not S_ZEBRAENHANCE_FOES_ENHANCEMENT %} class="hidden"{% endif %}>
 		{% set foe_options = [
-			['ze_foe_pm', 'ACP_ZE_FOE_PM', 'ACP_ZE_FOE_PM_EXPLAIN', S_ZE_FOE_PM],
-			['ze_foe_content', 'ACP_ZE_FOE_CONTENT', 'ACP_ZE_FOE_CONTENT_EXPLAIN', S_ZE_FOE_CONTENT],
-			['ze_foe_notifications', 'ACP_ZE_FOE_NOTIFICATIONS', 'ACP_ZE_FOE_NOTIFICATIONS_EXPLAIN', S_ZE_FOE_NOTIFICATIONS],
-			['ze_foe_temporary', 'ACP_ZE_FOE_TEMPORARY', 'ACP_ZE_FOE_TEMPORARY_EXPLAIN', S_ZE_FOE_TEMPORARY],
-			['ze_foe_notes', 'ACP_ZE_FOE_NOTES', 'ACP_ZE_FOE_NOTES_EXPLAIN', S_ZE_FOE_NOTES],
-			['ze_foe_exceptions', 'ACP_ZE_FOE_EXCEPTIONS', 'ACP_ZE_FOE_EXCEPTIONS_EXPLAIN', S_ZE_FOE_EXCEPTIONS]
+			['zebraenhance_foe_pm', 'ACP_ZEBRAENHANCE_FOE_PM', 'ACP_ZEBRAENHANCE_FOE_PM_EXPLAIN', S_ZEBRAENHANCE_FOE_PM],
+			['zebraenhance_foe_content', 'ACP_ZEBRAENHANCE_FOE_CONTENT', 'ACP_ZEBRAENHANCE_FOE_CONTENT_EXPLAIN', S_ZEBRAENHANCE_FOE_CONTENT],
+			['zebraenhance_foe_notifications', 'ACP_ZEBRAENHANCE_FOE_NOTIFICATIONS', 'ACP_ZEBRAENHANCE_FOE_NOTIFICATIONS_EXPLAIN', S_ZEBRAENHANCE_FOE_NOTIFICATIONS],
+			['zebraenhance_foe_temporary', 'ACP_ZEBRAENHANCE_FOE_TEMPORARY', 'ACP_ZEBRAENHANCE_FOE_TEMPORARY_EXPLAIN', S_ZEBRAENHANCE_FOE_TEMPORARY],
+			['zebraenhance_foe_notes', 'ACP_ZEBRAENHANCE_FOE_NOTES', 'ACP_ZEBRAENHANCE_FOE_NOTES_EXPLAIN', S_ZEBRAENHANCE_FOE_NOTES],
+			['zebraenhance_foe_exceptions', 'ACP_ZEBRAENHANCE_FOE_EXCEPTIONS', 'ACP_ZEBRAENHANCE_FOE_EXCEPTIONS_EXPLAIN', S_ZEBRAENHANCE_FOE_EXCEPTIONS]
 		] %}
 		{% for option in foe_options %}
 			<dl>

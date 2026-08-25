@@ -41,7 +41,7 @@ class report_module
 		{
 			$message = html_entity_decode((string) $row['request_message'], ENT_QUOTES, 'UTF-8');
 			$message = utf8_htmlspecialchars(censor_text($message));
-			$template->assign_block_vars('ze_requests', array(
+			$template->assign_block_vars('zebraenhance_requests', array(
 				'REQUEST_ID' => (int) $row['request_id'],
 				'REQUESTER'  => get_username_string('full', (int) $row['requester_id'], (string) $row['requester_username'], (string) $row['requester_colour']),
 				'RECIPIENT'  => get_username_string('full', (int) $row['recipient_id'], (string) $row['recipient_username'], (string) $row['recipient_colour']),
@@ -59,7 +59,7 @@ class report_module
 			$start
 		);
 		$template->assign_vars(array(
-			'TOTAL_REQUESTS' => $user->lang('ACP_ZE_PENDING_TOTAL', $total),
+			'TOTAL_REQUESTS' => $user->lang('ACP_ZEBRAENHANCE_PENDING_TOTAL', $total),
 		));
 	}
 }

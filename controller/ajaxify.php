@@ -56,7 +56,7 @@ class ajaxify
 			|| !$this->auth->acl_get('u_zebraenhance_use_friend_requests')
 			|| !$this->auth->acl_get('u_zebraenhance_manage_close_friends'))
 		{
-			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_AUTHORIZED', 403);
 		}
 
 		if (!check_form_key('anavaro_zebraenhance'))
@@ -67,14 +67,14 @@ class ajaxify
 		$is_close = (bool) (int) $state;
 		if (!$this->relationships->set_close_friend((int) $this->user->data['user_id'], (int) $userid, $is_close))
 		{
-			return $this->error('ZE_AJAX_NOT_FRIEND', 409);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_FRIEND', 409);
 		}
 
 		return new JsonResponse(array(
 			'success'  => true,
 			'user_id'  => (int) $userid,
 			'is_close' => $is_close,
-			'label'    => $this->language->lang($is_close ? 'ZE_REMOVE_CLOSE_FRIEND' : 'ZE_ADD_CLOSE_FRIEND'),
+			'label'    => $this->language->lang($is_close ? 'ZEBRAENHANCE_REMOVE_CLOSE_FRIEND' : 'ZEBRAENHANCE_ADD_CLOSE_FRIEND'),
 		));
 	}
 
@@ -86,7 +86,7 @@ class ajaxify
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
 		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
-			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_AUTHORIZED', 403);
 		}
 
 		if (!check_form_key('anavaro_zebraenhance'))
@@ -101,18 +101,18 @@ class ajaxify
 		);
 		if ($result === false)
 		{
-			return $this->error('ZE_AJAX_REQUEST_NOT_FOUND', 404);
+			return $this->error('ZEBRAENHANCE_AJAX_REQUEST_NOT_FOUND', 404);
 		}
 		if ($result === 'not_blockable')
 		{
-			return $this->error('ZE_REQUESTER_CANNOT_BE_BLOCKED', 409);
+			return $this->error('ZEBRAENHANCE_REQUESTER_CANNOT_BE_BLOCKED', 409);
 		}
 
 		$messages = array(
-			'accepted'  => 'ZE_REQUEST_ACCEPTED',
-			'declined'  => 'ZE_REQUEST_DECLINED',
-			'blocked'   => 'ZE_REQUEST_DECLINED_BLOCKED',
-			'cancelled' => 'ZE_REQUEST_CANCELLED',
+			'accepted'  => 'ZEBRAENHANCE_REQUEST_ACCEPTED',
+			'declined'  => 'ZEBRAENHANCE_REQUEST_DECLINED',
+			'blocked'   => 'ZEBRAENHANCE_REQUEST_DECLINED_BLOCKED',
+			'cancelled' => 'ZEBRAENHANCE_REQUEST_CANCELLED',
 		);
 		return new JsonResponse(array(
 			'success' => true,
@@ -126,14 +126,14 @@ class ajaxify
 	 */
 	public function manage_requests($action)
 	{
-		if ($error = $this->authorize_relationship_change())
+		if ($error = $this->authorizebraenhance_relationship_change())
 		{
 			return $error;
 		}
 		$request_ids = array_values(array_filter(array_map('intval', $this->request->variable('request_ids', array(0)))));
 		if (!$request_ids)
 		{
-			return $this->error('ZE_SELECT_REQUEST', 400);
+			return $this->error('ZEBRAENHANCE_SELECT_REQUEST', 400);
 		}
 		$summary = $this->relationships->manage_requests(
 			$request_ids,
@@ -142,14 +142,14 @@ class ajaxify
 		);
 		if (!$summary['completed'])
 		{
-			return $this->error('ZE_AJAX_REQUEST_NOT_FOUND', 404);
+			return $this->error('ZEBRAENHANCE_AJAX_REQUEST_NOT_FOUND', 404);
 		}
 
 		return new JsonResponse(array(
 			'success'   => true,
 			'completed' => (int) $summary['completed'],
 			'skipped'   => (int) $summary['skipped'],
-			'message'   => $this->language->lang('ZE_BULK_REQUESTS_COMPLETED', (int) $summary['completed']),
+			'message'   => $this->language->lang('ZEBRAENHANCE_BULK_REQUESTS_COMPLETED', (int) $summary['completed']),
 		));
 	}
 
@@ -161,7 +161,7 @@ class ajaxify
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
 		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
-			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_AUTHORIZED', 403);
 		}
 
 		if (!check_form_key('anavaro_zebraenhance'))
@@ -176,19 +176,19 @@ class ajaxify
 		);
 		if (!in_array($result, array('created', 'accepted'), true))
 		{
-			return $this->error('ZE_FRIEND_REQUEST_UNCHANGED', 409);
+			return $this->error('ZEBRAENHANCE_FRIEND_REQUEST_UNCHANGED', 409);
 		}
 
 		return new JsonResponse(array(
 			'success' => true,
 			'action'  => $result,
-			'message' => $this->language->lang($result === 'accepted' ? 'ZE_REQUEST_ACCEPTED' : 'ZE_FRIEND_REQUEST_CREATED'),
+			'message' => $this->language->lang($result === 'accepted' ? 'ZEBRAENHANCE_REQUEST_ACCEPTED' : 'ZEBRAENHANCE_FRIEND_REQUEST_CREATED'),
 		));
 	}
 
 	public function create_circle()
 	{
-		if ($error = $this->authorize_relationship_change())
+		if ($error = $this->authorizebraenhance_relationship_change())
 		{
 			return $error;
 		}
@@ -207,13 +207,13 @@ class ajaxify
 				'id'   => (int) $result['circle_id'],
 				'name' => (string) $result['circle_name'],
 			),
-			'message' => $this->language->lang('ZE_CIRCLE_CREATED'),
+			'message' => $this->language->lang('ZEBRAENHANCE_CIRCLE_CREATED'),
 		));
 	}
 
 	public function manage_circle($circleid, $action)
 	{
-		if ($error = $this->authorize_relationship_change())
+		if ($error = $this->authorizebraenhance_relationship_change())
 		{
 			return $error;
 		}
@@ -222,11 +222,11 @@ class ajaxify
 		{
 			if (!$this->relationships->delete_circle($owner_id, (int) $circleid))
 			{
-				return $this->error('ZE_CIRCLE_NOT_FOUND', 404);
+				return $this->error('ZEBRAENHANCE_CIRCLE_NOT_FOUND', 404);
 			}
 			return new JsonResponse(array(
 				'success' => true,
-				'message' => $this->language->lang('ZE_CIRCLE_DELETED'),
+				'message' => $this->language->lang('ZEBRAENHANCE_CIRCLE_DELETED'),
 			));
 		}
 
@@ -241,13 +241,13 @@ class ajaxify
 		}
 		return new JsonResponse(array(
 			'success' => true,
-			'message' => $this->language->lang('ZE_CIRCLE_RENAMED'),
+			'message' => $this->language->lang('ZEBRAENHANCE_CIRCLE_RENAMED'),
 		));
 	}
 
 	public function set_friend_circles($userid)
 	{
-		if ($error = $this->authorize_relationship_change())
+		if ($error = $this->authorizebraenhance_relationship_change())
 		{
 			return $error;
 		}
@@ -257,18 +257,18 @@ class ajaxify
 			$this->request->variable('circle_ids', array(0))
 		))
 		{
-			return $this->error('ZE_AJAX_NOT_FRIEND', 409);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_FRIEND', 409);
 		}
 
 		return new JsonResponse(array(
 			'success' => true,
-			'message' => $this->language->lang('ZE_CIRCLES_SAVED'),
+			'message' => $this->language->lang('ZEBRAENHANCE_CIRCLES_SAVED'),
 		));
 	}
 
 	public function update_foe($userid)
 	{
-		if ($error = $this->authorize_relationship_change(true))
+		if ($error = $this->authorizebraenhance_relationship_change(true))
 		{
 			return $error;
 		}
@@ -282,49 +282,49 @@ class ajaxify
 			$this->request->variable('notification_policy', 0)
 		))
 		{
-			return $this->error('ZE_FOE_NOT_FOUND', 404);
+			return $this->error('ZEBRAENHANCE_FOE_NOT_FOUND', 404);
 		}
 
 		return new JsonResponse(array(
 			'success' => true,
-			'message' => $this->language->lang('ZE_FOE_SAVED'),
+			'message' => $this->language->lang('ZEBRAENHANCE_FOE_SAVED'),
 		));
 	}
 
 	public function remove_foes()
 	{
-		if ($error = $this->authorize_relationship_change(true))
+		if ($error = $this->authorizebraenhance_relationship_change(true))
 		{
 			return $error;
 		}
 		$foe_ids = array_values(array_filter(array_map('intval', $this->request->variable('foe_ids', array(0)))));
 		if (!$foe_ids)
 		{
-			return $this->error('ZE_SELECT_FOE', 400);
+			return $this->error('ZEBRAENHANCE_SELECT_FOE', 400);
 		}
 		$removed = $this->relationships->remove_foes((int) $this->user->data['user_id'], $foe_ids);
 		if (!$removed)
 		{
-			return $this->error('ZE_FOE_NOT_FOUND', 404);
+			return $this->error('ZEBRAENHANCE_FOE_NOT_FOUND', 404);
 		}
 
 		return new JsonResponse(array(
 			'success' => true,
 			'removed' => $removed,
-			'message' => $this->language->lang('ZE_FOES_REMOVED', $removed),
+			'message' => $this->language->lang('ZEBRAENHANCE_FOES_REMOVED', $removed),
 		));
 	}
 
-	protected function authorize_relationship_change($foe_enhancement = false)
+	protected function authorizebraenhance_relationship_change($foe_enhancement = false)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
 		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
-			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_AUTHORIZED', 403);
 		}
 		if ($foe_enhancement && !$this->relationships->foe_feature_enabled())
 		{
-			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+			return $this->error('ZEBRAENHANCE_AJAX_NOT_AUTHORIZED', 403);
 		}
 		if (!check_form_key('anavaro_zebraenhance'))
 		{
@@ -337,12 +337,12 @@ class ajaxify
 	protected function circle_error($result)
 	{
 		$errors = array(
-			'invalid'   => array('ZE_CIRCLE_INVALID', 400),
-			'duplicate' => array('ZE_CIRCLE_DUPLICATE', 409),
-			'limit'     => array('ZE_CIRCLE_LIMIT', 409),
-			'not_found' => array('ZE_CIRCLE_NOT_FOUND', 404),
+			'invalid'   => array('ZEBRAENHANCE_CIRCLE_INVALID', 400),
+			'duplicate' => array('ZEBRAENHANCE_CIRCLE_DUPLICATE', 409),
+			'limit'     => array('ZEBRAENHANCE_CIRCLE_LIMIT', 409),
+			'not_found' => array('ZEBRAENHANCE_CIRCLE_NOT_FOUND', 404),
 		);
-		$error = isset($errors[$result]) ? $errors[$result] : array('ZE_REQUEST_FAILED', 409);
+		$error = isset($errors[$result]) ? $errors[$result] : array('ZEBRAENHANCE_REQUEST_FAILED', 409);
 		return $this->error($error[0], $error[1]);
 	}
 

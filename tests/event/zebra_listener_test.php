@@ -152,7 +152,7 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->listener->block_foe_pm_recipients($event);
 
 		$this->assertSame(array('u' => array(4 => 'bcc')), $event['address_list']);
-		$this->assertSame(array('ZE_PM_RECIPIENTS_BLOCKED'), $event['error']);
+		$this->assertSame(array('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED'), $event['error']);
 	}
 
 	public function test_pm_submission_guard_ignores_message_edits()
@@ -189,7 +189,7 @@ class zebra_listener_test extends \phpbb_test_case
 			restore_error_handler();
 		}
 
-		$this->assertSame('ZE_PM_RECIPIENTS_BLOCKED', $error_message);
+		$this->assertSame('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED', $error_message);
 	}
 
 	public function test_opted_in_user_does_not_receive_foe_post_rows()

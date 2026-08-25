@@ -147,7 +147,7 @@ class relationship_manager
 	 */
 	public function foe_feature_enabled($feature = '')
 	{
-		if (empty($this->config['ze_foes_enhancement']))
+		if (empty($this->config['zebraenhance_foes_enhancement']))
 		{
 			return false;
 		}
@@ -157,12 +157,12 @@ class relationship_manager
 		}
 
 		$features = array(
-			'pm'            => 'ze_foe_pm',
-			'content'       => 'ze_foe_content',
-			'notifications' => 'ze_foe_notifications',
-			'temporary'     => 'ze_foe_temporary',
-			'notes'         => 'ze_foe_notes',
-			'exceptions'    => 'ze_foe_exceptions',
+			'pm'            => 'zebraenhance_foe_pm',
+			'content'       => 'zebraenhance_foe_content',
+			'notifications' => 'zebraenhance_foe_notifications',
+			'temporary'     => 'zebraenhance_foe_temporary',
+			'notes'         => 'zebraenhance_foe_notes',
+			'exceptions'    => 'zebraenhance_foe_exceptions',
 		);
 
 		return isset($features[$feature]) && !empty($this->config[$features[$feature]]);
@@ -218,7 +218,7 @@ class relationship_manager
 	{
 		$requester_id = (int) $requester_id;
 		$recipient_id = (int) $recipient_id;
-		$request_message = $this->normalize_request_message($request_message);
+		$request_message = $this->normalizebraenhance_request_message($request_message);
 		if (!$requester_id || !$recipient_id || $requester_id === $recipient_id)
 		{
 			return 'ignored';
@@ -804,21 +804,21 @@ class relationship_manager
 		$set = array();
 		if ($this->foe_feature_enabled('notes'))
 		{
-			$set['foe_note'] = $this->normalize_encoded_text($note, self::MAX_FOE_NOTE_LENGTH);
+			$set['foe_note'] = $this->normalizebraenhance_encoded_text($note, self::MAX_FOE_NOTE_LENGTH);
 		}
 		if ($this->foe_feature_enabled('exceptions'))
 		{
 			if ($this->foe_feature_enabled('pm'))
 			{
-				$set['pm_policy'] = $this->normalize_foe_policy($pm_policy);
+				$set['pm_policy'] = $this->normalizebraenhance_foe_policy($pm_policy);
 			}
 			if ($this->foe_feature_enabled('content'))
 			{
-				$set['content_policy'] = $this->normalize_foe_policy($content_policy);
+				$set['content_policy'] = $this->normalizebraenhance_foe_policy($content_policy);
 			}
 			if ($this->foe_feature_enabled('notifications'))
 			{
-				$set['notification_policy'] = $this->normalize_foe_policy($notification_policy);
+				$set['notification_policy'] = $this->normalizebraenhance_foe_policy($notification_policy);
 			}
 		}
 		if ($this->foe_feature_enabled('temporary'))
@@ -1153,7 +1153,7 @@ class relationship_manager
 	public function create_circle($owner_id, $circle_name)
 	{
 		$owner_id = (int) $owner_id;
-		$names = $this->normalize_circle_name($circle_name);
+		$names = $this->normalizebraenhance_circle_name($circle_name);
 		if (!$owner_id || !$names)
 		{
 			return 'invalid';
@@ -1207,7 +1207,7 @@ class relationship_manager
 	{
 		$owner_id = (int) $owner_id;
 		$circle_id = (int) $circle_id;
-		$names = $this->normalize_circle_name($circle_name);
+		$names = $this->normalizebraenhance_circle_name($circle_name);
 		if (!$owner_id || !$circle_id || !$names)
 		{
 			return 'invalid';
@@ -1706,7 +1706,7 @@ class relationship_manager
 		);
 	}
 
-	protected function normalize_foe_policy($policy)
+	protected function normalizebraenhance_foe_policy($policy)
 	{
 		$policy = (int) $policy;
 		return in_array($policy, array(self::POLICY_INHERIT, self::POLICY_ALLOW, self::POLICY_BLOCK), true)
@@ -1851,14 +1851,14 @@ class relationship_manager
 		);
 	}
 
-	protected function normalize_request_message($request_message)
+	protected function normalizebraenhance_request_message($request_message)
 	{
-		return $this->normalize_encoded_text($request_message, 255);
+		return $this->normalizebraenhance_encoded_text($request_message, 255);
 	}
 
-	protected function normalize_circle_name($circle_name)
+	protected function normalizebraenhance_circle_name($circle_name)
 	{
-		$circle_name = $this->normalize_encoded_text($circle_name, self::MAX_CIRCLE_NAME_LENGTH);
+		$circle_name = $this->normalizebraenhance_encoded_text($circle_name, self::MAX_CIRCLE_NAME_LENGTH);
 		$circle_name_clean = utf8_substr(utf8_clean_string($circle_name), 0, self::MAX_CIRCLE_NAME_LENGTH);
 		if ($circle_name === '' || $circle_name_clean === '')
 		{
@@ -1871,7 +1871,7 @@ class relationship_manager
 		);
 	}
 
-	protected function normalize_encoded_text($value, $max_length)
+	protected function normalizebraenhance_encoded_text($value, $max_length)
 	{
 		$value = html_entity_decode(trim((string) $value), ENT_COMPAT, 'UTF-8');
 		$value = utf8_substr($value, 0, (int) $max_length);
@@ -1959,12 +1959,12 @@ class relationship_manager
 
 	protected function max_pending_requests()
 	{
-		if (!isset($this->config['ze_max_pending_requests']))
+		if (!isset($this->config['zebraenhance_max_pending_requests']))
 		{
 			return self::DEFAULT_MAX_PENDING_REQUESTS;
 		}
 
-		return max(0, (int) $this->config['ze_max_pending_requests']);
+		return max(0, (int) $this->config['zebraenhance_max_pending_requests']);
 	}
 
 	protected function request_policy_allows($requester_id, $recipient_id)
@@ -2027,8 +2027,8 @@ class relationship_manager
 	protected function replace_request_cooldown($requester_id, $recipient_id)
 	{
 		$this->delete_request_cooldown($requester_id, $recipient_id);
-		$days = isset($this->config['ze_decline_cooldown_days'])
-			? max(0, (int) $this->config['ze_decline_cooldown_days'])
+		$days = isset($this->config['zebraenhance_decline_cooldown_days'])
+			? max(0, (int) $this->config['zebraenhance_decline_cooldown_days'])
 			: 7;
 		if (!$days)
 		{

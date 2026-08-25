@@ -1,25 +1,25 @@
-{% if S_ZE_PROFILE_FRIEND_CONTROL %}
+{% if S_ZEBRAENHANCE_PROFILE_FRIEND_CONTROL %}
 {% INCLUDECSS '@anavaro_zebraenhance/zebraenhance.css' %}
 {% INCLUDEJS '@anavaro_zebraenhance/zebraenhance.js' %}
 <dt>&nbsp;</dt>
-<dd class="zebra" id="ze-friend-controls" data-error-title="{{ lang('ZE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZE_REQUEST_FAILED') }}">
-	<div id="ze-form-token" class="hidden">{{ S_FORM_TOKEN_ZE }}</div>
-	{% if S_ZE_PROFILE_CAN_CREATE %}
-	<div class="ze-request-compose">
-		<label for="ze-request-message">{{ lang('ZE_REQUEST_MESSAGE') }}</label>
-		<textarea id="ze-request-message" class="inputbox" rows="2" maxlength="255" placeholder="{{ lang('ZE_REQUEST_MESSAGE_PLACEHOLDER') }}"></textarea>
-		<button type="button" class="button button-secondary js-ze-request" data-url="{{ U_ZE_PROFILE_CREATE }}" data-message-input="#ze-request-message"><i class="icon fa-user-plus fa-fw" aria-hidden="true"></i> {{ lang('ADD_FRIEND') }}</button>
+<dd class="zebra" id="zebraenhance-friend-controls" data-error-title="{{ lang('ZEBRAENHANCE_ERROR_TITLE') }}" data-request-failed="{{ lang('ZEBRAENHANCE_REQUEST_FAILED') }}">
+	<div id="zebraenhance-form-token" class="hidden">{{ S_FORM_TOKEN_ZEBRAENHANCE }}</div>
+	{% if S_ZEBRAENHANCE_PROFILE_CAN_CREATE %}
+	<div class="zebraenhance-request-compose">
+		<label for="zebraenhance-request-message">{{ lang('ZEBRAENHANCE_REQUEST_MESSAGE') }}</label>
+		<textarea id="zebraenhance-request-message" class="inputbox" rows="2" maxlength="255" placeholder="{{ lang('ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER') }}"></textarea>
+		<button type="button" class="button button-secondary js-zebraenhance-request" data-url="{{ U_ZEBRAENHANCE_PROFILE_CREATE }}" data-message-input="#zebraenhance-request-message"><i class="icon fa-user-plus fa-fw" aria-hidden="true"></i> {{ lang('ADD_FRIEND') }}</button>
 	</div>
-	{% elseif S_ZE_PROFILE_INCOMING %}
+	{% elseif S_ZEBRAENHANCE_PROFILE_INCOMING %}
 	<strong>{{ lang('UCP_ZEBRA_PENDING_IN') }}</strong>
-	{% if ZE_PROFILE_REQUEST_MESSAGE %}<div class="ze-request-message">{{ ZE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
-	<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ U_ZE_PROFILE_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
-	<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ U_ZE_PROFILE_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
-	<button type="button" class="button button-secondary ze-icon-button js-ze-request js-ze-decline-block" data-url="{{ U_ZE_PROFILE_DECLINE_BLOCK }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
-	{% elseif S_ZE_PROFILE_OUTGOING %}
+	{% if ZEBRAENHANCE_PROFILE_REQUEST_MESSAGE %}<div class="zebraenhance-request-message">{{ ZEBRAENHANCE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
+	<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ U_ZEBRAENHANCE_PROFILE_ACCEPT }}" title="{{ lang('ZEBRAENHANCE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
+	<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ U_ZEBRAENHANCE_PROFILE_DECLINE }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+	<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request js-zebraenhance-decline-block" data-url="{{ U_ZEBRAENHANCE_PROFILE_DECLINE_BLOCK }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_DECLINE_BLOCK_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_DECLINE_BLOCK_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_DECLINE_BLOCK_REQUEST') }}"><i class="icon fa-ban fa-fw" aria-hidden="true"></i></button>
+	{% elseif S_ZEBRAENHANCE_PROFILE_OUTGOING %}
 	<strong>{{ lang('UCP_ZEBRA_PENDING_OUT') }}</strong>
-	{% if ZE_PROFILE_REQUEST_MESSAGE %}<div class="ze-request-message">{{ ZE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
-	<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ U_ZE_PROFILE_CANCEL }}" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
+	{% if ZEBRAENHANCE_PROFILE_REQUEST_MESSAGE %}<div class="zebraenhance-request-message">{{ ZEBRAENHANCE_PROFILE_REQUEST_MESSAGE }}</div>{% endif %}
+	<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-request" data-url="{{ U_ZEBRAENHANCE_PROFILE_CANCEL }}" data-confirm="{{ lang('ZEBRAENHANCE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZEBRAENHANCE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZEBRAENHANCE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
 	{% endif %}
 </dd>
 {% endif %}

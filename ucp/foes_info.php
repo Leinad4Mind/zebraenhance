@@ -17,12 +17,12 @@ class foes_info
 	{
 		return array(
 			'filename' => '\anavaro\zebraenhance\ucp\foes_module',
-			'title'    => 'ZE_UCP_FOE_MANAGER',
+			'title'    => 'ZEBRAENHANCE_UCP_FOE_MANAGER',
 			'version'  => '2.6.0',
 			'modes'    => array(
 				'manage' => array(
-					'title' => 'ZE_UCP_FOE_MANAGER',
-					'auth'  => 'ext_anavaro/zebraenhance && cfg_ze_foes_enhancement && acl_u_zebraenhance_use_friend_requests',
+					'title' => 'ZEBRAENHANCE_UCP_FOE_MANAGER',
+					'auth'  => 'ext_anavaro/zebraenhance && cfg_zebraenhance_foes_enhancement && acl_u_zebraenhance_use_friend_requests',
 					'cat'   => array('UCP_ZEBRA'),
 				),
 			),

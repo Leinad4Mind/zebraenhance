@@ -122,7 +122,7 @@ class zebra_listener implements EventSubscriberInterface
 		if ($mode === 'friends' && !$this->auth->acl_get('u_zebraenhance_use_friend_requests'))
 		{
 			$event['sql_ary'] = array();
-			trigger_error('ZE_FRIEND_REQUEST_NOT_AUTHORIZED');
+			trigger_error('ZEBRAENHANCE_FRIEND_REQUEST_NOT_AUTHORIZED');
 			return;
 		}
 
@@ -131,11 +131,11 @@ class zebra_listener implements EventSubscriberInterface
 			$mode,
 			$sql_ary,
 			$results,
-			$this->request->variable('ze_request_message', '', true)
+			$this->request->variable('zebraenhance_request_message', '', true)
 		);
 		if ($mode === 'friends' && !array_intersect($results, array('created', 'accepted')))
 		{
-			trigger_error('ZE_FRIEND_REQUEST_UNCHANGED');
+			trigger_error('ZEBRAENHANCE_FRIEND_REQUEST_UNCHANGED');
 		}
 	}
 
@@ -165,10 +165,10 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		add_form_key('anavaro_zebraenhance', '_ZE');
+		add_form_key('anavaro_zebraenhance', '_ZEBRAENHANCE');
 		$user_id = (int) $this->user->data['user_id'];
 		$friend_search = utf8_substr(
-			trim($this->request->variable('ze_friend_q', '', true)),
+			trim($this->request->variable('zebraenhance_friend_q', '', true)),
 			0,
 			\anavaro\zebraenhance\service\relationship_manager::MAX_FRIEND_SEARCH_LENGTH
 		);
@@ -235,9 +235,9 @@ class zebra_listener implements EventSubscriberInterface
 			'S_ZEBRA_BLOCK_FOE_PM' => !empty($this->user->data['zebra_block_foe_pm']),
 			'S_ZEBRA_HIDE_FOE_CONTENT' => !empty($this->user->data['zebra_hide_foe_content']),
 			'S_ZEBRA_MUTE_FOE_NOTIFICATIONS' => !empty($this->user->data['zebra_mute_foe_notifications']),
-			'S_ZE_FOE_PM_AVAILABLE' => $this->relationships->foe_feature_enabled('pm'),
-			'S_ZE_FOE_CONTENT_AVAILABLE' => $this->relationships->foe_feature_enabled('content'),
-			'S_ZE_FOE_NOTIFICATIONS_AVAILABLE' => $this->relationships->foe_feature_enabled('notifications'),
+			'S_ZEBRAENHANCE_FOE_PM_AVAILABLE' => $this->relationships->foe_feature_enabled('pm'),
+			'S_ZEBRAENHANCE_FOE_CONTENT_AVAILABLE' => $this->relationships->foe_feature_enabled('content'),
+			'S_ZEBRAENHANCE_FOE_NOTIFICATIONS_AVAILABLE' => $this->relationships->foe_feature_enabled('notifications'),
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_zebraenhance_manage_close_friends'),
 			'FRIEND_SEARCH'       => $friend_search,
 			'U_FRIEND_SEARCH'     => $this->ucp_friend_url(''),
@@ -248,9 +248,9 @@ class zebra_listener implements EventSubscriberInterface
 		));
 
 		$page_size = \anavaro\zebraenhance\service\relationship_manager::PAGE_SIZE;
-		$incoming_start = max(0, $this->request->variable('ze_in_start', 0));
-		$outgoing_start = max(0, $this->request->variable('ze_out_start', 0));
-		$friends_start = max(0, $this->request->variable('ze_friend_start', 0));
+		$incoming_start = max(0, $this->request->variable('zebraenhance_in_start', 0));
+		$outgoing_start = max(0, $this->request->variable('zebraenhance_out_start', 0));
+		$friends_start = max(0, $this->request->variable('zebraenhance_friend_start', 0));
 		$incoming_count = $this->relationships->count_requests($user_id, true);
 		$outgoing_count = $this->relationships->count_requests($user_id, false);
 		$friends_count = $this->relationships->count_friends($user_id, $friend_search);
@@ -261,7 +261,7 @@ class zebra_listener implements EventSubscriberInterface
 		$circles = $this->relationships->get_circles($user_id);
 		foreach ($circles as $circle)
 		{
-			$this->template->assign_block_vars('ze_circles', array(
+			$this->template->assign_block_vars('zebraenhance_circles', array(
 				'ID'           => (int) $circle['circle_id'],
 				'NAME'         => (string) $circle['circle_name'],
 				'MEMBER_COUNT' => (int) $circle['member_count'],
@@ -275,10 +275,10 @@ class zebra_listener implements EventSubscriberInterface
 				)),
 			));
 		}
-		$base_url = $this->ucp_friend_url($friend_search !== '' ? 'ze_friend_q=' . rawurlencode($friend_search) : '');
-		$this->pagination->generate_template_pagination($base_url, 'ze_in_pagination', 'ze_in_start', $incoming_count, $page_size, $incoming_start);
-		$this->pagination->generate_template_pagination($base_url, 'ze_out_pagination', 'ze_out_start', $outgoing_count, $page_size, $outgoing_start);
-		$this->pagination->generate_template_pagination($base_url, 'ze_friend_pagination', 'ze_friend_start', $friends_count, $page_size, $friends_start);
+		$base_url = $this->ucp_friend_url($friend_search !== '' ? 'zebraenhance_friend_q=' . rawurlencode($friend_search) : '');
+		$this->pagination->generate_template_pagination($base_url, 'zebraenhance_in_pagination', 'zebraenhance_in_start', $incoming_count, $page_size, $incoming_start);
+		$this->pagination->generate_template_pagination($base_url, 'zebraenhance_out_pagination', 'zebraenhance_out_start', $outgoing_count, $page_size, $outgoing_start);
+		$this->pagination->generate_template_pagination($base_url, 'zebraenhance_friend_pagination', 'zebraenhance_friend_start', $friends_count, $page_size, $friends_start);
 		$identity_ids = array();
 		foreach (array_merge($incoming, $outgoing) as $row)
 		{
@@ -334,7 +334,7 @@ class zebra_listener implements EventSubscriberInterface
 		foreach ($suggestions as $row)
 		{
 			$suggested_user_id = (int) $row['user_id'];
-			$this->template->assign_block_vars('ze_friend_suggestions', array(
+			$this->template->assign_block_vars('zebraenhance_friend_suggestions', array(
 				'USER_ID'       => $suggested_user_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($suggested_user_id, 'full'),
 				'MUTUAL_COUNT'  => (int) $row['mutual_count'],
@@ -361,7 +361,7 @@ class zebra_listener implements EventSubscriberInterface
 					'state'  => 0,
 				)),
 				'S_CLOSE'       => $is_close,
-				'L_CLOSE_ACTION' => $this->language->lang($is_close ? 'ZE_REMOVE_CLOSE_FRIEND' : 'ZE_ADD_CLOSE_FRIEND'),
+				'L_CLOSE_ACTION' => $this->language->lang($is_close ? 'ZEBRAENHANCE_REMOVE_CLOSE_FRIEND' : 'ZEBRAENHANCE_ADD_CLOSE_FRIEND'),
 				'U_CIRCLES'      => $this->controller_helper->route('anavaro_zebraenhance_friend_circles', array(
 					'userid' => $friend_id,
 				)),
@@ -391,7 +391,7 @@ class zebra_listener implements EventSubscriberInterface
 		}
 
 		$error = $event['error'];
-		$error[] = $this->language->lang('ZE_PM_RECIPIENTS_BLOCKED');
+		$error[] = $this->language->lang('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED');
 		$event['address_list'] = $filtered;
 		$event['error'] = $error;
 	}
@@ -409,7 +409,7 @@ class zebra_listener implements EventSubscriberInterface
 			: array();
 		if ($this->relationships->filter_pm_address_list((int) $this->user->data['user_id'], $address_list) !== $address_list)
 		{
-			trigger_error('ZE_PM_RECIPIENTS_BLOCKED');
+			trigger_error('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED');
 		}
 	}
 
@@ -562,22 +562,22 @@ class zebra_listener implements EventSubscriberInterface
 			$foe = isset($event['foe']) && (bool) $event['foe'];
 			if ($request || (!$friend && !$foe))
 			{
-				add_form_key('anavaro_zebraenhance', '_ZE');
+				add_form_key('anavaro_zebraenhance', '_ZEBRAENHANCE');
 				$is_incoming = $request && (int) $request['recipient_id'] === $viewer_id;
 				$this->profile_hide_native_add = true;
 				$this->template->assign_vars(array(
-					'S_ZE_PROFILE_FRIEND_CONTROL' => true,
-					'S_ZE_PROFILE_CAN_CREATE'     => !$request,
-					'S_ZE_PROFILE_INCOMING'       => $is_incoming,
-					'S_ZE_PROFILE_OUTGOING'       => $request && !$is_incoming,
-					'U_ZE_PROFILE_CREATE'         => !$request ? $this->controller_helper->route('anavaro_zebraenhance_create_request', array(
+					'S_ZEBRAENHANCE_PROFILE_FRIEND_CONTROL' => true,
+					'S_ZEBRAENHANCE_PROFILE_CAN_CREATE'     => !$request,
+					'S_ZEBRAENHANCE_PROFILE_INCOMING'       => $is_incoming,
+					'S_ZEBRAENHANCE_PROFILE_OUTGOING'       => $request && !$is_incoming,
+					'U_ZEBRAENHANCE_PROFILE_CREATE'         => !$request ? $this->controller_helper->route('anavaro_zebraenhance_create_request', array(
 						'userid' => $owner_id,
 					)) : '',
-					'U_ZE_PROFILE_ACCEPT'         => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'accept') : '',
-					'U_ZE_PROFILE_DECLINE'        => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline') : '',
-					'U_ZE_PROFILE_DECLINE_BLOCK'  => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline_block') : '',
-					'U_ZE_PROFILE_CANCEL'         => $request && !$is_incoming ? $this->request_action_url((int) $request['request_id'], 'cancel') : '',
-					'ZE_PROFILE_REQUEST_MESSAGE'  => $request ? $this->display_request_message($request['request_message']) : '',
+					'U_ZEBRAENHANCE_PROFILE_ACCEPT'         => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'accept') : '',
+					'U_ZEBRAENHANCE_PROFILE_DECLINE'        => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline') : '',
+					'U_ZEBRAENHANCE_PROFILE_DECLINE_BLOCK'  => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline_block') : '',
+					'U_ZEBRAENHANCE_PROFILE_CANCEL'         => $request && !$is_incoming ? $this->request_action_url((int) $request['request_id'], 'cancel') : '',
+					'ZEBRAENHANCE_PROFILE_REQUEST_MESSAGE'  => $request ? $this->display_request_message($request['request_message']) : '',
 				));
 			}
 		}

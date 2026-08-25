@@ -34,18 +34,18 @@ class settings_module
 				trigger_error('FORM_INVALID', E_USER_WARNING);
 			}
 
-			$max_pending = max(0, min(1000, $request->variable('ze_max_pending_requests', 100)));
-			$cooldown_days = max(0, min(3650, $request->variable('ze_decline_cooldown_days', 7)));
-			$config->set('ze_max_pending_requests', $max_pending);
-			$config->set('ze_decline_cooldown_days', $cooldown_days);
+			$max_pending = max(0, min(1000, $request->variable('zebraenhance_max_pending_requests', 100)));
+			$cooldown_days = max(0, min(3650, $request->variable('zebraenhance_decline_cooldown_days', 7)));
+			$config->set('zebraenhance_max_pending_requests', $max_pending);
+			$config->set('zebraenhance_decline_cooldown_days', $cooldown_days);
 			$foe_settings = array(
-				'ze_foes_enhancement',
-				'ze_foe_pm',
-				'ze_foe_content',
-				'ze_foe_notifications',
-				'ze_foe_temporary',
-				'ze_foe_notes',
-				'ze_foe_exceptions',
+				'zebraenhance_foes_enhancement',
+				'zebraenhance_foe_pm',
+				'zebraenhance_foe_content',
+				'zebraenhance_foe_notifications',
+				'zebraenhance_foe_temporary',
+				'zebraenhance_foe_notes',
+				'zebraenhance_foe_exceptions',
 			);
 			foreach ($foe_settings as $setting)
 			{
@@ -54,22 +54,22 @@ class settings_module
 			$phpbb_log->add('admin', $user->data['user_id'], $user->ip, 'LOG_ZEBRA_ENHANCE_SETTINGS', false, array(
 				$max_pending,
 				$cooldown_days,
-				$user->lang(!empty($config['ze_foes_enhancement']) ? 'ENABLED' : 'DISABLED'),
+				$user->lang(!empty($config['zebraenhance_foes_enhancement']) ? 'ENABLED' : 'DISABLED'),
 			));
 
 			trigger_error($user->lang('ACP_ZEBRA_ENHANCE_SAVED') . adm_back_link($this->u_action));
 		}
 
 		$template->assign_vars(array(
-			'ZE_MAX_PENDING_REQUESTS' => isset($config['ze_max_pending_requests']) ? (int) $config['ze_max_pending_requests'] : 100,
-			'ZE_DECLINE_COOLDOWN_DAYS' => isset($config['ze_decline_cooldown_days']) ? (int) $config['ze_decline_cooldown_days'] : 7,
-			'S_ZE_FOES_ENHANCEMENT' => !empty($config['ze_foes_enhancement']),
-			'S_ZE_FOE_PM' => !empty($config['ze_foe_pm']),
-			'S_ZE_FOE_CONTENT' => !empty($config['ze_foe_content']),
-			'S_ZE_FOE_NOTIFICATIONS' => !empty($config['ze_foe_notifications']),
-			'S_ZE_FOE_TEMPORARY' => !empty($config['ze_foe_temporary']),
-			'S_ZE_FOE_NOTES' => !empty($config['ze_foe_notes']),
-			'S_ZE_FOE_EXCEPTIONS' => !empty($config['ze_foe_exceptions']),
+			'ZEBRAENHANCE_MAX_PENDING_REQUESTS' => isset($config['zebraenhance_max_pending_requests']) ? (int) $config['zebraenhance_max_pending_requests'] : 100,
+			'ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS' => isset($config['zebraenhance_decline_cooldown_days']) ? (int) $config['zebraenhance_decline_cooldown_days'] : 7,
+			'S_ZEBRAENHANCE_FOES_ENHANCEMENT' => !empty($config['zebraenhance_foes_enhancement']),
+			'S_ZEBRAENHANCE_FOE_PM' => !empty($config['zebraenhance_foe_pm']),
+			'S_ZEBRAENHANCE_FOE_CONTENT' => !empty($config['zebraenhance_foe_content']),
+			'S_ZEBRAENHANCE_FOE_NOTIFICATIONS' => !empty($config['zebraenhance_foe_notifications']),
+			'S_ZEBRAENHANCE_FOE_TEMPORARY' => !empty($config['zebraenhance_foe_temporary']),
+			'S_ZEBRAENHANCE_FOE_NOTES' => !empty($config['zebraenhance_foe_notes']),
+			'S_ZEBRAENHANCE_FOE_EXCEPTIONS' => !empty($config['zebraenhance_foe_exceptions']),
 			'U_ACTION' => $this->u_action,
 		));
 	}

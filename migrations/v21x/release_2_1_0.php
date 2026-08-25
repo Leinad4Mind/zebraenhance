@@ -66,8 +66,8 @@ class release_2_1_0 extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
-			array('config.add', array('ze_max_pending_requests', 100)),
-			array('config.add', array('ze_decline_cooldown_days', 7)),
+			array('config.add', array('zebraenhance_max_pending_requests', 100)),
+			array('config.add', array('zebraenhance_decline_cooldown_days', 7)),
 			array('module.add', array('acp', 'ACP_CAT_DOT_MODS', 'ACP_ZEBRA_ENHANCE_TITLE')),
 			array('module.add', array(
 				'acp',

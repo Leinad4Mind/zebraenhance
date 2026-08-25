@@ -6,10 +6,10 @@
 
 (function ($) {
 	'use strict';
-	var $controls = $('#ze-friend-controls, #ze-foe-controls').first();
+	var $controls = $('#zebraenhance-friend-controls, #zebraenhance-foe-controls').first();
 
 	function tokenPayload() {
-		var $token = $('#ze-form-token');
+		var $token = $('#zebraenhance-form-token');
 
 		return {
 			creation_time: $token.find('input[name=creation_time]').val(),
@@ -44,7 +44,7 @@
 		});
 	}
 
-	$(document).on('click', '.js-ze-circle', function () {
+	$(document).on('click', '.js-zebraenhance-circle', function () {
 		var $button = $(this);
 		var submit = function () {
 			var input = $button.attr('data-name-input');
@@ -63,17 +63,17 @@
 		submit();
 	});
 
-	$(document).on('click', '.js-ze-save-circles', function () {
+	$(document).on('click', '.js-zebraenhance-save-circles', function () {
 		var $button = $(this);
 		var circleIds = $($button.attr('data-select')).val() || [];
 		postAndReload($button, {circle_ids: circleIds});
 	});
 
-	$(document).on('change', '.js-ze-check-all', function () {
+	$(document).on('change', '.js-zebraenhance-check-all', function () {
 		$($(this).attr('data-target')).prop('checked', this.checked);
 	});
 
-	$(document).on('click', '.js-ze-bulk-requests', function () {
+	$(document).on('click', '.js-zebraenhance-bulk-requests', function () {
 		var $button = $(this);
 		var requestIds = $($button.attr('data-target') + ':checked').map(function () {
 			return $(this).val();
@@ -98,52 +98,52 @@
 		submit();
 	});
 
-	$(document).on('click', '.js-ze-search-friends', function (event) {
+	$(document).on('click', '.js-zebraenhance-search-friends', function (event) {
 		event.preventDefault();
 		var $button = $(this);
 		var value = $($button.attr('data-input')).val();
 		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';
-		window.location.href = $button.attr('data-url') + separator + 'ze_friend_q=' + encodeURIComponent(value);
+		window.location.href = $button.attr('data-url') + separator + 'zebraenhance_friend_q=' + encodeURIComponent(value);
 	});
 
-	$(document).on('keydown', '#ze-friend-search', function (event) {
+	$(document).on('keydown', '#zebraenhance-friend-search', function (event) {
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			$('.js-ze-search-friends').trigger('click');
+			$('.js-zebraenhance-search-friends').trigger('click');
 		}
 	});
 
-	$(document).on('click', '.js-ze-search-foes', function (event) {
+	$(document).on('click', '.js-zebraenhance-search-foes', function (event) {
 		event.preventDefault();
 		var $button = $(this);
-		var value = $('#ze-foe-search').val();
+		var value = $('#zebraenhance-foe-search').val();
 		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';
-		window.location.href = $button.attr('data-url') + separator + 'ze_foe_q=' + encodeURIComponent(value);
+		window.location.href = $button.attr('data-url') + separator + 'zebraenhance_foe_q=' + encodeURIComponent(value);
 	});
 
-	$(document).on('keydown', '#ze-foe-search', function (event) {
+	$(document).on('keydown', '#zebraenhance-foe-search', function (event) {
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			$('.js-ze-search-foes').trigger('click');
+			$('.js-zebraenhance-search-foes').trigger('click');
 		}
 	});
 
-	$(document).on('click', '.js-ze-save-foe', function () {
+	$(document).on('click', '.js-zebraenhance-save-foe', function () {
 		var $button = $(this);
-		var $row = $button.closest('.ze-foe-row');
+		var $row = $button.closest('.zebraenhance-foe-row');
 		$button.attr('data-url', $row.attr('data-save-url'));
 		postAndReload($button, {
-			note: $row.find('.js-ze-foe-note').val(),
-			duration: $row.find('.js-ze-foe-duration').val(),
-			pm_policy: $row.find('.js-ze-foe-pm-policy').val(),
-			content_policy: $row.find('.js-ze-foe-content-policy').val(),
-			notification_policy: $row.find('.js-ze-foe-notification-policy').val()
+			note: $row.find('.js-zebraenhance-foe-note').val(),
+			duration: $row.find('.js-zebraenhance-foe-duration').val(),
+			pm_policy: $row.find('.js-zebraenhance-foe-pm-policy').val(),
+			content_policy: $row.find('.js-zebraenhance-foe-content-policy').val(),
+			notification_policy: $row.find('.js-zebraenhance-foe-notification-policy').val()
 		});
 	});
 
-	$(document).on('click', '.js-ze-remove-foes', function () {
+	$(document).on('click', '.js-zebraenhance-remove-foes', function () {
 		var $button = $(this);
-		var foeIds = $('.js-ze-foe-select:checked').map(function () {
+		var foeIds = $('.js-zebraenhance-foe-select:checked').map(function () {
 			return $(this).val();
 		}).get();
 		if (!foeIds.length) {
@@ -157,7 +157,7 @@
 		});
 	});
 
-	$(document).on('click', '.js-ze-close-friend', function () {
+	$(document).on('click', '.js-zebraenhance-close-friend', function () {
 		var $button = $(this);
 
 		$button.prop('disabled', true);
@@ -187,7 +187,7 @@
 		});
 	});
 
-	$(document).on('click', '.js-ze-request', function () {
+	$(document).on('click', '.js-zebraenhance-request', function () {
 		var $button = $(this);
 		var submit = function () {
 			var payload = tokenPayload();

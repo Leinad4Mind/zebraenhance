@@ -25,11 +25,11 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(1, $crawler->filter('link[href*="zebraenhance.css"]')->count());
 		$this->assertSame(1, $crawler->filter('script[src*="zebraenhance.js"]')->count());
-		$cancel = $crawler->filter('#ze-outgoing-requests .js-ze-request')->first();
+		$cancel = $crawler->filter('#zebraenhance-outgoing-requests .js-zebraenhance-request')->first();
 		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
-		$this->assertStringContainsString($username, $crawler->filter('#ze-outgoing-requests .js-ze-request-select')->attr('aria-label'));
-		$this->assertSame('ze_friend_q', $crawler->filter('#ze-friend-search')->attr('name'));
-		$this->assertSame('submit', $crawler->filter('.js-ze-search-friends')->attr('type'));
+		$this->assertStringContainsString($username, $crawler->filter('#zebraenhance-outgoing-requests .js-zebraenhance-request-select')->attr('aria-label'));
+		$this->assertSame('zebraenhance_friend_q', $crawler->filter('#zebraenhance-friend-search')->attr('name'));
+		$this->assertSame('submit', $crawler->filter('.js-zebraenhance-search-friends')->attr('type'));
 		$this->post_action($cancel->attr('data-url'), array(), 403);
 		$response = $this->post_action($cancel->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('cancelled', $response['action']);
@@ -37,24 +37,24 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$this->send_request_as_admin($username);
 		$crawler = $this->open_friends_as($username);
-		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$accept = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-request')->first();
 		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
 		$this->assertStringNotContainsString(rawurlencode($username), $accept->attr('data-url'));
 		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('accepted', $response['action']);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertStringContainsString('admin', $crawler->filter('#ze-friends')->text());
-		$remove = $crawler->filter('#ze-friends a[data-ajax=true]')->first()->link()->getUri();
+		$this->assertStringContainsString('admin', $crawler->filter('#zebraenhance-friends')->text());
+		$remove = $crawler->filter('#zebraenhance-friends a[data-ajax=true]')->first()->link()->getUri();
 		$crawler = self::request('GET', $this->local_path($remove));
 		$form = $crawler->selectButton($this->lang('YES'))->form();
 		self::submit($form);
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter('#ze-friends .ze-list-row')->count());
+		$this->assertSame(0, $crawler->filter('#zebraenhance-friends .zebraenhance-list-row')->count());
 		$this->logout();
 
 		$crawler = $this->open_friends_as('admin');
-		$this->assertSame(0, $crawler->filter('#ze-friends .ze-list-row')->count());
+		$this->assertSame(0, $crawler->filter('#zebraenhance-friends .zebraenhance-list-row')->count());
 		$this->logout();
 	}
 
@@ -65,13 +65,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->send_request_as_admin($username);
 
 		$crawler = $this->open_friends_as($username);
-		$decline = $crawler->filter('#ze-incoming-requests .js-ze-request')->eq(1);
+		$decline = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-request')->eq(1);
 		$this->assertStringContainsString('/decline', $decline->attr('data-url'));
 		$response = $this->post_action($decline->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('declined', $response['action']);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter('#ze-incoming-requests')->count());
+		$this->assertSame(0, $crawler->filter('#zebraenhance-incoming-requests')->count());
 		$this->logout();
 	}
 
@@ -82,13 +82,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($requester);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$create = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
 		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('created', $response['action']);
 		$this->logout();
 
 		$crawler = $this->open_friends_as('admin');
-		$block = $crawler->filter('#ze-incoming-requests .js-ze-decline-block')->first();
+		$block = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-decline-block')->first();
 		$this->assertStringContainsString('/decline_block', $block->attr('data-url'));
 		$this->post_action($block->attr('data-url'), array(), 403);
 		$response = $this->post_action($block->attr('data-url'), $this->form_token($crawler));
@@ -105,7 +105,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($requester);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$create = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
 		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler), 409);
 		$this->assertFalse($response['success']);
 		$this->logout();
@@ -118,11 +118,11 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->send_request_as_admin($recipient);
 
 		$crawler = $this->open_friends_as($recipient);
-		$block = $crawler->filter('#ze-incoming-requests .js-ze-decline-block')->first();
+		$block = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-decline-block')->first();
 		$response = $this->post_action($block->attr('data-url'), $this->form_token($crawler), 409);
 		$this->assertFalse($response['success']);
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertStringContainsString('admin', $crawler->filter('#ze-incoming-requests')->text());
+		$this->assertStringContainsString('admin', $crawler->filter('#zebraenhance-incoming-requests')->text());
 		$db = $this->get_db();
 		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra
 			WHERE user_id = ' . (int) $recipient_id . ' AND zebra_id = 2 AND foe = 1');
@@ -140,8 +140,8 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login();
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
-		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
-		$this->assertSame(1, $crawler->filter('#ze-request-message[maxlength="255"]')->count());
+		$create = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
+		$this->assertSame(1, $crawler->filter('#zebraenhance-request-message[maxlength="255"]')->count());
 		$this->assertStringContainsString("/friend/{$user_id}/request", $create->attr('data-url'));
 		$this->assertStringNotContainsString(rawurlencode($username), $create->attr('data-url'));
 		$this->post_action($create->attr('data-url'), array(), 403);
@@ -151,7 +151,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->assertSame('created', $response['action']);
 
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u={$user_id}&sid={$this->sid}");
-		$cancel = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$cancel = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
 		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
 		$this->logout();
 
@@ -159,17 +159,17 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang('memberlist');
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertStringContainsString($message, $crawler->filter('#ze-friend-controls .ze-request-message')->text());
-		$this->assertStringNotContainsString('<b>', $crawler->filter('#ze-friend-controls .ze-request-message')->html());
-		$block = $crawler->filter('#ze-friend-controls .js-ze-decline-block')->first();
+		$this->assertStringContainsString($message, $crawler->filter('#zebraenhance-friend-controls .zebraenhance-request-message')->text());
+		$this->assertStringNotContainsString('<b>', $crawler->filter('#zebraenhance-friend-controls .zebraenhance-request-message')->html());
+		$block = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-decline-block')->first();
 		$this->assertStringContainsString('/decline_block', $block->attr('data-url'));
-		$accept = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$accept = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
 		$this->assertStringContainsString('/accept', $accept->attr('data-url'));
 		$response = $this->post_action($accept->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('accepted', $response['action']);
 
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter('#ze-friend-controls')->count());
+		$this->assertSame(0, $crawler->filter('#zebraenhance-friend-controls')->count());
 		$this->assertStringContainsString($this->lang('REMOVE_FRIEND'), $crawler->filter('.zebra')->text());
 		$this->logout();
 	}
@@ -183,12 +183,12 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->send_request_as_admin($close_friend);
 
 		$crawler = $this->open_friends_as($close_friend);
-		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$accept = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-request')->first();
 		$this->post_action($accept->attr('data-url'), $this->form_token($crawler));
 		$this->logout();
 
 		$crawler = $this->open_friends_as('admin');
-		$close = $crawler->filter('#ze-friends .js-ze-close-friend')->first();
+		$close = $crawler->filter('#zebraenhance-friends .js-zebraenhance-close-friend')->first();
 		$response = $this->post_action($close->attr('data-url'), $this->form_token($crawler));
 		$this->assertTrue($response['is_close']);
 
@@ -200,13 +200,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($close_friend);
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
 		$this->assertSame(1, $crawler->filter('link[href*="zebraenhance.css"]')->count());
-		$this->assertStringContainsString($close_friend, $crawler->filter('#ze-friend-list')->text());
+		$this->assertStringContainsString($close_friend, $crawler->filter('#zebraenhance-friend-list')->text());
 		$this->logout();
 
 		$this->login($registered);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#ze-friend-list')->text());
+		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#zebraenhance-friend-list')->text());
 		$this->logout();
 	}
 
@@ -217,12 +217,12 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->send_request_as_admin($username);
 
 		$crawler = $this->open_friends_as($username);
-		$accept = $crawler->filter('#ze-incoming-requests .js-ze-request')->first();
+		$accept = $crawler->filter('#zebraenhance-incoming-requests .js-zebraenhance-request')->first();
 		$this->post_action($accept->attr('data-url'), $this->form_token($crawler));
 		$this->logout();
 
 		$crawler = $this->open_friends_as('admin');
-		$create = $crawler->filter('#ze-circles .js-ze-circle')->first();
+		$create = $crawler->filter('#zebraenhance-circles .js-zebraenhance-circle')->first();
 		$this->post_action($create->attr('data-url'), array(), 403);
 		$data = $this->form_token($crawler);
 		$data['name'] = 'Gaming';
@@ -231,37 +231,37 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$circle_id = (int) $response['circle']['id'];
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$circle_row = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']");
+		$circle_row = $crawler->filter("#zebraenhance-circles [data-circle-id='{$circle_id}']");
 		$this->assertSame(1, $circle_row->count());
-		$friend_row = $crawler->filter('#ze-friends .ze-friend-row')->reduce(function ($node) use ($username)
+		$friend_row = $crawler->filter('#zebraenhance-friends .zebraenhance-friend-row')->reduce(function ($node) use ($username)
 		{
 			return strpos($node->text(), $username) !== false;
 		})->first();
-		$save = $friend_row->filter('.js-ze-save-circles');
+		$save = $friend_row->filter('.js-zebraenhance-save-circles');
 		$data = $this->form_token($crawler);
 		$data['circle_ids'] = array($circle_id);
 		$response = $this->post_action($save->attr('data-url'), $data);
 		$this->assertTrue($response['success']);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$friend_row = $crawler->filter('#ze-friends .ze-friend-row')->reduce(function ($node) use ($username)
+		$friend_row = $crawler->filter('#zebraenhance-friends .zebraenhance-friend-row')->reduce(function ($node) use ($username)
 		{
 			return strpos($node->text(), $username) !== false;
 		})->first();
 		$this->assertSame('selected', $friend_row->filter("option[value='{$circle_id}']")->attr('selected'));
 
-		$circle_row = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']");
-		$rename = $circle_row->filter('.js-ze-circle')->first();
+		$circle_row = $crawler->filter("#zebraenhance-circles [data-circle-id='{$circle_id}']");
+		$rename = $circle_row->filter('.js-zebraenhance-circle')->first();
 		$data = $this->form_token($crawler);
 		$data['name'] = 'Game night';
 		$this->post_action($rename->attr('data-url'), $data);
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame('Game night', $crawler->filter("#ze-circle-name-{$circle_id}")->attr('value'));
+		$this->assertSame('Game night', $crawler->filter("#zebraenhance-circle-name-{$circle_id}")->attr('value'));
 
-		$delete = $crawler->filter("#ze-circles [data-circle-id='{$circle_id}'] .js-ze-circle")->last();
+		$delete = $crawler->filter("#zebraenhance-circles [data-circle-id='{$circle_id}'] .js-zebraenhance-circle")->last();
 		$this->post_action($delete->attr('data-url'), $this->form_token($crawler));
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter("#ze-circles [data-circle-id='{$circle_id}']")->count());
+		$this->assertSame(0, $crawler->filter("#zebraenhance-circles [data-circle-id='{$circle_id}']")->count());
 		$this->logout();
 	}
 
@@ -285,13 +285,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($viewer);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertSame(1, $crawler->filter('#ze-mutual-friends')->count());
-		$this->assertStringContainsString($mutual, $crawler->filter('#ze-mutual-friends')->text());
+		$this->assertSame(1, $crawler->filter('#zebraenhance-mutual-friends')->count());
+		$this->assertStringContainsString($mutual, $crawler->filter('#zebraenhance-mutual-friends')->text());
 
 		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 5 WHERE user_id = 2');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter('#ze-mutual-friends')->count());
-		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#ze-friend-list')->text());
+		$this->assertSame(0, $crawler->filter('#zebraenhance-mutual-friends')->count());
+		$this->assertStringContainsString($this->lang('FRIENDLIST_ERROR_ACCESS'), $crawler->filter('#zebraenhance-friend-list')->text());
 		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 0 WHERE user_id = 2');
 		$this->logout();
 	}
@@ -319,27 +319,27 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$db->sql_query('UPDATE phpbb_users SET profile_friend_show = 5 WHERE user_id = ' . (int) $private_id);
 
 		$crawler = $this->open_friends_as($viewer);
-		$this->assertStringContainsString($suggested, $crawler->filter('#ze-friend-suggestions')->text());
-		$this->assertStringNotContainsString($private, $crawler->filter('#ze-friend-suggestions')->text());
-		$this->assertStringContainsString('1 mutual friend', $crawler->filter('#ze-friend-suggestions')->text());
-		$suggestion = $crawler->filter('#ze-friend-suggestions .ze-list-row')->reduce(function ($node) use ($suggested)
+		$this->assertStringContainsString($suggested, $crawler->filter('#zebraenhance-friend-suggestions')->text());
+		$this->assertStringNotContainsString($private, $crawler->filter('#zebraenhance-friend-suggestions')->text());
+		$this->assertStringContainsString('1 mutual friend', $crawler->filter('#zebraenhance-friend-suggestions')->text());
+		$suggestion = $crawler->filter('#zebraenhance-friend-suggestions .zebraenhance-list-row')->reduce(function ($node) use ($suggested)
 		{
 			return strpos($node->text(), $suggested) !== false;
 		})->first();
 		$response = $this->post_action(
-			$suggestion->filter('.js-ze-request')->attr('data-url'),
+			$suggestion->filter('.js-zebraenhance-request')->attr('data-url'),
 			$this->form_token($crawler)
 		);
 		$this->assertSame('created', $response['action']);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame(0, $crawler->filter('#ze-friend-suggestions')->count());
-		$this->assertStringContainsString($suggested, $crawler->filter('#ze-outgoing-requests')->text());
-		$cancel = $crawler->filter('#ze-outgoing-requests .ze-list-row')->reduce(function ($node) use ($suggested)
+		$this->assertSame(0, $crawler->filter('#zebraenhance-friend-suggestions')->count());
+		$this->assertStringContainsString($suggested, $crawler->filter('#zebraenhance-outgoing-requests')->text());
+		$cancel = $crawler->filter('#zebraenhance-outgoing-requests .zebraenhance-list-row')->reduce(function ($node) use ($suggested)
 		{
 			return strpos($node->text(), $suggested) !== false;
 		})->first();
-		$this->post_action($cancel->filter('.js-ze-request')->attr('data-url'), $this->form_token($crawler));
+		$this->post_action($cancel->filter('.js-zebraenhance-request')->attr('data-url'), $this->form_token($crawler));
 		$this->logout();
 	}
 
@@ -356,13 +356,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$request_ids = array();
 		foreach (array($first, $second) as $username)
 		{
-			$row = $crawler->filter('#ze-outgoing-requests .ze-list-row')->reduce(function ($node) use ($username)
+			$row = $crawler->filter('#zebraenhance-outgoing-requests .zebraenhance-list-row')->reduce(function ($node) use ($username)
 			{
 				return strpos($node->text(), $username) !== false;
 			})->first();
-			$request_ids[] = (int) $row->filter('.js-ze-request-select')->attr('value');
+			$request_ids[] = (int) $row->filter('.js-zebraenhance-request-select')->attr('value');
 		}
-		$bulk = $crawler->filter('#ze-outgoing-requests .js-ze-bulk-requests');
+		$bulk = $crawler->filter('#zebraenhance-outgoing-requests .js-zebraenhance-bulk-requests');
 		$this->post_action($bulk->attr('data-url'), array(), 403);
 		$empty_response = $this->post_action($bulk->attr('data-url'), $this->form_token($crawler), 400);
 		$this->assertFalse($empty_response['success']);
@@ -395,10 +395,10 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login();
 		$this->add_lang('ucp');
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
-		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&ze_friend_q=needle&sid={$this->sid}");
-		$this->assertSame('needle', $crawler->filter('#ze-friend-search')->attr('value'));
-		$this->assertStringContainsString($match, $crawler->filter('#ze-friends')->text());
-		$this->assertStringNotContainsString($other, $crawler->filter('#ze-friends')->text());
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&zebraenhance_friend_q=needle&sid={$this->sid}");
+		$this->assertSame('needle', $crawler->filter('#zebraenhance-friend-search')->attr('value'));
+		$this->assertStringContainsString($match, $crawler->filter('#zebraenhance-friends')->text());
+		$this->assertStringNotContainsString($other, $crawler->filter('#zebraenhance-friends')->text());
 		$this->logout();
 	}
 
@@ -417,10 +417,10 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($requester);
 		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
 		$crawler = self::request('GET', "memberlist.php?mode=viewprofile&u=2&sid={$this->sid}");
-		$create = $crawler->filter('#ze-friend-controls .js-ze-request')->first();
+		$create = $crawler->filter('#zebraenhance-friend-controls .js-zebraenhance-request')->first();
 		$response = $this->post_action($create->attr('data-url'), $this->form_token($crawler), 409);
 		$this->assertFalse($response['success']);
-		$this->assertSame($this->lang('ZE_FRIEND_REQUEST_UNCHANGED'), $response['message']);
+		$this->assertSame($this->lang('ZEBRAENHANCE_FRIEND_REQUEST_UNCHANGED'), $response['message']);
 		$this->logout();
 
 		$crawler = $this->open_friends_as('admin');
@@ -434,22 +434,22 @@ class zebraenhance_requests_test extends zebraenhance_base
 	{
 		$db = $this->get_db();
 		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
-			WHERE config_name = 'ze_foes_enhancement'");
+			WHERE config_name = 'zebraenhance_foes_enhancement'");
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(0, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
 		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(0, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
-		$this->assertStringNotContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->assertStringNotContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
 		$this->logout();
 
 		$this->enable_foe_enhancements();
 		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
-			WHERE config_name = 'ze_foe_content'");
+			WHERE config_name = 'zebraenhance_foe_content'");
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
 		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
-		$this->assertStringContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->assertStringContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
 		$this->logout();
 	}
 
@@ -517,18 +517,18 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$module_id = (int) $module['module_id'];
 		$this->assertGreaterThan(0, $module_id);
 		$navigation = self::request('GET', 'ucp.php?i=' . (int) $module['parent_id'] . '&sid=' . $this->sid);
-		$manager_link = $navigation->selectLink($this->lang('ZE_UCP_FOE_MANAGER'))->link()->getUri();
+		$manager_link = $navigation->selectLink($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'))->link()->getUri();
 		$url = $this->local_path($manager_link);
-		$url .= (strpos($url, '?') === false ? '?' : '&') . 'ze_foe_q=' . rawurlencode($username);
+		$url .= (strpos($url, '?') === false ? '?' : '&') . 'zebraenhance_foe_q=' . rawurlencode($username);
 		$crawler = self::request('GET', $url);
-		$this->assertStringContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
-		$this->assertSame(1, $crawler->filter('.ze-foe-row')->count());
-		$this->assertStringContainsString($username, $crawler->filter('.ze-foe-heading')->text());
-		$this->assertStringContainsString($username, $crawler->filter('.js-ze-foe-select')->attr('aria-label'));
-		$this->assertSame('ze_foe_q', $crawler->filter('#ze-foe-search')->attr('name'));
-		$this->assertSame('submit', $crawler->filter('.js-ze-search-foes')->attr('type'));
+		$this->assertStringContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->assertSame(1, $crawler->filter('.zebraenhance-foe-row')->count());
+		$this->assertStringContainsString($username, $crawler->filter('.zebraenhance-foe-heading')->text());
+		$this->assertStringContainsString($username, $crawler->filter('.js-zebraenhance-foe-select')->attr('aria-label'));
+		$this->assertSame('zebraenhance_foe_q', $crawler->filter('#zebraenhance-foe-search')->attr('name'));
+		$this->assertSame('submit', $crawler->filter('.js-zebraenhance-search-foes')->attr('type'));
 
-		$save_url = $crawler->filter('.ze-foe-row')->attr('data-save-url');
+		$save_url = $crawler->filter('.zebraenhance-foe-row')->attr('data-save-url');
 		$response = $this->post_action($save_url, array_merge($this->form_token($crawler), array(
 			'note'                => 'Private context',
 			'duration'            => 86400,
@@ -550,7 +550,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->assertSame(2, (int) $row['notification_policy']);
 
 		$crawler = self::request('GET', $url);
-		$remove_url = $crawler->filter('.js-ze-remove-foes')->attr('data-url');
+		$remove_url = $crawler->filter('.js-zebraenhance-remove-foes')->attr('data-url');
 		$response = $this->post_action($remove_url, array_merge($this->form_token($crawler), array(
 			'foe_ids' => array($foe_id),
 		)));
@@ -585,7 +585,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = self::request('GET', "ucp.php?i=pm&mode=compose&u={$recipient_id}&sid={$this->sid}");
 
 		$this->assertStringContainsString(
-			$this->lang('ZE_PM_RECIPIENTS_BLOCKED'),
+			$this->lang('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED'),
 			$crawler->filter('html')->text()
 		);
 		$this->assertSame(0, $crawler->filter('input[name^="address_list[u]"]')->count());
@@ -601,13 +601,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$viewer_id = $this->create_user($viewer);
 
 		$this->login($foe);
-		$topic = $this->create_topic(2, 'ZE foe content topic', 'ze-foe-original-body');
+		$topic = $this->create_topic(2, 'Zebra Enhance foe content topic', 'zebraenhance-foe-original-body');
 		$this->logout();
 
 		$this->login();
 		$quote = '[quote=' . $foe . ' post_id=' . (int) $topic['post_id'] . ' user_id=' . (int) $foe_id . ']'
-			. 'ze-foe-quoted-body[/quote] ze-visible-reply-body';
-		$this->create_post(2, $topic['topic_id'], 'Re: ZE foe content topic', $quote);
+			. 'zebraenhance-foe-quoted-body[/quote] zebraenhance-visible-reply-body';
+		$this->create_post(2, $topic['topic_id'], 'Re: Zebra Enhance foe content topic', $quote);
 		$this->logout();
 
 		$db = $this->get_db();
@@ -621,9 +621,9 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->login($viewer);
 		$crawler = self::request('GET', 'viewtopic.php?t=' . (int) $topic['topic_id'] . "&sid={$this->sid}");
 		$page_text = $crawler->filter('html')->text();
-		$this->assertStringNotContainsString('ze-foe-original-body', $page_text);
-		$this->assertStringNotContainsString('ze-foe-quoted-body', $page_text);
-		$this->assertStringContainsString('ze-visible-reply-body', $page_text);
+		$this->assertStringNotContainsString('zebraenhance-foe-original-body', $page_text);
+		$this->assertStringNotContainsString('zebraenhance-foe-quoted-body', $page_text);
+		$this->assertStringContainsString('zebraenhance-visible-reply-body', $page_text);
 		$this->assertSame(0, $crawler->filter('#p' . (int) $topic['post_id'])->count());
 
 		$crawler = self::request('GET', 'search.php?author_id=' . (int) $foe_id . '&sr=posts&sid=' . $this->sid);
@@ -638,39 +638,39 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->add_lang_ext('anavaro/zebraenhance', 'info_acp_zebraenhance');
 		$url = 'adm/index.php?i=%5Canavaro%5Czebraenhance%5Cacp%5Csettings_module&mode=settings&sid=' . $this->sid;
 		$crawler = self::request('GET', $url);
-		$this->assertSame(1, $crawler->filter('input[name=ze_max_pending_requests]')->count());
-		$this->assertSame(1, $crawler->filter('input[name=ze_decline_cooldown_days]')->count());
-		$this->assertSame(2, $crawler->filter('input[name=ze_foes_enhancement]')->count());
-		$this->assertSame(1, $crawler->filter('#ze-foe-feature-options')->count());
+		$this->assertSame(1, $crawler->filter('input[name=zebraenhance_max_pending_requests]')->count());
+		$this->assertSame(1, $crawler->filter('input[name=zebraenhance_decline_cooldown_days]')->count());
+		$this->assertSame(2, $crawler->filter('input[name=zebraenhance_foes_enhancement]')->count());
+		$this->assertSame(1, $crawler->filter('#zebraenhance-foe-feature-options')->count());
 
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
-		$form['ze_max_pending_requests'] = 12;
-		$form['ze_decline_cooldown_days'] = 3;
-		$form['ze_foes_enhancement'] = 1;
-		$form['ze_foe_pm'] = 1;
-		$form['ze_foe_content'] = 0;
-		$form['ze_foe_notifications'] = 1;
-		$form['ze_foe_temporary'] = 0;
-		$form['ze_foe_notes'] = 1;
-		$form['ze_foe_exceptions'] = 0;
+		$form['zebraenhance_max_pending_requests'] = 12;
+		$form['zebraenhance_decline_cooldown_days'] = 3;
+		$form['zebraenhance_foes_enhancement'] = 1;
+		$form['zebraenhance_foe_pm'] = 1;
+		$form['zebraenhance_foe_content'] = 0;
+		$form['zebraenhance_foe_notifications'] = 1;
+		$form['zebraenhance_foe_temporary'] = 0;
+		$form['zebraenhance_foe_notes'] = 1;
+		$form['zebraenhance_foe_exceptions'] = 0;
 		$crawler = self::submit($form);
 		$this->assertStringContainsString($this->lang('ACP_ZEBRA_ENHANCE_SAVED'), $crawler->filter('#main')->text());
 
 		$crawler = self::request('GET', $url);
-		$this->assertSame('1', $crawler->filter('input[name=ze_foes_enhancement]:checked')->attr('value'));
-		$this->assertSame('0', $crawler->filter('input[name=ze_foe_content]:checked')->attr('value'));
-		$this->assertSame('0', $crawler->filter('input[name=ze_foe_temporary]:checked')->attr('value'));
-		$this->assertSame('0', $crawler->filter('input[name=ze_foe_exceptions]:checked')->attr('value'));
+		$this->assertSame('1', $crawler->filter('input[name=zebraenhance_foes_enhancement]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=zebraenhance_foe_content]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=zebraenhance_foe_temporary]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=zebraenhance_foe_exceptions]:checked')->attr('value'));
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
-		$form['ze_max_pending_requests'] = 100;
-		$form['ze_decline_cooldown_days'] = 7;
-		$form['ze_foes_enhancement'] = 0;
-		$form['ze_foe_pm'] = 1;
-		$form['ze_foe_content'] = 1;
-		$form['ze_foe_notifications'] = 1;
-		$form['ze_foe_temporary'] = 1;
-		$form['ze_foe_notes'] = 1;
-		$form['ze_foe_exceptions'] = 1;
+		$form['zebraenhance_max_pending_requests'] = 100;
+		$form['zebraenhance_decline_cooldown_days'] = 7;
+		$form['zebraenhance_foes_enhancement'] = 0;
+		$form['zebraenhance_foe_pm'] = 1;
+		$form['zebraenhance_foe_content'] = 1;
+		$form['zebraenhance_foe_notifications'] = 1;
+		$form['zebraenhance_foe_temporary'] = 1;
+		$form['zebraenhance_foe_notes'] = 1;
+		$form['zebraenhance_foe_exceptions'] = 1;
 		self::submit($form);
 		$this->logout();
 	}
@@ -725,13 +725,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$db->sql_query("UPDATE phpbb_config
 			SET config_value = '1', is_dynamic = 1
 			WHERE " . $db->sql_in_set('config_name', array(
-				'ze_foes_enhancement',
-				'ze_foe_pm',
-				'ze_foe_content',
-				'ze_foe_notifications',
-				'ze_foe_temporary',
-				'ze_foe_notes',
-				'ze_foe_exceptions',
+				'zebraenhance_foes_enhancement',
+				'zebraenhance_foe_pm',
+				'zebraenhance_foe_content',
+				'zebraenhance_foe_notifications',
+				'zebraenhance_foe_temporary',
+				'zebraenhance_foe_notes',
+				'zebraenhance_foe_exceptions',
 			)));
 	}
 
@@ -758,8 +758,8 @@ class zebraenhance_requests_test extends zebraenhance_base
 	protected function form_token($crawler)
 	{
 		return array(
-			'creation_time' => $crawler->filter('#ze-form-token input[name=creation_time]')->attr('value'),
-			'form_token'    => $crawler->filter('#ze-form-token input[name=form_token]')->attr('value'),
+			'creation_time' => $crawler->filter('#zebraenhance-form-token input[name=creation_time]')->attr('value'),
+			'form_token'    => $crawler->filter('#zebraenhance-form-token input[name=form_token]')->attr('value'),
 		);
 	}
 

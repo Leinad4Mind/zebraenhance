@@ -30,22 +30,22 @@ class expire_foes extends \phpbb\cron\task\base
 
 	public function run()
 	{
-		if (empty($this->config['ze_foes_enhancement']) || empty($this->config['ze_foe_temporary']))
+		if (empty($this->config['zebraenhance_foes_enhancement']) || empty($this->config['zebraenhance_foe_temporary']))
 		{
 			return;
 		}
 		$this->relationships->expire_foes();
-		$this->config->set('ze_foe_expiry_last_gc', time(), true);
+		$this->config->set('zebraenhance_foe_expiry_last_gc', time(), true);
 	}
 
 	public function should_run()
 	{
-		if (empty($this->config['ze_foes_enhancement']) || empty($this->config['ze_foe_temporary']))
+		if (empty($this->config['zebraenhance_foes_enhancement']) || empty($this->config['zebraenhance_foe_temporary']))
 		{
 			return false;
 		}
-		$last_run = isset($this->config['ze_foe_expiry_last_gc']) ? (int) $this->config['ze_foe_expiry_last_gc'] : 0;
-		$interval = isset($this->config['ze_foe_expiry_gc']) ? max(300, (int) $this->config['ze_foe_expiry_gc']) : 3600;
+		$last_run = isset($this->config['zebraenhance_foe_expiry_last_gc']) ? (int) $this->config['zebraenhance_foe_expiry_last_gc'] : 0;
+		$interval = isset($this->config['zebraenhance_foe_expiry_gc']) ? max(300, (int) $this->config['zebraenhance_foe_expiry_gc']) : 3600;
 
 		return $last_run < time() - $interval;
 	}

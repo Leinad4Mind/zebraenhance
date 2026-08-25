@@ -11,19 +11,19 @@
 </div>
 {% endif %}
 
-{% if ze_requests|length %}
+{% if zebraenhance_requests|length %}
 <table class="table1 zebra-table fixed-width-table">
 	<thead>
 	<tr>
-		<th>{{ lang('ACP_ZE_REQUEST_ID') }}</th>
-		<th>{{ lang('ACP_ZE_REQUESTER') }}</th>
-		<th>{{ lang('ACP_ZE_RECIPIENT') }}</th>
-		<th>{{ lang('ACP_ZE_REQUEST_DATE') }}</th>
-		<th>{{ lang('ACP_ZE_REQUEST_MESSAGE') }}</th>
+		<th>{{ lang('ACP_ZEBRAENHANCE_REQUEST_ID') }}</th>
+		<th>{{ lang('ACP_ZEBRAENHANCE_REQUESTER') }}</th>
+		<th>{{ lang('ACP_ZEBRAENHANCE_RECIPIENT') }}</th>
+		<th>{{ lang('ACP_ZEBRAENHANCE_REQUEST_DATE') }}</th>
+		<th>{{ lang('ACP_ZEBRAENHANCE_REQUEST_MESSAGE') }}</th>
 	</tr>
 	</thead>
 	<tbody>
-	{% for request in ze_requests %}
+	{% for request in zebraenhance_requests %}
 	<tr>
 		<td>{{ request.REQUEST_ID }}</td>
 		<td>{{ request.REQUESTER }}</td>
@@ -36,7 +36,7 @@
 </table>
 {% else %}
 <div class="errorbox notice">
-	<p>{{ lang('ACP_ZE_NO_PENDING_REQUESTS') }}</p>
+	<p>{{ lang('ACP_ZEBRAENHANCE_NO_PENDING_REQUESTS') }}</p>
 </div>
 {% endif %}
 

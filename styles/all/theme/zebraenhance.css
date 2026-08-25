@@ -4,12 +4,12 @@
  * @license GNU General Public License, version 2 (GPL-2.0-only)
  */
 
-.ze-scroll-list {
+.zebraenhance-scroll-list {
 	max-height: 12rem;
 	overflow: auto;
 }
 
-.ze-list-row {
+.zebraenhance-list-row {
 	align-items: center;
 	display: flex;
 	gap: .5rem;
@@ -17,36 +17,36 @@
 	min-height: 2rem;
 }
 
-.ze-request-compose {
+.zebraenhance-request-compose {
 	display: grid;
 	gap: .4rem;
 	max-width: 30rem;
 }
 
-.ze-request-compose .button {
+.zebraenhance-request-compose .button {
 	justify-self: start;
 }
 
-.ze-request-message {
+.zebraenhance-request-message {
 	display: block;
 	font-style: italic;
 	margin-top: .2rem;
 	white-space: pre-wrap;
 }
 
-.ze-mutual-count {
+.zebraenhance-mutual-count {
 	color: #536482;
 	display: block;
 	font-size: .9em;
 }
 
-.ze-actions {
+.zebraenhance-actions {
 	display: inline-flex;
 	gap: .25rem;
 }
 
-.ze-bulk-actions,
-.ze-friend-search {
+.zebraenhance-bulk-actions,
+.zebraenhance-friend-search {
 	align-items: center;
 	display: flex;
 	flex-wrap: wrap;
@@ -54,57 +54,57 @@
 	margin: .5rem 0;
 }
 
-.ze-icon-button {
+.zebraenhance-icon-button {
 	line-height: 1;
 	padding: 2px 5px;
 }
 
-.ze-circle-manager,
-.ze-circle-create,
-.ze-circle-row,
-.ze-circle-assignment {
+.zebraenhance-circle-manager,
+.zebraenhance-circle-create,
+.zebraenhance-circle-row,
+.zebraenhance-circle-assignment {
 	display: flex;
 	flex-wrap: wrap;
 	gap: .4rem;
 }
 
-.ze-circle-manager {
+.zebraenhance-circle-manager {
 	flex-direction: column;
 }
 
-.ze-circle-create,
-.ze-circle-row,
-.ze-circle-assignment {
+.zebraenhance-circle-create,
+.zebraenhance-circle-row,
+.zebraenhance-circle-assignment {
 	align-items: center;
 }
 
-.ze-circle-count {
+.zebraenhance-circle-count {
 	color: #536482;
 	min-width: 5rem;
 }
 
-.ze-friend-row {
+.zebraenhance-friend-row {
 	flex-wrap: wrap;
 }
 
-.ze-friend-name {
+.zebraenhance-friend-name {
 	min-width: 10rem;
 }
 
-.ze-circle-assignment {
+.zebraenhance-circle-assignment {
 	margin-inline-start: auto;
 }
 
-.ze-circle-assignment select {
+.zebraenhance-circle-assignment select {
 	min-width: 10rem;
 }
 
-.ze-pagination {
+.zebraenhance-pagination {
 	float: none;
 	margin: .5rem 0 1rem;
 }
 
-.ze-profile-friends {
+.zebraenhance-profile-friends {
 	display: grid;
 	gap: .75rem;
 	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
@@ -113,66 +113,66 @@
 	padding: 0;
 }
 
-.ze-profile-friends li {
+.zebraenhance-profile-friends li {
 	align-items: center;
 	display: flex;
 	gap: .5rem;
 }
 
-.ze-profile-friends .header-avatar img {
+.zebraenhance-profile-friends .header-avatar img {
 	max-height: 3rem;
 	max-width: 3rem;
 }
 
-.ze-mutual-friends {
+.zebraenhance-mutual-friends {
 	border-bottom: 1px solid #ccc;
 	margin-bottom: 1rem;
 	padding-bottom: 1rem;
 }
 
-.ze-foe-toolbar,
-.ze-global-status .inner,
-.ze-foe-heading,
-.ze-foe-fields,
-.ze-foe-policies {
+.zebraenhance-foe-toolbar,
+.zebraenhance-global-status .inner,
+.zebraenhance-foe-heading,
+.zebraenhance-foe-fields,
+.zebraenhance-foe-policies {
 	display: flex;
 	flex-wrap: wrap;
 	gap: .5rem;
 }
 
-.ze-foe-toolbar {
+.zebraenhance-foe-toolbar {
 	align-items: center;
 	margin-bottom: 1rem;
 }
 
-.ze-global-status .inner {
+.zebraenhance-global-status .inner {
 	justify-content: space-between;
 }
 
-.ze-foe-heading {
+.zebraenhance-foe-heading {
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: .75rem;
 }
 
-.ze-foe-fields,
-.ze-foe-policies {
+.zebraenhance-foe-fields,
+.zebraenhance-foe-policies {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 	margin-bottom: .75rem;
 }
 
-.ze-foe-fields label,
-.ze-foe-policies label {
+.zebraenhance-foe-fields label,
+.zebraenhance-foe-policies label {
 	display: grid;
 	gap: .25rem;
 }
 
-.ze-status {
+.zebraenhance-status {
 	color: #a00;
 	font-size: .9em;
 }
 
-.ze-status-active {
+.zebraenhance-status-active {
 	color: #087b00;
 }

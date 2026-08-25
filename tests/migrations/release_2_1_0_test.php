@@ -38,8 +38,8 @@ class release_2_1_0_test extends \phpbb_test_case
 	{
 		$data = $this->migration()->update_data();
 
-		$this->assertContains(array('config.add', array('ze_max_pending_requests', 100)), $data);
-		$this->assertContains(array('config.add', array('ze_decline_cooldown_days', 7)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_max_pending_requests', 100)), $data);
+		$this->assertContains(array('config.add', array('zebraenhance_decline_cooldown_days', 7)), $data);
 		$this->assertSame('module.add', $data[2][0]);
 		$this->assertSame('module.add', $data[3][0]);
 		$this->assertContains(array('config.update', array('zebra_enhance_version', '2.1.0')), $data);

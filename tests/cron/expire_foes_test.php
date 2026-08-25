@@ -20,17 +20,17 @@ class expire_foes_test extends \phpbb_test_case
 			->getMock();
 		$relationships->expects($this->once())->method('expire_foes');
 		$config = new \phpbb\config\config(array(
-			'ze_foes_enhancement' => 1,
-			'ze_foe_temporary'    => 1,
-			'ze_foe_expiry_last_gc' => 0,
-			'ze_foe_expiry_gc'      => 3600,
+			'zebraenhance_foes_enhancement' => 1,
+			'zebraenhance_foe_temporary'    => 1,
+			'zebraenhance_foe_expiry_last_gc' => 0,
+			'zebraenhance_foe_expiry_gc'      => 3600,
 		));
 		$task = new \anavaro\zebraenhance\cron\task\expire_foes($relationships, $config);
 
 		$this->assertTrue($task->should_run());
 		$before = time();
 		$task->run();
-		$this->assertGreaterThanOrEqual($before, (int) $config['ze_foe_expiry_last_gc']);
+		$this->assertGreaterThanOrEqual($before, (int) $config['zebraenhance_foe_expiry_last_gc']);
 		$this->assertFalse($task->should_run());
 	}
 
@@ -41,8 +41,8 @@ class expire_foes_test extends \phpbb_test_case
 			->getMock();
 		$relationships->expects($this->never())->method('expire_foes');
 		$config = new \phpbb\config\config(array(
-			'ze_foes_enhancement' => 0,
-			'ze_foe_temporary'    => 1,
+			'zebraenhance_foes_enhancement' => 0,
+			'zebraenhance_foe_temporary'    => 1,
 		));
 		$task = new \anavaro\zebraenhance\cron\task\expire_foes($relationships, $config);
 
