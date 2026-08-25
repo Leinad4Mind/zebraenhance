@@ -47,3 +47,15 @@ anavaro_zebraenhance_friend_circles:
     methods: [POST]
     requirements:
         userid: \d+
+
+anavaro_zebraenhance_update_foe:
+    path: /zebraenhance/foe/{userid}
+    defaults: { _controller: anavaro.zebraenhance.controller:update_foe }
+    methods: [POST]
+    requirements:
+        userid: \d+
+
+anavaro_zebraenhance_remove_foes:
+    path: /zebraenhance/foes/remove
+    defaults: { _controller: anavaro.zebraenhance.controller:remove_foes }
+    methods: [POST]

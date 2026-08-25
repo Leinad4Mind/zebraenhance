@@ -55,6 +55,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var bool */
 	protected $profile_hide_native_add = false;
 
+	/** @var array|null */
+	protected $foe_identities;
+
 	public function __construct(
 		\anavaro\zebraenhance\service\relationship_manager $relationships,
 		\phpbb\user_loader $user_loader,
@@ -89,6 +92,13 @@ class zebra_listener implements EventSubscriberInterface
 			'core.ucp_add_zebra'             => 'zebra_confirm_add',
 			'core.ucp_remove_zebra'          => 'zebra_confirm_remove',
 			'core.ucp_display_module_before' => 'module_display',
+			'core.message_list_actions'       => 'block_foe_pm_recipients',
+			'core.submit_pm_before'           => 'guard_foe_pm_submission',
+			'core.viewtopic_modify_post_data' => 'hide_foe_posts',
+			'core.topic_review_modify_post_list' => 'hide_foe_posts',
+			'core.text_formatter_s9e_render_before' => 'hide_foe_quotes',
+			'core.search_modify_rowset'       => 'hide_foe_search_results',
+			'core.notification_manager_add_notifications' => 'mute_foe_notifications',
 			'core.delete_user_before'        => 'delete_users',
 			'core.memberlist_view_profile'   => 'prepare_friends',
 			'core.memberlist_modify_view_profile_template_vars' => 'modify_profile_template_vars',
@@ -131,6 +141,12 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function zebra_confirm_remove($event)
 	{
+		if ($event['mode'] === 'foes')
+		{
+			$this->relationships->remove_foes((int) $this->user->data['user_id'], $event['user_ids']);
+			$event['user_ids'] = array(0);
+			return;
+		}
 		if ($event['mode'] !== 'friends')
 		{
 			return;
@@ -156,7 +172,11 @@ class zebra_listener implements EventSubscriberInterface
 			0,
 			\anavaro\zebraenhance\service\relationship_manager::MAX_FRIEND_SEARCH_LENGTH
 		);
-		if ($this->request->is_set_post('zebra_profile_acl') || $this->request->is_set_post('zebra_request_policy'))
+		if ($this->request->is_set_post('zebra_profile_acl')
+			|| $this->request->is_set_post('zebra_request_policy')
+			|| $this->request->is_set_post('zebra_block_foe_pm')
+			|| $this->request->is_set_post('zebra_hide_foe_content')
+			|| $this->request->is_set_post('zebra_mute_foe_notifications'))
 		{
 			if (!check_form_key('anavaro_zebraenhance'))
 			{
@@ -179,12 +199,45 @@ class zebra_listener implements EventSubscriberInterface
 				);
 				$this->user->data['zebra_request_policy'] = $policy;
 			}
+			if ($this->relationships->foe_feature_enabled('pm')
+				&& $this->request->is_set_post('zebra_block_foe_pm'))
+			{
+				$block_foe_pm = $this->relationships->set_block_foe_pm(
+					$user_id,
+					$this->request->variable('zebra_block_foe_pm', 0)
+				);
+				$this->user->data['zebra_block_foe_pm'] = $block_foe_pm;
+			}
+			if ($this->relationships->foe_feature_enabled('content')
+				&& $this->request->is_set_post('zebra_hide_foe_content'))
+			{
+				$hide_foe_content = $this->relationships->set_hide_foe_content(
+					$user_id,
+					$this->request->variable('zebra_hide_foe_content', 0)
+				);
+				$this->user->data['zebra_hide_foe_content'] = $hide_foe_content;
+			}
+			if ($this->relationships->foe_feature_enabled('notifications')
+				&& $this->request->is_set_post('zebra_mute_foe_notifications'))
+			{
+				$mute_foe_notifications = $this->relationships->set_mute_foe_notifications(
+					$user_id,
+					$this->request->variable('zebra_mute_foe_notifications', 0)
+				);
+				$this->user->data['zebra_mute_foe_notifications'] = $mute_foe_notifications;
+			}
 		}
 
 		$this->template->assign_vars(array(
 			'IS_ZEBRA'           => true,
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
 			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
+			'S_ZEBRA_BLOCK_FOE_PM' => !empty($this->user->data['zebra_block_foe_pm']),
+			'S_ZEBRA_HIDE_FOE_CONTENT' => !empty($this->user->data['zebra_hide_foe_content']),
+			'S_ZEBRA_MUTE_FOE_NOTIFICATIONS' => !empty($this->user->data['zebra_mute_foe_notifications']),
+			'S_ZE_FOE_PM_AVAILABLE' => $this->relationships->foe_feature_enabled('pm'),
+			'S_ZE_FOE_CONTENT_AVAILABLE' => $this->relationships->foe_feature_enabled('content'),
+			'S_ZE_FOE_NOTIFICATIONS_AVAILABLE' => $this->relationships->foe_feature_enabled('notifications'),
 			'S_CAN_CLOSE_FRIENDS' => $this->auth->acl_get('u_ze_close_friends'),
 			'FRIEND_SEARCH'       => $friend_search,
 			'U_FRIEND_SEARCH'     => $this->ucp_friend_url(''),
@@ -321,6 +374,167 @@ class zebra_listener implements EventSubscriberInterface
 				));
 			}
 		}
+	}
+
+	public function block_foe_pm_recipients($event)
+	{
+		$address_list = $event['address_list'];
+		$filtered = $this->relationships->filter_pm_address_list(
+			(int) $this->user->data['user_id'],
+			$address_list
+		);
+		if ($filtered === $address_list)
+		{
+			return;
+		}
+
+		$error = $event['error'];
+		$error[] = $this->language->lang('ZE_PM_RECIPIENTS_BLOCKED');
+		$event['address_list'] = $filtered;
+		$event['error'] = $error;
+	}
+
+	public function guard_foe_pm_submission($event)
+	{
+		if ($event['mode'] === 'edit')
+		{
+			return;
+		}
+
+		$data = $event['data'];
+		$address_list = isset($data['address_list']) && is_array($data['address_list'])
+			? $data['address_list']
+			: array();
+		if ($this->relationships->filter_pm_address_list((int) $this->user->data['user_id'], $address_list) !== $address_list)
+		{
+			trigger_error('ZE_PM_RECIPIENTS_BLOCKED');
+		}
+	}
+
+	public function hide_foe_posts($event)
+	{
+		if (!$this->hide_foe_content_enabled())
+		{
+			return;
+		}
+
+		$foe_ids = array_fill_keys(array_keys($this->get_foe_identities()), true);
+		if (!$foe_ids)
+		{
+			return;
+		}
+		$rowset = $event['rowset'];
+		foreach ($rowset as $post_id => $row)
+		{
+			$poster_id = isset($row['poster_id']) ? (int) $row['poster_id'] : (isset($row['user_id']) ? (int) $row['user_id'] : 0);
+			if (isset($foe_ids[$poster_id]))
+			{
+				unset($rowset[$post_id]);
+			}
+		}
+		$event['rowset'] = $rowset;
+	}
+
+	public function hide_foe_quotes($event)
+	{
+		if (!$this->hide_foe_content_enabled() || !class_exists('\\DOMDocument'))
+		{
+			return;
+		}
+
+		$xml = $event['xml'];
+		if (strpos($xml, '<QUOTE') === false)
+		{
+			return;
+		}
+
+		$foe_identities = $this->get_foe_identities();
+		if (!$foe_identities)
+		{
+			return;
+		}
+		$foe_names = array_fill_keys(array_values($foe_identities), true);
+
+		$document = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors(true);
+		$loaded = $document->loadXML($xml, LIBXML_NONET);
+		libxml_clear_errors();
+		libxml_use_internal_errors($previous_errors);
+		if (!$loaded || !$document->documentElement)
+		{
+			return;
+		}
+
+		$quotes_to_remove = array();
+		foreach ($document->getElementsByTagName('QUOTE') as $quote)
+		{
+			$quote_user_id = (int) $quote->getAttribute('user_id');
+			$hide_quote = $quote_user_id
+				? isset($foe_identities[$quote_user_id])
+				: isset($foe_names[utf8_clean_string($quote->getAttribute('author'))]);
+			if ($hide_quote)
+			{
+				$quotes_to_remove[] = $quote;
+			}
+		}
+
+		for ($i = count($quotes_to_remove) - 1; $i >= 0; $i--)
+		{
+			$quote = $quotes_to_remove[$i];
+			if ($quote->parentNode)
+			{
+				$quote->parentNode->removeChild($quote);
+			}
+		}
+		if ($quotes_to_remove)
+		{
+			$event['xml'] = $document->saveXML($document->documentElement);
+		}
+	}
+
+	public function hide_foe_search_results($event)
+	{
+		if (!$this->hide_foe_content_enabled()
+			|| $event['show_results'] !== 'posts')
+		{
+			return;
+		}
+
+		$foe_ids = array_fill_keys(array_keys($this->get_foe_identities()), true);
+		$rowset = $event['rowset'];
+		foreach ($rowset as $result_id => $row)
+		{
+			if (isset($foe_ids[(int) $row['poster_id']]))
+			{
+				unset($rowset[$result_id]);
+			}
+		}
+		$event['rowset'] = $rowset;
+	}
+
+	public function mute_foe_notifications($event)
+	{
+		$notification_types = array(
+			'notification.type.quote',
+			'notification.type.post',
+			'notification.type.topic',
+			'notification.type.bookmark',
+			'notification.type.mention',
+		);
+		if (!in_array($event['notification_type_name'], $notification_types, true))
+		{
+			return;
+		}
+		$data = $event['data'];
+		$actor_id = isset($data['poster_id']) ? (int) $data['poster_id'] : 0;
+		if (!$actor_id)
+		{
+			return;
+		}
+		$event['notify_users'] = $this->relationships->filter_foe_notification_recipients(
+			$actor_id,
+			$event['notify_users']
+		);
 	}
 
 	public function delete_users($event)
@@ -463,6 +677,24 @@ class zebra_listener implements EventSubscriberInterface
 		}
 
 		return false;
+	}
+
+	protected function hide_foe_content_enabled()
+	{
+		return !empty($this->user->data['is_registered'])
+			&& $this->relationships->foe_feature_enabled('content');
+	}
+
+	protected function get_foe_identities()
+	{
+		if ($this->foe_identities === null)
+		{
+			$this->foe_identities = $this->relationships->get_foe_identities(
+				(int) $this->user->data['user_id']
+			);
+		}
+
+		return $this->foe_identities;
 	}
 
 	protected function profile_url($user_id)

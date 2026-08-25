@@ -266,10 +266,63 @@ class ajaxify
 		));
 	}
 
-	protected function authorize_relationship_change()
+	public function update_foe($userid)
+	{
+		if ($error = $this->authorize_relationship_change(true))
+		{
+			return $error;
+		}
+		if (!$this->relationships->update_foe(
+			(int) $this->user->data['user_id'],
+			(int) $userid,
+			$this->request->variable('duration', -1),
+			$this->request->variable('note', '', true),
+			$this->request->variable('pm_policy', 0),
+			$this->request->variable('content_policy', 0),
+			$this->request->variable('notification_policy', 0)
+		))
+		{
+			return $this->error('ZE_FOE_NOT_FOUND', 404);
+		}
+
+		return new JsonResponse(array(
+			'success' => true,
+			'message' => $this->language->lang('ZE_FOE_SAVED'),
+		));
+	}
+
+	public function remove_foes()
+	{
+		if ($error = $this->authorize_relationship_change(true))
+		{
+			return $error;
+		}
+		$foe_ids = array_values(array_filter(array_map('intval', $this->request->variable('foe_ids', array(0)))));
+		if (!$foe_ids)
+		{
+			return $this->error('ZE_SELECT_FOE', 400);
+		}
+		$removed = $this->relationships->remove_foes((int) $this->user->data['user_id'], $foe_ids);
+		if (!$removed)
+		{
+			return $this->error('ZE_FOE_NOT_FOUND', 404);
+		}
+
+		return new JsonResponse(array(
+			'success' => true,
+			'removed' => $removed,
+			'message' => $this->language->lang('ZE_FOES_REMOVED', $removed),
+		));
+	}
+
+	protected function authorize_relationship_change($foe_enhancement = false)
 	{
 		$this->language->add_lang('zebra_enchance', 'anavaro/zebraenhance');
 		if ((int) $this->user->data['user_id'] === ANONYMOUS || !$this->auth->acl_get('u_ze_use'))
+		{
+			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
+		}
+		if ($foe_enhancement && !$this->relationships->foe_feature_enabled())
 		{
 			return $this->error('ZE_AJAX_NOT_AUTHORIZED', 403);
 		}

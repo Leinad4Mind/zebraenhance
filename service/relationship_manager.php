@@ -36,6 +36,14 @@ class relationship_manager
 	const REQUEST_POLICY_EVERYONE = 0;
 	const REQUEST_POLICY_FRIENDS_OF_FRIENDS = 1;
 	const REQUEST_POLICY_NOBODY = 2;
+	const POLICY_INHERIT = 0;
+	const POLICY_ALLOW = 1;
+	const POLICY_BLOCK = 2;
+	const FOE_DURATION_KEEP = -1;
+	const FOE_DURATION_PERMANENT = 0;
+	const MAX_FOE_NOTE_LENGTH = 255;
+	const MAX_FOE_SEARCH_LENGTH = 100;
+	const MAX_BULK_FOES = 100;
 
 	/** @var \phpbb\db\driver\driver_interface */
 	protected $db;
@@ -77,6 +85,9 @@ class relationship_manager
 	protected $users_table;
 
 	/** @var string */
+	protected $user_group_table;
+
+	/** @var string */
 	protected $notifications_table;
 
 	/** @var string */
@@ -84,6 +95,9 @@ class relationship_manager
 
 	/** @var string */
 	protected $notification_types_table;
+
+	/** @var string */
+	protected $foe_settings_table;
 
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -99,9 +113,11 @@ class relationship_manager
 		$circles_table,
 		$circle_members_table,
 		$users_table,
+		$user_group_table,
 		$notifications_table,
 		$notification_emails_table,
-		$notification_types_table
+		$notification_types_table,
+		$foe_settings_table
 	)
 	{
 		$this->db = $db;
@@ -117,9 +133,39 @@ class relationship_manager
 		$this->circles_table = $circles_table;
 		$this->circle_members_table = $circle_members_table;
 		$this->users_table = $users_table;
+		$this->user_group_table = $user_group_table;
 		$this->notifications_table = $notifications_table;
 		$this->notification_emails_table = $notification_emails_table;
 		$this->notification_types_table = $notification_types_table;
+		$this->foe_settings_table = $foe_settings_table;
+	}
+
+	/**
+	 * Check whether the administrator made an enhanced foe capability available.
+	 *
+	 * @param string $feature Empty for the master switch
+	 */
+	public function foe_feature_enabled($feature = '')
+	{
+		if (empty($this->config['ze_foes_enhancement']))
+		{
+			return false;
+		}
+		if ($feature === '')
+		{
+			return true;
+		}
+
+		$features = array(
+			'pm'            => 'ze_foe_pm',
+			'content'       => 'ze_foe_content',
+			'notifications' => 'ze_foe_notifications',
+			'temporary'     => 'ze_foe_temporary',
+			'notes'         => 'ze_foe_notes',
+			'exceptions'    => 'ze_foe_exceptions',
+		);
+
+		return isset($features[$feature]) && !empty($this->config[$features[$feature]]);
 	}
 
 	/**
@@ -156,6 +202,7 @@ class relationship_manager
 			foreach ($relationships as $user_id => $zebra_ids)
 			{
 				$this->remove_relationships_with_reason($user_id, $zebra_ids, 'foe');
+				$this->register_foe_settings($user_id, $zebra_ids);
 			}
 		}
 
@@ -613,6 +660,438 @@ class relationship_manager
 		}
 
 		return $policy;
+	}
+
+	public function set_block_foe_pm($user_id, $enabled)
+	{
+		$user_id = (int) $user_id;
+		$enabled = (bool) $enabled;
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_block_foe_pm = ' . (int) $enabled . '
+				WHERE user_id = ' . (int) $user_id);
+		}
+
+		return $enabled;
+	}
+
+	public function set_hide_foe_content($user_id, $enabled)
+	{
+		$user_id = (int) $user_id;
+		$enabled = (bool) $enabled;
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_hide_foe_content = ' . (int) $enabled . '
+				WHERE user_id = ' . (int) $user_id);
+		}
+
+		return $enabled;
+	}
+
+	public function set_mute_foe_notifications($user_id, $enabled)
+	{
+		$user_id = (int) $user_id;
+		$enabled = (bool) $enabled;
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_mute_foe_notifications = ' . (int) $enabled . '
+				WHERE user_id = ' . $user_id);
+		}
+
+		return $enabled;
+	}
+
+	/**
+	 * Record metadata for newly added foes without overwriting existing notes.
+	 */
+	public function register_foe_settings($owner_id, array $foe_ids, $added_at = null)
+	{
+		$owner_id = (int) $owner_id;
+		$foe_ids = array_values(array_unique(array_filter(array_map('intval', $foe_ids))));
+		if (!$owner_id || !$foe_ids)
+		{
+			return;
+		}
+
+		$result = $this->db->sql_query('SELECT foe_id
+			FROM ' . $this->foe_settings_table . '
+			WHERE owner_id = ' . $owner_id . '
+				AND ' . $this->db->sql_in_set('foe_id', $foe_ids));
+		$existing = array();
+		while (($foe_id = $this->db->sql_fetchfield('foe_id')) !== false)
+		{
+			$existing[(int) $foe_id] = true;
+		}
+		$this->db->sql_freeresult($result);
+
+		$rows = array();
+		foreach ($foe_ids as $foe_id)
+		{
+			if (!isset($existing[$foe_id]))
+			{
+				$rows[] = array(
+					'owner_id'   => $owner_id,
+					'foe_id'     => $foe_id,
+					'added_at'   => $added_at === null ? time() : max(0, (int) $added_at),
+					'expires_at' => 0,
+				);
+			}
+		}
+		if ($rows)
+		{
+			$this->db->sql_multi_insert($this->foe_settings_table, $rows);
+		}
+	}
+
+	public function count_foes($owner_id, $search = '')
+	{
+		$sql = 'SELECT COUNT(*) AS total
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u ON u.user_id = z.zebra_id
+			WHERE z.user_id = ' . (int) $owner_id . '
+				AND z.foe = 1' . $this->foe_search_sql($search, 'u');
+		$result = $this->db->sql_query($sql);
+		$count = (int) $this->db->sql_fetchfield('total');
+		$this->db->sql_freeresult($result);
+
+		return $count;
+	}
+
+	public function get_foes($owner_id, $limit = self::PAGE_SIZE, $offset = 0, $search = '')
+	{
+		$sql = 'SELECT z.zebra_id, u.username, u.username_clean, u.user_colour,
+				fs.added_at, fs.expires_at, fs.foe_note, fs.pm_policy,
+				fs.content_policy, fs.notification_policy
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u ON u.user_id = z.zebra_id
+			LEFT JOIN ' . $this->foe_settings_table . ' fs
+				ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+			WHERE z.user_id = ' . (int) $owner_id . '
+				AND z.foe = 1' . $this->foe_search_sql($search, 'u') . '
+			ORDER BY u.username_clean ASC, z.zebra_id ASC';
+		$result = $this->db->sql_query_limit($sql, max(1, (int) $limit), max(0, (int) $offset));
+		$rows = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$row['added_at'] = isset($row['added_at']) ? (int) $row['added_at'] : 0;
+			$row['expires_at'] = isset($row['expires_at']) ? (int) $row['expires_at'] : 0;
+			$row['foe_note'] = isset($row['foe_note']) ? (string) $row['foe_note'] : '';
+			foreach (array('pm_policy', 'content_policy', 'notification_policy') as $policy)
+			{
+				$row[$policy] = isset($row[$policy]) ? (int) $row[$policy] : self::POLICY_INHERIT;
+			}
+			$rows[] = $row;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $rows;
+	}
+
+	/**
+	 * Update a foe's duration, note, and privacy exceptions.
+	 */
+	public function update_foe($owner_id, $foe_id, $duration, $note, $pm_policy, $content_policy, $notification_policy)
+	{
+		$owner_id = (int) $owner_id;
+		$foe_id = (int) $foe_id;
+		if (!$this->foe_feature_enabled() || !$this->is_foe($owner_id, $foe_id))
+		{
+			return false;
+		}
+		$this->register_foe_settings($owner_id, array($foe_id));
+		$set = array();
+		if ($this->foe_feature_enabled('notes'))
+		{
+			$set['foe_note'] = utf8_substr(trim((string) $note), 0, self::MAX_FOE_NOTE_LENGTH);
+		}
+		if ($this->foe_feature_enabled('exceptions'))
+		{
+			if ($this->foe_feature_enabled('pm'))
+			{
+				$set['pm_policy'] = $this->normalize_foe_policy($pm_policy);
+			}
+			if ($this->foe_feature_enabled('content'))
+			{
+				$set['content_policy'] = $this->normalize_foe_policy($content_policy);
+			}
+			if ($this->foe_feature_enabled('notifications'))
+			{
+				$set['notification_policy'] = $this->normalize_foe_policy($notification_policy);
+			}
+		}
+		if ($this->foe_feature_enabled('temporary'))
+		{
+			$duration = (int) $duration;
+			$valid_durations = array(self::FOE_DURATION_KEEP, 0, 86400, 604800, 2592000);
+			if (!in_array($duration, $valid_durations, true))
+			{
+				$duration = self::FOE_DURATION_KEEP;
+			}
+			if ($duration !== self::FOE_DURATION_KEEP)
+			{
+				$set['expires_at'] = $duration ? time() + $duration : 0;
+			}
+		}
+		if (!$set)
+		{
+			return true;
+		}
+		$this->db->sql_query('UPDATE ' . $this->foe_settings_table . '
+			SET ' . $this->db->sql_build_array('UPDATE', $set) . '
+			WHERE owner_id = ' . $owner_id . '
+				AND foe_id = ' . $foe_id);
+
+		return true;
+	}
+
+	public function remove_foes($owner_id, array $foe_ids)
+	{
+		$owner_id = (int) $owner_id;
+		$foe_ids = array_slice(array_values(array_unique(array_filter(array_map('intval', $foe_ids)))), 0, self::MAX_BULK_FOES);
+		if (!$owner_id || !$foe_ids)
+		{
+			return 0;
+		}
+		$sql_ids = $this->db->sql_in_set('zebra_id', $foe_ids);
+		$this->db->sql_transaction('begin');
+		try
+		{
+			$this->db->sql_query('UPDATE ' . $this->zebra_table . '
+				SET foe = 0
+				WHERE user_id = ' . $owner_id . ' AND foe = 1 AND ' . $sql_ids);
+			$removed = (int) $this->db->sql_affectedrows();
+			$this->db->sql_query('DELETE FROM ' . $this->zebra_table . '
+				WHERE user_id = ' . $owner_id . ' AND friend = 0 AND foe = 0 AND ' . $sql_ids);
+			$this->db->sql_query('DELETE FROM ' . $this->foe_settings_table . '
+				WHERE owner_id = ' . $owner_id . ' AND ' . $this->db->sql_in_set('foe_id', $foe_ids));
+			$this->db->sql_transaction('commit');
+		}
+		catch (\Throwable $e)
+		{
+			$this->db->sql_transaction('rollback');
+			throw $e;
+		}
+
+		return $removed;
+	}
+
+	public function expire_foes($now = null, $owner_id = 0)
+	{
+		if (!$this->foe_feature_enabled('temporary'))
+		{
+			return 0;
+		}
+		$now = $now === null ? time() : (int) $now;
+		$owner_id = (int) $owner_id;
+		$sql = 'SELECT owner_id, foe_id
+			FROM ' . $this->foe_settings_table . '
+			WHERE expires_at > 0 AND expires_at <= ' . $now;
+		if ($owner_id)
+		{
+			$sql .= ' AND owner_id = ' . $owner_id;
+		}
+		$result = $this->db->sql_query($sql);
+		$owners = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$owners[(int) $row['owner_id']][] = (int) $row['foe_id'];
+		}
+		$this->db->sql_freeresult($result);
+		$removed = 0;
+		foreach ($owners as $owner_id => $foe_ids)
+		{
+			$removed += $this->remove_foes($owner_id, $foe_ids);
+		}
+
+		return $removed;
+	}
+
+	/**
+	 * Return foe IDs for which a protection is currently effective.
+	 */
+	public function get_effective_foe_ids($owner_id, $protection)
+	{
+		$columns = $this->foe_policy_columns($protection);
+		if (!$columns || !(int) $owner_id || !$this->foe_feature_enabled($protection))
+		{
+			return array();
+		}
+		$now = time();
+		$sql = 'SELECT z.zebra_id
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u ON u.user_id = z.user_id
+			LEFT JOIN ' . $this->foe_settings_table . ' fs
+				ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+			WHERE z.user_id = ' . (int) $owner_id . '
+				AND z.foe = 1
+				' . $this->active_foe_sql('fs', $now) . '
+				AND ' . $this->effective_policy_sql('fs.' . $columns[0], 'u.' . $columns[1]);
+		$result = $this->db->sql_query($sql);
+		$ids = array();
+		while (($foe_id = $this->db->sql_fetchfield('zebra_id')) !== false)
+		{
+			$ids[] = (int) $foe_id;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $ids;
+	}
+
+	public function filter_foe_notification_recipients($actor_id, array $notify_users)
+	{
+		if (!$this->foe_feature_enabled('notifications'))
+		{
+			return $notify_users;
+		}
+		$actor_id = (int) $actor_id;
+		$recipient_ids = array_values(array_filter(array_map('intval', array_keys($notify_users))));
+		if (!$actor_id || !$recipient_ids)
+		{
+			return $notify_users;
+		}
+		$now = time();
+		$sql = 'SELECT z.user_id
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u ON u.user_id = z.user_id
+			LEFT JOIN ' . $this->foe_settings_table . ' fs
+				ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+			WHERE z.zebra_id = ' . $actor_id . '
+				AND z.foe = 1
+				AND ' . $this->db->sql_in_set('z.user_id', $recipient_ids) . '
+				' . $this->active_foe_sql('fs', $now) . '
+				AND ' . $this->effective_policy_sql('fs.notification_policy', 'u.zebra_mute_foe_notifications');
+		$result = $this->db->sql_query($sql);
+		while (($recipient_id = $this->db->sql_fetchfield('user_id')) !== false)
+		{
+			unset($notify_users[(int) $recipient_id]);
+		}
+		$this->db->sql_freeresult($result);
+
+		return $notify_users;
+	}
+
+	/**
+	 * Return foe IDs and their current normalized usernames for quote matching.
+	 */
+	public function get_foe_identities($owner_id)
+	{
+		$owner_id = (int) $owner_id;
+		if (!$owner_id)
+		{
+			return array();
+		}
+
+		$identities = array();
+		$foe_ids = $this->get_effective_foe_ids($owner_id, 'content');
+		if (!$foe_ids)
+		{
+			return array();
+		}
+		$sql = 'SELECT z.zebra_id, u.username_clean
+			FROM ' . $this->zebra_table . ' z
+			INNER JOIN ' . $this->users_table . ' u
+				ON u.user_id = z.zebra_id
+			WHERE z.user_id = ' . $owner_id . '
+				AND z.foe = 1
+				AND ' . $this->db->sql_in_set('z.zebra_id', $foe_ids);
+		$result = $this->db->sql_query($sql);
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$identities[(int) $row['zebra_id']] = (string) $row['username_clean'];
+		}
+		$this->db->sql_freeresult($result);
+
+		return $identities;
+	}
+
+	/**
+	 * Remove users who opted to reject PMs from foes from a PM address list.
+	 *
+	 * A group is removed as a whole when any active member would block the
+	 * sender. phpBB expands group recipients only after its last filter event,
+	 * so partial group delivery would otherwise bypass the preference.
+	 */
+	public function filter_pm_address_list($sender_id, array $address_list)
+	{
+		if (!$this->foe_feature_enabled('pm'))
+		{
+			return $address_list;
+		}
+		$sender_id = (int) $sender_id;
+		if (!$sender_id)
+		{
+			return $address_list;
+		}
+
+		$user_ids = !empty($address_list['u'])
+			? array_values(array_filter(array_map('intval', array_keys($address_list['u']))))
+			: array();
+		if ($user_ids)
+		{
+			$now = time();
+			$sql = 'SELECT z.user_id AS recipient_id
+				FROM ' . $this->zebra_table . ' z
+				INNER JOIN ' . $this->users_table . ' u
+					ON u.user_id = z.user_id
+				LEFT JOIN ' . $this->foe_settings_table . ' fs
+					ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+				WHERE z.zebra_id = ' . $sender_id . '
+					AND z.foe = 1
+					' . $this->active_foe_sql('fs', $now) . '
+					AND ' . $this->effective_policy_sql('fs.pm_policy', 'u.zebra_block_foe_pm') . '
+					AND ' . $this->db->sql_in_set('z.user_id', $user_ids);
+			$result = $this->db->sql_query($sql);
+			while (($recipient_id = $this->db->sql_fetchfield('recipient_id')) !== false)
+			{
+				unset($address_list['u'][(int) $recipient_id]);
+			}
+			$this->db->sql_freeresult($result);
+			if (empty($address_list['u']))
+			{
+				unset($address_list['u']);
+			}
+		}
+
+		$group_ids = !empty($address_list['g'])
+			? array_values(array_filter(array_map('intval', array_keys($address_list['g']))))
+			: array();
+		if ($group_ids)
+		{
+			$sql_allow_pm = (!$this->auth->acl_gets('a_', 'm_') && !$this->auth->acl_getf_global('m_'))
+				? ' AND u.user_allow_pm = 1'
+				: '';
+			$sql = 'SELECT DISTINCT ug.group_id AS recipient_group_id
+				FROM ' . $this->user_group_table . ' ug
+				INNER JOIN ' . $this->zebra_table . ' z
+					ON z.user_id = ug.user_id
+					AND z.zebra_id = ' . $sender_id . '
+					AND z.foe = 1
+				INNER JOIN ' . $this->users_table . ' u
+					ON u.user_id = ug.user_id
+				LEFT JOIN ' . $this->foe_settings_table . ' fs
+					ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+				WHERE ug.user_pending = 0
+					AND u.user_type IN (' . USER_NORMAL . ', ' . USER_FOUNDER . ')' .
+					$sql_allow_pm . '
+					' . $this->active_foe_sql('fs', time()) . '
+					AND ' . $this->effective_policy_sql('fs.pm_policy', 'u.zebra_block_foe_pm') . '
+					AND ' . $this->db->sql_in_set('ug.group_id', $group_ids);
+			$result = $this->db->sql_query($sql);
+			while (($group_id = $this->db->sql_fetchfield('recipient_group_id')) !== false)
+			{
+				unset($address_list['g'][(int) $group_id]);
+			}
+			$this->db->sql_freeresult($result);
+			if (empty($address_list['g']))
+			{
+				unset($address_list['g']);
+			}
+		}
+
+		return $address_list;
 	}
 
 	/**
@@ -1214,6 +1693,60 @@ class relationship_manager
 		);
 	}
 
+	protected function foe_search_sql($search, $user_alias)
+	{
+		$search = utf8_clean_string(utf8_substr(trim((string) $search), 0, self::MAX_FOE_SEARCH_LENGTH));
+		if ($search === '')
+		{
+			return '';
+		}
+
+		return ' AND ' . $user_alias . '.username_clean ' . $this->db->sql_like_expression(
+			$this->db->get_any_char() . $search . $this->db->get_any_char()
+		);
+	}
+
+	protected function normalize_foe_policy($policy)
+	{
+		$policy = (int) $policy;
+		return in_array($policy, array(self::POLICY_INHERIT, self::POLICY_ALLOW, self::POLICY_BLOCK), true)
+			? $policy
+			: self::POLICY_INHERIT;
+	}
+
+	protected function foe_policy_columns($protection)
+	{
+		$columns = array(
+			'pm'            => array('pm_policy', 'zebra_block_foe_pm'),
+			'content'       => array('content_policy', 'zebra_hide_foe_content'),
+			'notifications' => array('notification_policy', 'zebra_mute_foe_notifications'),
+		);
+
+		return isset($columns[$protection]) ? $columns[$protection] : false;
+	}
+
+	protected function effective_policy_sql($policy_column, $global_column)
+	{
+		if (!$this->foe_feature_enabled('exceptions'))
+		{
+			return $global_column . ' = 1';
+		}
+		return '((' . $policy_column . ' = ' . self::POLICY_BLOCK . ')
+			OR ((' . $policy_column . ' IS NULL OR ' . $policy_column . ' = ' . self::POLICY_INHERIT . ')
+				AND ' . $global_column . ' = 1))';
+	}
+
+	protected function active_foe_sql($settings_alias, $now)
+	{
+		if (!$this->foe_feature_enabled('temporary'))
+		{
+			return '';
+		}
+
+		return 'AND (' . $settings_alias . '.foe_id IS NULL OR ' . $settings_alias . '.expires_at = 0
+			OR ' . $settings_alias . '.expires_at > ' . (int) $now . ')';
+	}
+
 	/**
 	 * Return requests with the other user's public identity fields.
 	 */
@@ -1559,6 +2092,9 @@ class relationship_manager
 		$this->db->sql_query('DELETE FROM ' . $this->cooldowns_table . '
 			WHERE ' . $this->db->sql_in_set('requester_id', $user_ids) . '
 				OR ' . $this->db->sql_in_set('recipient_id', $user_ids));
+		$this->db->sql_query('DELETE FROM ' . $this->foe_settings_table . '
+			WHERE ' . $this->db->sql_in_set('owner_id', $user_ids) . '
+				OR ' . $this->db->sql_in_set('foe_id', $user_ids));
 
 		$owned_circle_ids = array();
 		$result = $this->db->sql_query('SELECT circle_id

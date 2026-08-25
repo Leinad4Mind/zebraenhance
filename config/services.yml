@@ -15,9 +15,21 @@ services:
             - '%core.table_prefix%zebra_circles'
             - '%core.table_prefix%zebra_circle_members'
             - '%core.table_prefix%users'
+            - '%core.table_prefix%user_group'
             - '%core.table_prefix%notifications'
             - '%core.table_prefix%notification_emails'
             - '%core.table_prefix%notification_types'
+            - '%core.table_prefix%zebra_foe_settings'
+
+    anavaro.zebraenhance.cron.expire_foes:
+        class: anavaro\zebraenhance\cron\task\expire_foes
+        arguments:
+            - '@anavaro.zebraenhance.relationships'
+            - '@config'
+        calls:
+            - [set_name, [anavaro.zebraenhance.cron.expire_foes]]
+        tags:
+            - { name: cron.task }
 
     anavaro.zebraenhance.listener:
         class: anavaro\zebraenhance\event\zebra_listener
