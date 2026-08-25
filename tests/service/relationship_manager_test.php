@@ -40,6 +40,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$factory = new \phpbb\db\tools\factory();
 		$this->db_tools = $factory->get($this->db);
 		$this->ensure_extension_columns();
+		$this->db->sql_query('DELETE FROM phpbb_zebra_foe_settings');
 		$this->auth = $this->getMockBuilder('\phpbb\auth\auth')
 			->disableOriginalConstructor()
 			->getMock();
@@ -50,6 +51,13 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->config = new \phpbb\config\config(array(
 			'ze_max_pending_requests' => 100,
 			'ze_decline_cooldown_days' => 7,
+			'ze_foes_enhancement' => 1,
+			'ze_foe_pm' => 1,
+			'ze_foe_content' => 1,
+			'ze_foe_notifications' => 1,
+			'ze_foe_temporary' => 1,
+			'ze_foe_notes' => 1,
+			'ze_foe_exceptions' => 1,
 		));
 		$this->relationships = new \anavaro\zebraenhance\service\relationship_manager(
 			$this->db,
@@ -65,9 +73,11 @@ class relationship_manager_test extends \phpbb_database_test_case
 			'phpbb_zebra_circles',
 			'phpbb_zebra_circle_members',
 			'phpbb_users',
+			'phpbb_user_group',
 			'phpbb_notifications',
 			'phpbb_notification_emails',
-			'phpbb_notification_types'
+			'phpbb_notification_types',
+			'phpbb_zebra_foe_settings'
 		);
 	}
 
@@ -92,6 +102,18 @@ class relationship_manager_test extends \phpbb_database_test_case
 		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_request_policy'))
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'zebra_request_policy', array('UINT', 0));
+		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_block_foe_pm'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_block_foe_pm', array('BOOL', 0));
+		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_hide_foe_content'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_hide_foe_content', array('BOOL', 0));
+		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_mute_foe_notifications'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_mute_foe_notifications', array('BOOL', 0));
 		}
 	}
 
@@ -592,6 +614,156 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$result = $this->db->sql_query('SELECT zebra_request_policy FROM phpbb_users WHERE user_id = 2');
 		$this->assertSame(2, (int) $this->db->sql_fetchfield('zebra_request_policy'));
 		$this->db->sql_freeresult($result);
+	}
+
+	public function test_block_foe_pm_preference_is_persisted()
+	{
+		$this->assertTrue($this->relationships->set_block_foe_pm(2, true));
+		$result = $this->db->sql_query('SELECT zebra_block_foe_pm FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(1, (int) $this->db->sql_fetchfield('zebra_block_foe_pm'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertFalse($this->relationships->set_block_foe_pm(2, false));
+	}
+
+	public function test_hide_foe_content_preference_is_persisted()
+	{
+		$this->assertTrue($this->relationships->set_hide_foe_content(2, true));
+		$result = $this->db->sql_query('SELECT zebra_hide_foe_content FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(1, (int) $this->db->sql_fetchfield('zebra_hide_foe_content'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertFalse($this->relationships->set_hide_foe_content(2, false));
+	}
+
+	public function test_mute_foe_notifications_preference_is_persisted()
+	{
+		$this->assertTrue($this->relationships->set_mute_foe_notifications(2, true));
+		$result = $this->db->sql_query('SELECT zebra_mute_foe_notifications FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(1, (int) $this->db->sql_fetchfield('zebra_mute_foe_notifications'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertFalse($this->relationships->set_mute_foe_notifications(2, false));
+	}
+
+	public function test_master_switch_bypasses_all_enhanced_foe_behaviour()
+	{
+		$this->config->set('ze_foes_enhancement', 0);
+		$this->db->sql_query('UPDATE phpbb_users
+			SET zebra_block_foe_pm = 1, zebra_hide_foe_content = 1, zebra_mute_foe_notifications = 1
+			WHERE user_id = 4');
+		$address_list = array('u' => array(4 => 'to'));
+		$recipients = array(4 => array('notification.method.board'));
+
+		$this->assertFalse($this->relationships->foe_feature_enabled());
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(5, $address_list));
+		$this->assertSame(array(), $this->relationships->get_foe_identities(4));
+		$this->assertSame($recipients, $this->relationships->filter_foe_notification_recipients(5, $recipients));
+		$this->assertSame(0, $this->relationships->expire_foes(time() + 90000, 4));
+		$this->assertFalse($this->relationships->update_foe(4, 5, 86400, 'ignored', 2, 2, 2));
+	}
+
+	public function test_disabled_exceptions_use_only_the_global_preference()
+	{
+		$this->config->set('ze_foe_exceptions', 0);
+		$this->relationships->register_foe_settings(4, array(5));
+		$this->db->sql_query('UPDATE phpbb_zebra_foe_settings
+			SET content_policy = 2
+			WHERE owner_id = 4 AND foe_id = 5');
+
+		$this->assertSame(array(), $this->relationships->get_effective_foe_ids(4, 'content'));
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_hide_foe_content = 1 WHERE user_id = 4');
+		$this->db->sql_query('UPDATE phpbb_zebra_foe_settings
+			SET content_policy = 1
+			WHERE owner_id = 4 AND foe_id = 5');
+		$this->assertSame(array(5), $this->relationships->get_effective_foe_ids(4, 'content'));
+	}
+
+	public function test_foe_identities_include_normalized_usernames()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_hide_foe_content = 1 WHERE user_id = 4');
+		$this->assertSame(array(5 => 'user5'), $this->relationships->get_foe_identities(4));
+		$this->assertSame(array(), $this->relationships->get_foe_identities(0));
+	}
+
+	public function test_foe_manager_search_notes_and_individual_policies()
+	{
+		$this->relationships->register_foe_settings(4, array(5), 1234);
+		$this->assertTrue($this->relationships->update_foe(4, 5, -1, '  Temporary conflict  ', 1, 2, 2));
+
+		$this->assertSame(1, $this->relationships->count_foes(4, 'USER5'));
+		$foes = $this->relationships->get_foes(4, 25, 0, 'user5');
+		$this->assertCount(1, $foes);
+		$this->assertSame(1234, (int) $foes[0]['added_at']);
+		$this->assertSame('Temporary conflict', $foes[0]['foe_note']);
+		$this->assertSame(1, (int) $foes[0]['pm_policy']);
+		$this->assertSame(2, (int) $foes[0]['content_policy']);
+		$this->assertSame(2, (int) $foes[0]['notification_policy']);
+		$this->assertSame(array(5), $this->relationships->get_effective_foe_ids(4, 'content'));
+	}
+
+	public function test_notification_policy_can_inherit_allow_or_block()
+	{
+		$this->relationships->register_foe_settings(4, array(5));
+		$recipients = array(4 => array('notification.method.board'), 3 => array('notification.method.board'));
+
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_mute_foe_notifications = 1 WHERE user_id = 4');
+		$this->assertSame(
+			array(3 => array('notification.method.board')),
+			$this->relationships->filter_foe_notification_recipients(5, $recipients)
+		);
+
+		$this->relationships->update_foe(4, 5, -1, '', 0, 0, 1);
+		$this->assertSame($recipients, $this->relationships->filter_foe_notification_recipients(5, $recipients));
+
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_mute_foe_notifications = 0 WHERE user_id = 4');
+		$this->relationships->update_foe(4, 5, -1, '', 0, 0, 2);
+		$this->assertSame(
+			array(3 => array('notification.method.board')),
+			$this->relationships->filter_foe_notification_recipients(5, $recipients)
+		);
+	}
+
+	public function test_temporary_foes_expire_and_are_removed()
+	{
+		$this->relationships->register_foe_settings(4, array(5));
+		$this->assertTrue($this->relationships->update_foe(4, 5, 86400, '', 0, 0, 0));
+		$this->assertSame(1, $this->relationships->expire_foes(time() + 90000, 4));
+		$this->assertSame(0, $this->relationships->count_foes(4));
+		$result = $this->db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra_foe_settings
+			WHERE owner_id = 4 AND foe_id = 5');
+		$this->assertSame(0, (int) $this->db->sql_fetchfield('total'));
+		$this->db->sql_freeresult($result);
+	}
+
+	public function test_pm_filter_removes_opted_in_foes_and_affected_groups()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 1 WHERE user_id = 4');
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (4, 3, 0, 1, 0)');
+		$this->db->sql_query('INSERT INTO phpbb_user_group
+			(group_id, user_id, group_leader, user_pending)
+			VALUES (2, 4, 0, 0)');
+		$address_list = array(
+			'u' => array(4 => 'to', 5 => 'bcc'),
+			'g' => array(2 => 'to', 5 => 'bcc'),
+		);
+
+		$this->assertSame(array(
+			'u' => array(5 => 'bcc'),
+			'g' => array(5 => 'bcc'),
+		), $this->relationships->filter_pm_address_list(3, $address_list));
+	}
+
+	public function test_pm_filter_does_not_apply_without_recipient_opt_in()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (4, 3, 0, 1, 0)');
+		$address_list = array('u' => array(4 => 'to'));
+
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
 	}
 
 	public function test_friend_list_visibility_change_dispatches_event()

@@ -427,6 +427,204 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_acp_controls_foe_options_exposed_in_ucp()
+	{
+		$db = $this->get_db();
+		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
+			WHERE config_name = 'ze_foes_enhancement'");
+		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(0, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
+		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
+		$this->assertSame(0, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
+		$this->assertStringNotContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->logout();
+
+		$this->enable_foe_enhancements();
+		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
+			WHERE config_name = 'ze_foe_content'");
+		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
+		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
+		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
+		$this->assertStringContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->logout();
+	}
+
+	public function test_user_can_toggle_foe_privacy_settings_in_ucp()
+	{
+		$this->enable_foe_enhancements();
+		$db = $this->get_db();
+		$db->sql_query('UPDATE phpbb_users
+			SET zebra_block_foe_pm = 0, zebra_hide_foe_content = 0, zebra_mute_foe_notifications = 0
+			WHERE user_id = 2');
+		$crawler = $this->open_friends_as('admin');
+		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
+		$this->assertSame('0', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
+		$this->assertSame(2, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
+		$this->assertSame('0', $crawler->filter('input[name=zebra_hide_foe_content]:checked')->attr('value'));
+		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
+		$this->assertSame('0', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
+
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_block_foe_pm'] = 1;
+		$form['zebra_hide_foe_content'] = 1;
+		$form['zebra_mute_foe_notifications'] = 1;
+		self::submit($form);
+
+		$result = $db->sql_query('SELECT zebra_block_foe_pm, zebra_hide_foe_content, zebra_mute_foe_notifications
+			FROM phpbb_users WHERE user_id = 2');
+		$row = $db->sql_fetchrow($result);
+		$this->assertSame(1, (int) $row['zebra_block_foe_pm']);
+		$this->assertSame(1, (int) $row['zebra_hide_foe_content']);
+		$this->assertSame(1, (int) $row['zebra_mute_foe_notifications']);
+		$db->sql_freeresult($result);
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$this->assertSame('1', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
+		$this->assertSame('1', $crawler->filter('input[name=zebra_hide_foe_content]:checked')->attr('value'));
+		$this->assertSame('1', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_block_foe_pm'] = 0;
+		$form['zebra_hide_foe_content'] = 0;
+		$form['zebra_mute_foe_notifications'] = 0;
+		self::submit($form);
+		$this->logout();
+	}
+
+	public function test_enhanced_foe_manager_saves_exceptions_and_bulk_removes()
+	{
+		$this->enable_foe_enhancements();
+		$username = 'zemanagedfoe';
+		$foe_id = $this->create_user($username);
+		$db = $this->get_db();
+		$db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (2, ' . (int) $foe_id . ', 0, 1, 0)');
+		$db->sql_query('INSERT INTO phpbb_zebra_foe_settings
+			(owner_id, foe_id, added_at, expires_at, foe_note, pm_policy, content_policy, notification_policy)
+			VALUES (2, ' . (int) $foe_id . ", 1234, 0, '', 0, 0, 0)");
+
+		$this->login();
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$result = $db->sql_query("SELECT module_id, parent_id FROM phpbb_modules
+			WHERE module_basename = '\\anavaro\\zebraenhance\\ucp\\foes_module'
+				AND module_mode = 'manage'");
+		$module = $db->sql_fetchrow($result);
+		$db->sql_freeresult($result);
+		$module_id = (int) $module['module_id'];
+		$this->assertGreaterThan(0, $module_id);
+		$navigation = self::request('GET', 'ucp.php?i=' . (int) $module['parent_id'] . '&sid=' . $this->sid);
+		$manager_link = $navigation->selectLink($this->lang('ZE_UCP_FOE_MANAGER'))->link()->getUri();
+		$url = $this->local_path($manager_link);
+		$url .= (strpos($url, '?') === false ? '?' : '&') . 'ze_foe_q=' . rawurlencode($username);
+		$crawler = self::request('GET', $url);
+		$this->assertStringContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
+		$this->assertSame(1, $crawler->filter('.ze-foe-row')->count());
+		$this->assertStringContainsString($username, $crawler->filter('.ze-foe-heading')->text());
+
+		$save_url = $crawler->filter('.ze-foe-row')->attr('data-save-url');
+		$response = $this->post_action($save_url, array_merge($this->form_token($crawler), array(
+			'note'                => 'Private context',
+			'duration'            => 86400,
+			'pm_policy'           => 1,
+			'content_policy'      => 2,
+			'notification_policy' => 2,
+		)));
+		$this->assertTrue($response['success']);
+
+		$result = $db->sql_query('SELECT expires_at, foe_note, pm_policy, content_policy, notification_policy
+			FROM phpbb_zebra_foe_settings
+			WHERE owner_id = 2 AND foe_id = ' . (int) $foe_id);
+		$row = $db->sql_fetchrow($result);
+		$db->sql_freeresult($result);
+		$this->assertGreaterThan(time(), (int) $row['expires_at']);
+		$this->assertSame('Private context', $row['foe_note']);
+		$this->assertSame(1, (int) $row['pm_policy']);
+		$this->assertSame(2, (int) $row['content_policy']);
+		$this->assertSame(2, (int) $row['notification_policy']);
+
+		$crawler = self::request('GET', $url);
+		$remove_url = $crawler->filter('.js-ze-remove-foes')->attr('data-url');
+		$response = $this->post_action($remove_url, array_merge($this->form_token($crawler), array(
+			'foe_ids' => array($foe_id),
+		)));
+		$this->assertTrue($response['success']);
+		$this->assertSame(1, (int) $response['removed']);
+
+		$result = $db->sql_query('SELECT COUNT(*) AS total FROM phpbb_zebra
+			WHERE user_id = 2 AND zebra_id = ' . (int) $foe_id . ' AND foe = 1');
+		$this->assertSame(0, (int) $db->sql_fetchfield('total'));
+		$db->sql_freeresult($result);
+		$this->logout();
+	}
+
+	public function test_opted_in_user_rejects_private_messages_from_foes()
+	{
+		$this->enable_foe_enhancements();
+		$sender = 'zepmsender';
+		$recipient = 'zepmrecipient';
+		$sender_id = $this->create_user($sender);
+		$recipient_id = $this->create_user($recipient);
+		$db = $this->get_db();
+		$db->sql_query('UPDATE phpbb_users
+			SET zebra_block_foe_pm = 1
+			WHERE user_id = ' . (int) $recipient_id);
+		$db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (' . (int) $recipient_id . ', ' . (int) $sender_id . ', 0, 1, 0)');
+
+		$this->login($sender);
+		$this->add_lang('ucp');
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', "ucp.php?i=pm&mode=compose&u={$recipient_id}&sid={$this->sid}");
+
+		$this->assertStringContainsString(
+			$this->lang('ZE_PM_RECIPIENTS_BLOCKED'),
+			$crawler->filter('html')->text()
+		);
+		$this->assertSame(0, $crawler->filter('input[name^="address_list[u]"]')->count());
+		$this->logout();
+	}
+
+	public function test_opted_in_user_does_not_see_foe_posts_or_quotes()
+	{
+		$this->enable_foe_enhancements();
+		$foe = 'zehiddenfoe';
+		$viewer = 'zecontentviewer';
+		$foe_id = $this->create_user($foe);
+		$viewer_id = $this->create_user($viewer);
+
+		$this->login($foe);
+		$topic = $this->create_topic(2, 'ZE foe content topic', 'ze-foe-original-body');
+		$this->logout();
+
+		$this->login();
+		$quote = '[quote=' . $foe . ' post_id=' . (int) $topic['post_id'] . ' user_id=' . (int) $foe_id . ']'
+			. 'ze-foe-quoted-body[/quote] ze-visible-reply-body';
+		$this->create_post(2, $topic['topic_id'], 'Re: ZE foe content topic', $quote);
+		$this->logout();
+
+		$db = $this->get_db();
+		$db->sql_query('UPDATE phpbb_users
+			SET zebra_hide_foe_content = 1
+			WHERE user_id = ' . (int) $viewer_id);
+		$db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (' . (int) $viewer_id . ', ' . (int) $foe_id . ', 0, 1, 0)');
+
+		$this->login($viewer);
+		$crawler = self::request('GET', 'viewtopic.php?t=' . (int) $topic['topic_id'] . "&sid={$this->sid}");
+		$page_text = $crawler->filter('html')->text();
+		$this->assertStringNotContainsString('ze-foe-original-body', $page_text);
+		$this->assertStringNotContainsString('ze-foe-quoted-body', $page_text);
+		$this->assertStringContainsString('ze-visible-reply-body', $page_text);
+		$this->assertSame(0, $crawler->filter('#p' . (int) $topic['post_id'])->count());
+
+		$crawler = self::request('GET', 'search.php?author_id=' . (int) $foe_id . '&sr=posts&sid=' . $this->sid);
+		$this->assertSame(0, $crawler->filter('div.search.post')->count());
+		$this->logout();
+	}
+
 	public function test_acp_request_limits_can_be_saved()
 	{
 		$this->login();
@@ -436,17 +634,37 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = self::request('GET', $url);
 		$this->assertSame(1, $crawler->filter('input[name=ze_max_pending_requests]')->count());
 		$this->assertSame(1, $crawler->filter('input[name=ze_decline_cooldown_days]')->count());
+		$this->assertSame(2, $crawler->filter('input[name=ze_foes_enhancement]')->count());
+		$this->assertSame(1, $crawler->filter('#ze-foe-feature-options')->count());
 
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
 		$form['ze_max_pending_requests'] = 12;
 		$form['ze_decline_cooldown_days'] = 3;
+		$form['ze_foes_enhancement'] = 1;
+		$form['ze_foe_pm'] = 1;
+		$form['ze_foe_content'] = 0;
+		$form['ze_foe_notifications'] = 1;
+		$form['ze_foe_temporary'] = 0;
+		$form['ze_foe_notes'] = 1;
+		$form['ze_foe_exceptions'] = 0;
 		$crawler = self::submit($form);
 		$this->assertStringContainsString($this->lang('ACP_ZEBRA_ENHANCE_SAVED'), $crawler->filter('#main')->text());
 
 		$crawler = self::request('GET', $url);
+		$this->assertSame('1', $crawler->filter('input[name=ze_foes_enhancement]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=ze_foe_content]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=ze_foe_temporary]:checked')->attr('value'));
+		$this->assertSame('0', $crawler->filter('input[name=ze_foe_exceptions]:checked')->attr('value'));
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
 		$form['ze_max_pending_requests'] = 100;
 		$form['ze_decline_cooldown_days'] = 7;
+		$form['ze_foes_enhancement'] = 0;
+		$form['ze_foe_pm'] = 1;
+		$form['ze_foe_content'] = 1;
+		$form['ze_foe_notifications'] = 1;
+		$form['ze_foe_temporary'] = 1;
+		$form['ze_foe_notes'] = 1;
+		$form['ze_foe_exceptions'] = 1;
 		self::submit($form);
 		$this->logout();
 	}
@@ -493,6 +711,22 @@ class zebraenhance_requests_test extends zebraenhance_base
 		}
 
 		$this->logout();
+	}
+
+	protected function enable_foe_enhancements()
+	{
+		$db = $this->get_db();
+		$db->sql_query("UPDATE phpbb_config
+			SET config_value = '1', is_dynamic = 1
+			WHERE " . $db->sql_in_set('config_name', array(
+				'ze_foes_enhancement',
+				'ze_foe_pm',
+				'ze_foe_content',
+				'ze_foe_notifications',
+				'ze_foe_temporary',
+				'ze_foe_notes',
+				'ze_foe_exceptions',
+			)));
 	}
 
 	protected function send_request_as_admin($username)
