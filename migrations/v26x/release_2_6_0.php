@@ -100,19 +100,31 @@ class release_2_6_0 extends \phpbb\db\migration\migration
 		);
 	}
 
-	public function migrate_existing_foes()
+	public function migrate_existing_foes($state = 0)
 	{
 		$settings_table = $this->table_prefix . 'zebra_foe_settings';
+		$owner_id = is_array($state) && isset($state['owner_id']) ? (int) $state['owner_id'] : 0;
+		$foe_id = is_array($state) && isset($state['foe_id']) ? (int) $state['foe_id'] : 0;
 		$rows = array();
-		$result = $this->db->sql_query('SELECT user_id, zebra_id
-			FROM ' . $this->table_prefix . 'zebra
-			WHERE foe = 1');
+		$sql = 'SELECT z.user_id, z.zebra_id
+			FROM ' . $this->table_prefix . 'zebra z
+			LEFT JOIN ' . $settings_table . ' fs
+				ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+			WHERE z.foe = 1
+				AND fs.owner_id IS NULL';
+		if ($owner_id)
+		{
+			$sql .= ' AND (z.user_id > ' . $owner_id . '
+				OR (z.user_id = ' . $owner_id . ' AND z.zebra_id > ' . $foe_id . '))';
+		}
+		$sql .= ' ORDER BY z.user_id ASC, z.zebra_id ASC';
+		$result = $this->db->sql_query_limit($sql, 500);
 		while ($row = $this->db->sql_fetchrow($result))
 		{
 			$rows[] = array(
 				'owner_id'   => (int) $row['user_id'],
 				'foe_id'     => (int) $row['zebra_id'],
-				'added_at'   => time(),
+				'added_at'   => 0,
 				'expires_at' => 0,
 			);
 		}
@@ -122,5 +134,16 @@ class release_2_6_0 extends \phpbb\db\migration\migration
 		{
 			$this->db->sql_multi_insert($settings_table, $batch);
 		}
+
+		if (count($rows) === 500)
+		{
+			$last = end($rows);
+			return array(
+				'owner_id' => (int) $last['owner_id'],
+				'foe_id'   => (int) $last['foe_id'],
+			);
+		}
+
+		return null;
 	}
 }

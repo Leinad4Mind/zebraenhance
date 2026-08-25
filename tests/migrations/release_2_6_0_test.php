@@ -42,7 +42,8 @@ class release_2_6_0_test extends \phpbb_test_case
 
 	public function test_data_registers_cron_module_and_version()
 	{
-		$data = $this->migration()->update_data();
+		$migration = $this->migration();
+		$data = $migration->update_data();
 		$this->assertContains(
 			array('permission.add', array('u_zebraenhance_use_friend_requests', true, 'u_ze_use')),
 			$data
@@ -66,6 +67,7 @@ class release_2_6_0_test extends \phpbb_test_case
 		$this->assertContains(array('config.add', array('ze_foe_notes', 1)), $data);
 		$this->assertContains(array('config.add', array('ze_foe_exceptions', 1)), $data);
 		$this->assertContains(array('config.add', array('ze_foe_expiry_gc', 3600)), $data);
+		$this->assertContains(array('custom', array(array($migration, 'migrate_existing_foes'))), $data);
 		$this->assertContains(array('config.update', array('zebra_enhance_version', '2.6.0')), $data);
 		$modules = array_values(array_filter($data, function ($operation)
 		{
