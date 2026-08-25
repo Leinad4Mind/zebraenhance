@@ -66,6 +66,7 @@ class notification_types_test extends \phpbb_test_case
 
 	public function test_request_message_is_stored_with_notification()
 	{
+		$this->disable_word_censor_for_test();
 		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
 		$notification = $this->notification('\anavaro\zebraenhance\notification\zebraadd', $auth);
 		$notification->create_insert_array(array(
@@ -78,6 +79,40 @@ class notification_types_test extends \phpbb_test_case
 
 		$this->assertSame('Hello there', $data['request_message']);
 		$this->assertSame('Hello there', $notification->get_reference());
+	}
+
+	public function test_request_message_is_safe_for_html_and_decoded_for_plaintext_email()
+	{
+		$this->disable_word_censor_for_test();
+		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
+		$notification = $this->notification('\anavaro\zebraenhance\notification\zebraadd', $auth);
+		$user_loader = $this->getMockBuilder('\phpbb\user_loader')->disableOriginalConstructor()->getMock();
+		$user_loader->expects($this->once())->method('get_user')->with(3)->willReturn(array(
+			'username' => 'Requester',
+		));
+		$notification->set_user_loader($user_loader);
+		$notification->create_insert_array(array(
+			'request_id' => 42,
+			'requester_id' => 3,
+			'request_message' => 'Fish &amp; Chips &lt;b&gt;',
+		));
+
+		$this->assertSame('Fish &amp; Chips &lt;b&gt;', $notification->get_reference());
+		$this->assertSame(
+			'Fish & Chips <b>',
+			$notification->get_email_template_variables()['REQUEST_MESSAGE']
+		);
+	}
+
+	protected function disable_word_censor_for_test()
+	{
+		global $config, $user, $auth;
+
+		$config = new \phpbb\config\config(array('allow_nocensors' => 1));
+		$user = $this->getMockBuilder('\phpbb\user')->disableOriginalConstructor()->getMock();
+		$user->method('optionget')->with('viewcensors')->willReturn(false);
+		$auth = $this->getMockBuilder('\phpbb\auth\auth')->disableOriginalConstructor()->getMock();
+		$auth->method('acl_get')->with('u_chgcensors')->willReturn(true);
 	}
 
 	protected function notification($class, $auth)

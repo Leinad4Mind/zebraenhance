@@ -806,7 +806,7 @@ class relationship_manager
 		$set = array();
 		if ($this->foe_feature_enabled('notes'))
 		{
-			$set['foe_note'] = utf8_substr(trim((string) $note), 0, self::MAX_FOE_NOTE_LENGTH);
+			$set['foe_note'] = $this->normalize_encoded_text($note, self::MAX_FOE_NOTE_LENGTH);
 		}
 		if ($this->foe_feature_enabled('exceptions'))
 		{
@@ -1856,13 +1856,12 @@ class relationship_manager
 
 	protected function normalize_request_message($request_message)
 	{
-		$request_message = trim((string) $request_message);
-		return utf8_substr($request_message, 0, 255);
+		return $this->normalize_encoded_text($request_message, 255);
 	}
 
 	protected function normalize_circle_name($circle_name)
 	{
-		$circle_name = trim(utf8_substr(trim((string) $circle_name), 0, self::MAX_CIRCLE_NAME_LENGTH));
+		$circle_name = $this->normalize_encoded_text($circle_name, self::MAX_CIRCLE_NAME_LENGTH);
 		$circle_name_clean = utf8_substr(utf8_clean_string($circle_name), 0, self::MAX_CIRCLE_NAME_LENGTH);
 		if ($circle_name === '' || $circle_name_clean === '')
 		{
@@ -1873,6 +1872,20 @@ class relationship_manager
 			'display' => $circle_name,
 			'clean'   => $circle_name_clean,
 		);
+	}
+
+	protected function normalize_encoded_text($value, $max_length)
+	{
+		$value = html_entity_decode(trim((string) $value), ENT_COMPAT, 'UTF-8');
+		$value = utf8_substr($value, 0, (int) $max_length);
+		$encoded = utf8_htmlspecialchars($value);
+		while (utf8_strlen($encoded) > $max_length && $value !== '')
+		{
+			$value = utf8_substr($value, 0, utf8_strlen($value) - 1);
+			$encoded = utf8_htmlspecialchars($value);
+		}
+
+		return $encoded;
 	}
 
 	protected function get_circle_by_clean_name($owner_id, $circle_name_clean)

@@ -48,7 +48,7 @@ $lang = array_merge($lang, array(
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Você não tem acesso para ver a lista de amigos do usuário.',
 
-	'FRIENDLIST_TITLE'       => 'Friend list',
+	'FRIENDLIST_TITLE'       => 'Lista de Amigos',
 	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
 	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
 	'ZE_DECLINE_BLOCK_REQUEST' => 'Recusar e bloquear solicitante',

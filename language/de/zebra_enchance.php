@@ -49,7 +49,7 @@ $lang = array_merge($lang, array(
 
 	'FRIENDLIST_ERROR_ACCESS'				=> 'Du hast keine Berechtigung die Benutzer-Freundesliste zu sehen.',
 
-	'FRIENDLIST_TITLE'       => 'Friend list',
+	'FRIENDLIST_TITLE'       => 'Freundesliste',
 	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
 	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
 	'ZE_DECLINE_BLOCK_REQUEST' => 'Decline and block requester',

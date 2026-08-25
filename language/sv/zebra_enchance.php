@@ -49,7 +49,7 @@ $lang = array_merge($lang, array(
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Du är ej behörig att se denna vänlista.',
 
-	'FRIENDLIST_TITLE'       => 'Friend list',
+	'FRIENDLIST_TITLE'       => 'Vänlista',
 	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
 	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
 	'ZE_DECLINE_BLOCK_REQUEST' => 'Decline and block requester',

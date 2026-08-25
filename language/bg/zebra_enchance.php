@@ -47,7 +47,7 @@ $lang = array_merge($lang, array(
 	'ZE_FRIENDLIST_EXPLAIN'	=>	'Кой може да вижда приятелите ви в профила ви?',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Нямате права да виждате приятелите на този потребител',
-	'FRIENDLIST_TITLE'       => 'Friend list',
+	'FRIENDLIST_TITLE'       => 'Приятели',
 	'ZE_ACCEPT_REQUEST'      => 'Accept friend request',
 	'ZE_DECLINE_REQUEST'     => 'Decline friend request',
 	'ZE_DECLINE_BLOCK_REQUEST' => 'Decline and block requester',

@@ -115,7 +115,7 @@ class zebraadd extends \phpbb\notification\type\base
 
 	public function get_reference()
 	{
-		return (string) $this->get_data('request_message');
+		return utf8_htmlspecialchars(censor_text($this->decoded_request_message()));
 	}
 
 	/**
@@ -140,7 +140,7 @@ class zebraadd extends \phpbb\notification\type\base
 
 		return array(
 			'REQUESTER_NAME'    => $requester ? htmlspecialchars_decode($requester['username'], ENT_QUOTES) : $this->language->lang('GUEST'),
-			'REQUEST_MESSAGE'   => (string) $this->get_data('request_message'),
+			'REQUEST_MESSAGE'   => censor_text($this->decoded_request_message()),
 			'U_FRIEND_REQUESTS' => generate_board_url() . '/ucp.' . $this->php_ext . '?i=ucp_zebra&mode=friends',
 		);
 	}
@@ -175,5 +175,10 @@ class zebraadd extends \phpbb\notification\type\base
 		$this->set_data('requester_id', isset($data['requester_id']) ? (int) $data['requester_id'] : 0);
 		$this->set_data('request_message', isset($data['request_message']) ? (string) $data['request_message'] : '');
 		parent::create_insert_array($data, $pre_create_data);
+	}
+
+	protected function decoded_request_message()
+	{
+		return html_entity_decode((string) $this->get_data('request_message'), ENT_QUOTES, 'UTF-8');
 	}
 }

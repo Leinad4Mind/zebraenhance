@@ -310,7 +310,7 @@ class zebra_listener implements EventSubscriberInterface
 				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $requester_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($requester_id, 'full'),
-				'MESSAGE'       => (string) $row['request_message'],
+				'MESSAGE'       => $this->display_request_message($row['request_message']),
 				'U_ACCEPT'      => $this->request_action_url((int) $row['request_id'], 'accept'),
 				'U_DECLINE'     => $this->request_action_url((int) $row['request_id'], 'decline'),
 				'U_DECLINE_BLOCK' => $this->request_action_url((int) $row['request_id'], 'decline_block'),
@@ -324,7 +324,7 @@ class zebra_listener implements EventSubscriberInterface
 				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $recipient_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($recipient_id, 'full'),
-				'MESSAGE'       => (string) $row['request_message'],
+				'MESSAGE'       => $this->display_request_message($row['request_message']),
 				'U_CANCEL'      => $this->request_action_url((int) $row['request_id'], 'cancel'),
 			));
 		}
@@ -575,7 +575,7 @@ class zebra_listener implements EventSubscriberInterface
 					'U_ZE_PROFILE_DECLINE'        => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline') : '',
 					'U_ZE_PROFILE_DECLINE_BLOCK'  => $is_incoming ? $this->request_action_url((int) $request['request_id'], 'decline_block') : '',
 					'U_ZE_PROFILE_CANCEL'         => $request && !$is_incoming ? $this->request_action_url((int) $request['request_id'], 'cancel') : '',
-					'ZE_PROFILE_REQUEST_MESSAGE'  => $request ? (string) $request['request_message'] : '',
+					'ZE_PROFILE_REQUEST_MESSAGE'  => $request ? $this->display_request_message($request['request_message']) : '',
 				));
 			}
 		}
@@ -700,6 +700,12 @@ class zebra_listener implements EventSubscriberInterface
 	protected function profile_url($user_id)
 	{
 		return append_sid($this->root_path . 'memberlist.' . $this->php_ext, 'mode=viewprofile&u=' . (int) $user_id);
+	}
+
+	protected function display_request_message($message)
+	{
+		$message = html_entity_decode((string) $message, ENT_QUOTES, 'UTF-8');
+		return utf8_htmlspecialchars(censor_text($message));
 	}
 
 	protected function ucp_friend_url($parameters)

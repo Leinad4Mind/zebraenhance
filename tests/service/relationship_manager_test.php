@@ -159,8 +159,8 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_request_message_is_normalized_persisted_and_dispatched()
 	{
-		$message = "  Let's connect!\nWe share interests.  ";
-		$normalized = "Let's connect!\nWe share interests.";
+		$message = "  Let's connect & share <interests>!  ";
+		$normalized = "Let's connect &amp; share &lt;interests&gt;!";
 		$this->dispatcher->expects($this->once())
 			->method('trigger_event')
 			->with(
@@ -693,13 +693,13 @@ class relationship_manager_test extends \phpbb_database_test_case
 	public function test_foe_manager_search_notes_and_individual_policies()
 	{
 		$this->relationships->register_foe_settings(4, array(5), 1234);
-		$this->assertTrue($this->relationships->update_foe(4, 5, -1, '  Temporary conflict  ', 1, 2, 2));
+		$this->assertTrue($this->relationships->update_foe(4, 5, -1, '  Temporary <conflict> & context  ', 1, 2, 2));
 
 		$this->assertSame(1, $this->relationships->count_foes(4, 'USER5'));
 		$foes = $this->relationships->get_foes(4, 25, 0, 'user5');
 		$this->assertCount(1, $foes);
 		$this->assertSame(1234, (int) $foes[0]['added_at']);
-		$this->assertSame('Temporary conflict', $foes[0]['foe_note']);
+		$this->assertSame('Temporary &lt;conflict&gt; &amp; context', $foes[0]['foe_note']);
 		$this->assertSame(1, (int) $foes[0]['pm_policy']);
 		$this->assertSame(2, (int) $foes[0]['content_policy']);
 		$this->assertSame(2, (int) $foes[0]['notification_policy']);
