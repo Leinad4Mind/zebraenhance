@@ -52,12 +52,22 @@ class release_2_6_0 extends \phpbb\db\migration\migration
 					'zebra_mute_foe_notifications' => array('BOOL', 0),
 				),
 			),
+			'drop_columns' => array(
+				$this->table_prefix . 'users' => array(
+					'zebra_changed',
+				),
+			),
 		);
 	}
 
 	public function revert_schema()
 	{
 		return array(
+			'add_columns' => array(
+				$this->table_prefix . 'users' => array(
+					'zebra_changed' => array('UINT', 0),
+				),
+			),
 			'drop_tables' => array(
 				$this->table_prefix . 'zebra_foe_settings',
 			),

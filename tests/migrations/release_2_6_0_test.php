@@ -38,6 +38,9 @@ class release_2_6_0_test extends \phpbb_test_case
 			array('BOOL', 0),
 			$schema['add_columns']['phpbb_users']['zebra_mute_foe_notifications']
 		);
+		$this->assertContains('zebra_changed', $schema['drop_columns']['phpbb_users']);
+		$revert = $this->migration()->revert_schema();
+		$this->assertSame(array('UINT', 0), $revert['add_columns']['phpbb_users']['zebra_changed']);
 	}
 
 	public function test_data_registers_cron_module_and_version()

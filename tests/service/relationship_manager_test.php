@@ -95,10 +95,6 @@ class relationship_manager_test extends \phpbb_database_test_case
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'profile_friend_show', array('UINT', 5));
 		}
-		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_changed'))
-		{
-			$this->db_tools->sql_column_add('phpbb_users', 'zebra_changed', array('UINT', 0));
-		}
 		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_request_policy'))
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'zebra_request_policy', array('UINT', 0));

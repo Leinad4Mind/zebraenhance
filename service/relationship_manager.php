@@ -401,7 +401,6 @@ class relationship_manager
 					OR (zebra_id = ' . (int) $user_id . '
 						AND ' . $this->db->sql_in_set('user_id', $zebra_ids) . ')';
 			$this->db->sql_query($sql);
-			$this->mark_changed(array_merge(array($user_id), $zebra_ids));
 			$this->db->sql_transaction('commit');
 		}
 		catch (\Throwable $e)
@@ -544,7 +543,6 @@ class relationship_manager
 			$this->delete_request_rows(array($request));
 			$this->delete_legacy_between($requester_id, $actor_id);
 			$this->delete_request_cooldown($requester_id, $actor_id, true);
-			$this->mark_changed(array($actor_id, $requester_id));
 			$this->db->sql_transaction('commit');
 		}
 		catch (\Throwable $e)
@@ -1138,7 +1136,6 @@ class relationship_manager
 				AND friend = 1
 				AND foe = 0';
 		$this->db->sql_query($sql);
-		$this->mark_changed(array($owner_id));
 		$this->dispatch_event(self::EVENT_CLOSE_FRIEND_CHANGED, array(
 			'owner_id'  => $owner_id,
 			'friend_id' => $friend_id,
@@ -2219,7 +2216,6 @@ class relationship_manager
 					array('user_id' => $requester_id, 'zebra_id' => $acceptor_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
 					array('user_id' => $acceptor_id, 'zebra_id' => $requester_id, 'friend' => 1, 'foe' => 0, 'bff' => 0),
 				));
-				$this->mark_changed(array($requester_id, $acceptor_id));
 				$this->db->sql_transaction('commit');
 			}
 		}
@@ -2322,17 +2318,6 @@ class relationship_manager
 			WHERE (user_id = ' . (int) $user_id . ' AND zebra_id = ' . (int) $zebra_id . ')
 				OR (user_id = ' . (int) $zebra_id . ' AND zebra_id = ' . (int) $user_id . ')';
 		$this->db->sql_query($sql);
-	}
-
-	protected function mark_changed(array $user_ids)
-	{
-		$user_ids = array_values(array_unique(array_filter(array_map('intval', $user_ids))));
-		if ($user_ids)
-		{
-			$this->db->sql_query('UPDATE ' . $this->users_table . '
-				SET zebra_changed = 1
-				WHERE ' . $this->db->sql_in_set('user_id', $user_ids));
-		}
 	}
 
 	protected function dispatch_request_event($event_name, array $request, $actor_id, $reason = null)
