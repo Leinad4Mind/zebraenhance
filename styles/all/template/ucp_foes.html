@@ -11,8 +11,8 @@
 
 	<div class="ze-foe-toolbar">
 		<label class="sr-only" for="ze-foe-search">{{ lang('ZE_SEARCH_FOES') }}</label>
-		<input type="search" id="ze-foe-search" class="inputbox autowidth" value="{{ FOE_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FOES') }}">
-		<button type="button" class="button button-secondary js-ze-search-foes" data-url="{{ U_FOE_SEARCH }}">{{ lang('SEARCH') }}</button>
+		<input type="search" id="ze-foe-search" name="ze_foe_q" class="inputbox autowidth" value="{{ FOE_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FOES') }}">
+		<button type="submit" class="button button-secondary js-ze-search-foes" data-url="{{ U_FOE_SEARCH }}">{{ lang('SEARCH') }}</button>
 		{% if FOE_SEARCH %}<a class="button button-secondary" href="{{ U_FOE_SEARCH }}">{{ lang('RESET') }}</a>{% endif %}
 		<a class="button button-secondary" href="{{ U_ADD_FOES }}">{{ lang('ZE_ADD_FOES') }}</a>
 	</div>
@@ -34,7 +34,7 @@
 		<section class="panel bg1 ze-foe-row" data-save-url="{{ foe.U_SAVE }}">
 			<div class="inner">
 				<div class="ze-foe-heading">
-					<label><input type="checkbox" class="js-ze-foe-select" value="{{ foe.USER_ID }}" aria-label="{{ lang('ZE_SELECT_FOE_ITEM') }}"> {{ foe.USERNAME_FULL }}</label>
+					<label><input type="checkbox" class="js-ze-foe-select" value="{{ foe.USER_ID }}" aria-label="{{ lang('ZE_SELECT_FOE_ITEM', foe.USERNAME) }}"> {{ foe.USERNAME_FULL }}</label>
 					<span>{{ lang('ZE_FOE_ADDED') }}: {{ foe.ADDED }}{% if S_FOE_TEMPORARY_AVAILABLE %} · {{ lang('ZE_FOE_EXPIRES') }}: {{ foe.EXPIRES }}{% endif %}</span>
 				</div>
 

@@ -80,6 +80,7 @@ class foes_module
 			$expires_at = (int) $foe['expires_at'];
 			$template->assign_block_vars('ze_foes', array(
 				'USER_ID'        => $foe_id,
+				'USERNAME'       => (string) $foe['username'],
 				'USERNAME_FULL'  => get_username_string('full', $foe_id, $foe['username'], $foe['user_colour']),
 				'ADDED'          => (int) $foe['added_at'] ? $user->format_date((int) $foe['added_at']) : $user->lang('ZE_FOE_DATE_UNKNOWN'),
 				'EXPIRES'        => $expires_at ? $user->format_date($expires_at) : $user->lang('ZE_FOE_PERMANENT'),

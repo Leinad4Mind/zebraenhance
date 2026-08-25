@@ -98,7 +98,8 @@
 		submit();
 	});
 
-	$(document).on('click', '.js-ze-search-friends', function () {
+	$(document).on('click', '.js-ze-search-friends', function (event) {
+		event.preventDefault();
 		var $button = $(this);
 		var value = $($button.attr('data-input')).val();
 		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';
@@ -112,7 +113,8 @@
 		}
 	});
 
-	$(document).on('click', '.js-ze-search-foes', function () {
+	$(document).on('click', '.js-ze-search-foes', function (event) {
+		event.preventDefault();
 		var $button = $(this);
 		var value = $('#ze-foe-search').val();
 		var separator = $button.attr('data-url').indexOf('?') === -1 ? '?' : '&';

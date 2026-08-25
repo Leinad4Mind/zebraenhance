@@ -29,7 +29,7 @@
 	<dd id="ze-incoming-requests" class="ze-scroll-list">
 	{% for request in pending_requests %}
 		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
-			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM') }}">
+			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
 			<span class="ze-actions">
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_ACCEPT }}" title="{{ lang('ZE_ACCEPT_REQUEST') }}" aria-label="{{ lang('ZE_ACCEPT_REQUEST') }}"><i class="icon fa-check fa-fw" aria-hidden="true"></i></button>
 				<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_DECLINE }}" data-confirm="{{ lang('ZE_CONFIRM_DECLINE_REQUEST') }}" title="{{ lang('ZE_DECLINE_REQUEST') }}" aria-label="{{ lang('ZE_DECLINE_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
@@ -60,8 +60,8 @@
 
 <div class="ze-friend-search">
 	<label class="sr-only" for="ze-friend-search">{{ lang('ZE_SEARCH_FRIENDS') }}</label>
-	<input type="search" id="ze-friend-search" class="inputbox autowidth" value="{{ FRIEND_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FRIENDS') }}">
-	<button type="button" class="button button-secondary js-ze-search-friends" data-url="{{ U_FRIEND_SEARCH }}" data-input="#ze-friend-search">{{ lang('SEARCH') }}</button>
+	<input type="search" id="ze-friend-search" name="ze_friend_q" class="inputbox autowidth" value="{{ FRIEND_SEARCH }}" maxlength="100" placeholder="{{ lang('ZE_SEARCH_FRIENDS') }}">
+	<button type="submit" class="button button-secondary js-ze-search-friends" data-url="{{ U_FRIEND_SEARCH }}" data-input="#ze-friend-search">{{ lang('SEARCH') }}</button>
 	{% if FRIEND_SEARCH %}<a class="button button-secondary" href="{{ U_FRIEND_SEARCH }}">{{ lang('RESET') }}</a>{% endif %}
 </div>
 
@@ -126,7 +126,7 @@
 	<dd id="ze-outgoing-requests" class="ze-scroll-list">
 	{% for request in pending_awaits %}
 		<div class="ze-list-row" data-user-id="{{ request.USER_ID }}">
-			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM') }}">
+			<input type="checkbox" class="js-ze-request-select" value="{{ request.REQUEST_ID }}" aria-label="{{ lang('ZE_SELECT_REQUEST_ITEM', request.USERNAME) }}">
 			<button type="button" class="button button-secondary ze-icon-button js-ze-request" data-url="{{ request.U_CANCEL }}" data-confirm="{{ lang('ZE_CONFIRM_CANCEL_REQUEST') }}" title="{{ lang('ZE_CANCEL_REQUEST') }}" aria-label="{{ lang('ZE_CANCEL_REQUEST') }}"><i class="icon fa-times fa-fw" aria-hidden="true"></i></button>
 			<span>{{ request.USERNAME_FULL }}{% if request.MESSAGE %}<span class="ze-request-message">{{ request.MESSAGE }}</span>{% endif %}</span>
 		</div>

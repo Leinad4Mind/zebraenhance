@@ -309,6 +309,7 @@ class zebra_listener implements EventSubscriberInterface
 			$this->template->assign_block_vars('pending_requests', array(
 				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $requester_id,
+				'USERNAME'      => (string) $row['username'],
 				'USERNAME_FULL' => $this->user_loader->get_username($requester_id, 'full'),
 				'MESSAGE'       => $this->display_request_message($row['request_message']),
 				'U_ACCEPT'      => $this->request_action_url((int) $row['request_id'], 'accept'),
@@ -323,6 +324,7 @@ class zebra_listener implements EventSubscriberInterface
 			$this->template->assign_block_vars('pending_awaits', array(
 				'REQUEST_ID'    => (int) $row['request_id'],
 				'USER_ID'       => $recipient_id,
+				'USERNAME'      => (string) $row['username'],
 				'USERNAME_FULL' => $this->user_loader->get_username($recipient_id, 'full'),
 				'MESSAGE'       => $this->display_request_message($row['request_message']),
 				'U_CANCEL'      => $this->request_action_url((int) $row['request_id'], 'cancel'),

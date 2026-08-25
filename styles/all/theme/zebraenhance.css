@@ -92,7 +92,7 @@
 }
 
 .ze-circle-assignment {
-	margin-left: auto;
+	margin-inline-start: auto;
 }
 
 .ze-circle-assignment select {

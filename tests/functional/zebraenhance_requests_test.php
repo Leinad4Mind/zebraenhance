@@ -27,6 +27,9 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->assertSame(1, $crawler->filter('script[src*="zebraenhance.js"]')->count());
 		$cancel = $crawler->filter('#ze-outgoing-requests .js-ze-request')->first();
 		$this->assertStringContainsString('/cancel', $cancel->attr('data-url'));
+		$this->assertStringContainsString($username, $crawler->filter('#ze-outgoing-requests .js-ze-request-select')->attr('aria-label'));
+		$this->assertSame('ze_friend_q', $crawler->filter('#ze-friend-search')->attr('name'));
+		$this->assertSame('submit', $crawler->filter('.js-ze-search-friends')->attr('type'));
 		$this->post_action($cancel->attr('data-url'), array(), 403);
 		$response = $this->post_action($cancel->attr('data-url'), $this->form_token($crawler));
 		$this->assertSame('cancelled', $response['action']);
@@ -521,6 +524,9 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->assertStringContainsString($this->lang('ZE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
 		$this->assertSame(1, $crawler->filter('.ze-foe-row')->count());
 		$this->assertStringContainsString($username, $crawler->filter('.ze-foe-heading')->text());
+		$this->assertStringContainsString($username, $crawler->filter('.js-ze-foe-select')->attr('aria-label'));
+		$this->assertSame('ze_foe_q', $crawler->filter('#ze-foe-search')->attr('name'));
+		$this->assertSame('submit', $crawler->filter('.js-ze-search-foes')->attr('type'));
 
 		$save_url = $crawler->filter('.ze-foe-row')->attr('data-save-url');
 		$response = $this->post_action($save_url, array_merge($this->form_token($crawler), array(
