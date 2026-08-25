@@ -1033,12 +1033,14 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(array(), $this->relationships->get_friend_suggestions(2));
 	}
 
-	public function test_pending_request_limit_prevents_unbounded_spam()
+	public function test_pending_request_limit_is_applied_separately_by_direction()
 	{
 		$this->config->set('ze_max_pending_requests', 1);
-		$this->notifications->expects($this->never())->method('add_notifications');
+		$this->notifications->expects($this->once())->method('add_notifications');
 
-		$this->assertSame('limited', $this->relationships->request_friendship(3, 4));
+		$this->assertSame('limited', $this->relationships->request_friendship(2, 4));
+		$this->assertSame('created', $this->relationships->request_friendship(3, 4));
+		$this->assertSame('limited', $this->relationships->request_friendship(52, 4));
 	}
 
 	public function test_zero_pending_request_limit_is_unlimited()

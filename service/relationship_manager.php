@@ -258,8 +258,8 @@ class relationship_manager
 			return 'cooldown';
 		}
 		$max_pending = $this->max_pending_requests();
-		if ($max_pending > 0 && ($this->count_pending_requests($requester_id) >= $max_pending
-			|| $this->count_pending_requests($recipient_id) >= $max_pending))
+		if ($max_pending > 0 && ($this->count_pending_requests($requester_id, false) >= $max_pending
+			|| $this->count_pending_requests($recipient_id, true) >= $max_pending))
 		{
 			return 'limited';
 		}
@@ -1602,14 +1602,13 @@ class relationship_manager
 			return array();
 		}
 		$max_pending = $this->max_pending_requests();
-		if ($max_pending > 0 && $this->count_pending_requests($viewer_id) >= $max_pending)
+		if ($max_pending > 0 && $this->count_pending_requests($viewer_id, false) >= $max_pending)
 		{
 			return array();
 		}
 		$candidate_limit_sql = $max_pending > 0
 			? ' AND (SELECT COUNT(*) FROM ' . $this->requests_table . ' candidate_pending
-				WHERE candidate_pending.requester_id = candidate.user_id
-					OR candidate_pending.recipient_id = candidate.user_id) < ' . (int) $max_pending
+				WHERE candidate_pending.recipient_id = candidate.user_id) < ' . (int) $max_pending
 			: '';
 
 		$sql = 'SELECT candidate.user_id, candidate.username, candidate.user_colour,
@@ -1935,12 +1934,12 @@ class relationship_manager
 		}
 	}
 
-	protected function count_pending_requests($user_id)
+	protected function count_pending_requests($user_id, $incoming)
 	{
+		$column = $incoming ? 'recipient_id' : 'requester_id';
 		$sql = 'SELECT COUNT(*) AS total
 			FROM ' . $this->requests_table . '
-			WHERE requester_id = ' . (int) $user_id . '
-				OR recipient_id = ' . (int) $user_id;
+			WHERE ' . $column . ' = ' . (int) $user_id;
 		$result = $this->db->sql_query($sql);
 		$count = (int) $this->db->sql_fetchfield('total');
 		$this->db->sql_freeresult($result);
