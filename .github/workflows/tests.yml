@@ -52,9 +52,9 @@ jobs:
             ref: 'release-3.3.17'
             php: '7.4'
             composer: 'v2'
-          # phpBB 3.3.17 pins PHPUnit 7, which cannot run on PHP 8.1.
-          - phpbb: '3.3.x'
-            ref: '3.3.x'
+          # Its locked test dependencies are replaced below for PHP 8.1.
+          - phpbb: '3.3.17'
+            ref: 'release-3.3.17'
             php: '8.1'
             composer: 'v2'
     steps:
@@ -72,6 +72,16 @@ jobs:
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
           rsync -a --exclude=.git --exclude=phpbb --exclude=vendor --exclude=dist "$GITHUB_WORKSPACE/" phpbb/phpBB/ext/anavaro/zebraenhance/
+      - name: Install PHP 8.1-compatible test dependencies
+        if: matrix.php == '8.1'
+        run: |
+          composer remove --working-dir=phpbb/phpBB --dev phpunit/dbunit --no-update --no-interaction
+          composer require --working-dir=phpbb/phpBB --dev \
+            phpunit/phpunit:9.6.35 \
+            misantron/dbunit:5.2.1 \
+            symfony/yaml:4.4.45 \
+            doctrine/instantiator:1.5.0 \
+            --with-all-dependencies --ignore-platform-req=php --no-interaction --no-progress
       - name: Run extension tests
         working-directory: phpbb
         run: phpBB/vendor/bin/phpunit -c phpBB/ext/anavaro/zebraenhance/phpunit.xml.dist --testsuite 'Extension Test Suite' --colors=always
@@ -91,9 +101,9 @@ jobs:
             ref: 'release-3.3.17'
             php: '7.4'
             composer: 'v2'
-          # phpBB 3.3.17 pins PHPUnit 7, which cannot run on PHP 8.1.
-          - phpbb: '3.3.x'
-            ref: '3.3.x'
+          # Its locked test dependencies are replaced below for PHP 8.1.
+          - phpbb: '3.3.17'
+            ref: 'release-3.3.17'
             php: '8.1'
             composer: 'v2'
     steps:
@@ -111,6 +121,16 @@ jobs:
           mkdir -p phpbb/phpBB/ext/anavaro
           mkdir -p phpbb/phpBB/ext/anavaro/zebraenhance
           rsync -a --exclude=.git --exclude=phpbb --exclude=vendor --exclude=dist "$GITHUB_WORKSPACE/" phpbb/phpBB/ext/anavaro/zebraenhance/
+      - name: Install PHP 8.1-compatible test dependencies
+        if: matrix.php == '8.1'
+        run: |
+          composer remove --working-dir=phpbb/phpBB --dev phpunit/dbunit --no-update --no-interaction
+          composer require --working-dir=phpbb/phpBB --dev \
+            phpunit/phpunit:9.6.35 \
+            misantron/dbunit:5.2.1 \
+            symfony/yaml:4.4.45 \
+            doctrine/instantiator:1.5.0 \
+            --with-all-dependencies --ignore-platform-req=php --no-interaction --no-progress
       - name: Run functional tests
         working-directory: phpbb
         run: |
