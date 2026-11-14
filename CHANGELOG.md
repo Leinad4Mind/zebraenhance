@@ -2,6 +2,17 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added a notice mode for content from foes: their quotes collapse into a notice that can be opened, and the topics they started are replaced by a notice row with a button that shows them.
+- Topics started by foes are removed from forum lists and topic searches when content from foes is removed completely.
+
+### Changed
+
+- The UCP setting for content from foes now offers three choices: do not hide, hide behind a notice, or remove completely. Existing users who enabled it keep the complete removal.
+
 ## 2.6.0 - 2026-08-25
 
 ### Added

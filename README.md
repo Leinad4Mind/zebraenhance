@@ -25,7 +25,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Users can optionally block private messages from people on their foe list.
-- Users can optionally remove foe-authored posts from topics, reply reviews, and post-search results, along with identifiable quotes wherever phpBB renders them.
+- Users choose whether content from foes is shown, hidden behind a notice, or removed completely. The choice covers their posts (in topics, reply reviews, and post searches), the topics they started (in forum lists and topic searches), and identifiable quotes of their posts wherever phpBB renders them. A notice can be opened to reveal what it hides; for posts it is phpBB's own placeholder.
 - Users can suppress quote, mention, reply, topic, and bookmark notifications created by foes.
 - Foes can expire automatically after 24 hours, 7 days, or 30 days, or remain permanent.
 - An enhanced UCP foe manager adds search, pagination, recorded dates, private notes, bulk removal, and a clear protection summary.
