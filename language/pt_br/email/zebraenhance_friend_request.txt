@@ -2,7 +2,7 @@ Subject: Nova solicitação de amizade em {SITENAME}
 
 Olá {USERNAME},
 
-{REQUESTER_NAME} enviou uma solicitação de amizade.
+{REQUESTER_NAME} enviou uma solicitação de amizade para você.
 
 <!-- IF REQUEST_MESSAGE -->Mensagem:
 {REQUEST_MESSAGE}
