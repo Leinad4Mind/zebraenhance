@@ -171,10 +171,13 @@
 
 {% if S_ZEBRAENHANCE_FOE_CONTENT_AVAILABLE %}
 <dl>
-	<dt><label>{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT') }}</label><br><span>{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN') }}</span></dt>
+	<dt><label for="zebra_hide_foe_content">{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT') }}</label><br><span>{{ lang('ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN') }}</span></dt>
 	<dd>
-		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="1"{% if S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('YES') }}</label>
-		<label><input type="radio" class="radio" name="zebra_hide_foe_content" value="0"{% if not S_ZEBRA_HIDE_FOE_CONTENT %} checked{% endif %}> {{ lang('NO') }}</label>
+		<select name="zebra_hide_foe_content" id="zebra_hide_foe_content">
+			<option value="0"{% if ZEBRA_FOE_CONTENT_MODE == 0 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_FOE_CONTENT_SHOW') }}</option>
+			<option value="2"{% if ZEBRA_FOE_CONTENT_MODE == 2 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_FOE_CONTENT_NOTICE') }}</option>
+			<option value="1"{% if ZEBRA_FOE_CONTENT_MODE == 1 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_FOE_CONTENT_REMOVE') }}</option>
+		</select>
 	</dd>
 </dl>
 {% endif %}

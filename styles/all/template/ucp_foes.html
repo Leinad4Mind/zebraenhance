@@ -22,7 +22,7 @@
 		<div class="inner">
 			<strong>{{ lang('ZEBRAENHANCE_GLOBAL_DEFAULTS') ~ lang('COLON') }}</strong>
 			{% if S_FOE_PM_AVAILABLE %}<span>{{ lang('ZEBRAENHANCE_PROTECTION_PM') }}: {{ lang(S_GLOBAL_PM ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
-			{% if S_FOE_CONTENT_AVAILABLE %}<span>{{ lang('ZEBRAENHANCE_PROTECTION_CONTENT') }}: {{ lang(S_GLOBAL_CONTENT ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
+			{% if S_FOE_CONTENT_AVAILABLE %}<span>{{ lang('ZEBRAENHANCE_PROTECTION_CONTENT') }}: {{ lang(GLOBAL_CONTENT_MODE == 2 ? 'ZEBRAENHANCE_FOE_CONTENT_NOTICE' : (GLOBAL_CONTENT_MODE == 1 ? 'ZEBRAENHANCE_FOE_CONTENT_REMOVE' : 'ZEBRAENHANCE_FOE_CONTENT_SHOW')) }}</span>{% endif %}
 			{% if S_FOE_NOTIFICATIONS_AVAILABLE %}<span>{{ lang('ZEBRAENHANCE_PROTECTION_NOTIFICATIONS') }}: {{ lang(S_GLOBAL_NOTIFICATIONS ? 'ENABLED' : 'DISABLED') }}</span>{% endif %}
 		</div>
 	</div>

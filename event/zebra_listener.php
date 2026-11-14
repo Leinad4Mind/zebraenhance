@@ -12,6 +12,7 @@
 
 namespace anavaro\zebraenhance\event;
 
+use anavaro\zebraenhance\service\relationship_manager;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class zebra_listener implements EventSubscriberInterface
@@ -58,6 +59,12 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var array|null */
 	protected $foe_identities;
 
+	/** @var array Placeholder tokens of the text being rendered, mapped to their HTML */
+	protected $foe_quote_replacements = array();
+
+	/** @var string */
+	protected $foe_quote_nonce = '';
+
 	public function __construct(
 		\anavaro\zebraenhance\service\relationship_manager $relationships,
 		\phpbb\user_loader $user_loader,
@@ -97,7 +104,12 @@ class zebra_listener implements EventSubscriberInterface
 			'core.viewtopic_modify_post_data' => 'hide_foe_posts',
 			'core.topic_review_modify_post_list' => 'hide_foe_posts',
 			'core.text_formatter_s9e_render_before' => 'hide_foe_quotes',
+			'core.text_formatter_s9e_render_after' => 'insert_foe_quote_notices',
+			'core.viewforum_modify_topics_data' => 'hide_foe_topics',
+			'core.viewforum_modify_topicrow'  => 'mark_foe_topic_row',
 			'core.search_modify_rowset'       => 'hide_foe_search_results',
+			'core.search_modify_tpl_ary'      => 'mark_foe_search_topic_row',
+			'core.page_header'                => 'assign_foe_content_assets',
 			'core.notification_manager_add_notifications' => 'mute_foe_notifications',
 			'core.delete_user_before'        => 'delete_users',
 			'core.memberlist_view_profile'   => 'prepare_friends',
@@ -233,7 +245,9 @@ class zebra_listener implements EventSubscriberInterface
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
 			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
 			'S_ZEBRA_BLOCK_FOE_PM' => !empty($this->user->data['zebra_block_foe_pm']),
-			'S_ZEBRA_HIDE_FOE_CONTENT' => !empty($this->user->data['zebra_hide_foe_content']),
+			'ZEBRA_FOE_CONTENT_MODE' => relationship_manager::normalize_foe_content_mode(
+				isset($this->user->data['zebra_hide_foe_content']) ? $this->user->data['zebra_hide_foe_content'] : 0
+			),
 			'S_ZEBRA_MUTE_FOE_NOTIFICATIONS' => !empty($this->user->data['zebra_mute_foe_notifications']),
 			'S_ZEBRAENHANCE_FOE_PM_AVAILABLE' => $this->relationships->foe_feature_enabled('pm'),
 			'S_ZEBRAENHANCE_FOE_CONTENT_AVAILABLE' => $this->relationships->foe_feature_enabled('content'),
@@ -415,7 +429,8 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function hide_foe_posts($event)
 	{
-		if (!$this->hide_foe_content_enabled())
+		// In the notice mode phpBB's own "post by a foe" placeholder is kept.
+		if ($this->foe_content_mode() !== relationship_manager::FOE_CONTENT_REMOVE)
 		{
 			return;
 		}
@@ -439,7 +454,9 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function hide_foe_quotes($event)
 	{
-		if (!$this->hide_foe_content_enabled() || !class_exists('\\DOMDocument'))
+		$this->foe_quote_replacements = array();
+		$mode = $this->foe_content_mode();
+		if ($mode === relationship_manager::FOE_CONTENT_SHOW || !class_exists('\\DOMDocument'))
 		{
 			return;
 		}
@@ -467,7 +484,7 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$quotes_to_remove = array();
+		$foe_quotes = array();
 		foreach ($document->getElementsByTagName('QUOTE') as $quote)
 		{
 			$quote_user_id = (int) $quote->getAttribute('user_id');
@@ -476,42 +493,135 @@ class zebra_listener implements EventSubscriberInterface
 				: isset($foe_names[utf8_clean_string($quote->getAttribute('author'))]);
 			if ($hide_quote)
 			{
-				$quotes_to_remove[] = $quote;
+				$foe_quotes[] = $quote;
 			}
+		}
+		if (!$foe_quotes)
+		{
+			return;
 		}
 
-		for ($i = count($quotes_to_remove) - 1; $i >= 0; $i--)
+		if ($mode === relationship_manager::FOE_CONTENT_NOTICE)
 		{
-			$quote = $quotes_to_remove[$i];
-			if ($quote->parentNode)
+			foreach ($foe_quotes as $index => $quote)
 			{
-				$quote->parentNode->removeChild($quote);
+				$this->wrap_foe_quote($document, $quote, $index);
 			}
 		}
-		if ($quotes_to_remove)
+		else
 		{
-			$event['xml'] = $document->saveXML($document->documentElement);
+			for ($i = count($foe_quotes) - 1; $i >= 0; $i--)
+			{
+				$quote = $foe_quotes[$i];
+				if ($quote->parentNode)
+				{
+					$quote->parentNode->removeChild($quote);
+				}
+			}
 		}
+		$event['xml'] = $document->saveXML($document->documentElement);
+	}
+
+	/**
+	 * Turn the placeholders left by hide_foe_quotes() into the collapsible notice.
+	 */
+	public function insert_foe_quote_notices($event)
+	{
+		if (!$this->foe_quote_replacements)
+		{
+			return;
+		}
+
+		$event['html'] = strtr($event['html'], $this->foe_quote_replacements);
+		$this->foe_quote_replacements = array();
 	}
 
 	public function hide_foe_search_results($event)
 	{
-		if (!$this->hide_foe_content_enabled()
-			|| $event['show_results'] !== 'posts')
+		if ($this->foe_content_mode() !== relationship_manager::FOE_CONTENT_REMOVE
+			|| !in_array($event['show_results'], array('posts', 'topics'), true))
 		{
 			return;
 		}
 
 		$foe_ids = array_fill_keys(array_keys($this->get_foe_identities()), true);
+		if (!$foe_ids)
+		{
+			return;
+		}
+		$author_key = $event['show_results'] === 'topics' ? 'topic_poster' : 'poster_id';
 		$rowset = $event['rowset'];
 		foreach ($rowset as $result_id => $row)
 		{
-			if (isset($foe_ids[(int) $row['poster_id']]))
+			if (isset($row[$author_key], $foe_ids[(int) $row[$author_key]]))
 			{
 				unset($rowset[$result_id]);
 			}
 		}
 		$event['rowset'] = $rowset;
+	}
+
+	public function hide_foe_topics($event)
+	{
+		if ($this->foe_content_mode() !== relationship_manager::FOE_CONTENT_REMOVE)
+		{
+			return;
+		}
+
+		$foe_ids = array_fill_keys(array_keys($this->get_foe_identities()), true);
+		if (!$foe_ids)
+		{
+			return;
+		}
+		$rowset = $event['rowset'];
+		$removed = array();
+		foreach ($rowset as $topic_id => $row)
+		{
+			if (isset($row['topic_poster'], $foe_ids[(int) $row['topic_poster']]))
+			{
+				unset($rowset[$topic_id]);
+				$removed[(int) $topic_id] = true;
+			}
+		}
+		if (!$removed)
+		{
+			return;
+		}
+
+		$topic_list = array();
+		foreach ($event['topic_list'] as $topic_id)
+		{
+			if (!isset($removed[(int) $topic_id]))
+			{
+				$topic_list[] = $topic_id;
+			}
+		}
+		$event['rowset'] = $rowset;
+		$event['topic_list'] = $topic_list;
+	}
+
+	public function mark_foe_topic_row($event)
+	{
+		$event['topic_row'] = $this->add_foe_topic_notice($event['row'], $event['topic_row']);
+	}
+
+	public function mark_foe_search_topic_row($event)
+	{
+		if ($event['show_results'] === 'topics')
+		{
+			$event['tpl_ary'] = $this->add_foe_topic_notice($event['row'], $event['tpl_ary']);
+		}
+	}
+
+	/**
+	 * Load the notice styles and script only for users who can see a notice.
+	 */
+	public function assign_foe_content_assets()
+	{
+		if ($this->foe_content_mode() === relationship_manager::FOE_CONTENT_NOTICE)
+		{
+			$this->template->assign_var('S_ZEBRAENHANCE_FOE_CONTENT_NOTICE', true);
+		}
 	}
 
 	public function mute_foe_notifications($event)
@@ -685,6 +795,124 @@ class zebra_listener implements EventSubscriberInterface
 	{
 		return !empty($this->user->data['is_registered'])
 			&& $this->relationships->foe_feature_enabled('content');
+	}
+
+	/**
+	 * How content from the viewer's protected foes is presented.
+	 *
+	 * Which foes are protected is decided by get_foe_identities(). A per-foe
+	 * block applies even when the global choice is to show content, and it then
+	 * removes the content as it did before the notice mode existed.
+	 *
+	 * @return int One of the relationship_manager::FOE_CONTENT_* constants
+	 */
+	protected function foe_content_mode()
+	{
+		if (!$this->hide_foe_content_enabled())
+		{
+			return relationship_manager::FOE_CONTENT_SHOW;
+		}
+		$mode = isset($this->user->data['zebra_hide_foe_content']) ? (int) $this->user->data['zebra_hide_foe_content'] : 0;
+
+		return $mode === relationship_manager::FOE_CONTENT_NOTICE
+			? relationship_manager::FOE_CONTENT_NOTICE
+			: relationship_manager::FOE_CONTENT_REMOVE;
+	}
+
+	/**
+	 * Surround a foe quote with placeholders that insert_foe_quote_notices()
+	 * replaces with a collapsed <details> element after rendering.
+	 *
+	 * The author is left as post text between two placeholders, so phpBB
+	 * escapes and censors it like the rest of the post.
+	 */
+	protected function wrap_foe_quote(\DOMDocument $document, \DOMElement $quote, $index)
+	{
+		$parent = $quote->parentNode;
+		if (!$parent)
+		{
+			return;
+		}
+
+		$open = '<div class="zebraenhance-foe-quote"><details><summary>';
+		$toggle = ' <span class="zebraenhance-foe-quote-show">' . $this->language->lang('ZEBRAENHANCE_FOE_QUOTE_SHOW') . '</span>'
+			. '<span class="zebraenhance-foe-quote-hide" hidden>' . $this->language->lang('ZEBRAENHANCE_FOE_QUOTE_HIDE') . '</span></summary>';
+		$close_token = $this->foe_quote_token($index, 3);
+		$this->foe_quote_replacements[$close_token] = '</details></div>';
+
+		$author = trim($quote->getAttribute('author'));
+		if ($author === '')
+		{
+			$open_token = $this->foe_quote_token($index, 1);
+			$this->foe_quote_replacements[$open_token] = $open . $this->language->lang('ZEBRAENHANCE_FOE_QUOTE_HIDDEN_UNKNOWN') . $toggle;
+			$parent->insertBefore($document->createTextNode($open_token), $quote);
+		}
+		else
+		{
+			// Split the translated sentence around the author so word order stays translatable.
+			$marker = $this->foe_quote_token($index, 0);
+			$notice = explode($marker, $this->language->lang('ZEBRAENHANCE_FOE_QUOTE_HIDDEN', $marker), 2);
+			$open_token = $this->foe_quote_token($index, 1);
+			$author_token = $this->foe_quote_token($index, 2);
+			$this->foe_quote_replacements[$open_token] = $open . $notice[0] . '<strong>';
+			$this->foe_quote_replacements[$author_token] = '</strong>' . (isset($notice[1]) ? $notice[1] : '') . $toggle;
+			$parent->insertBefore($document->createTextNode($open_token), $quote);
+			$parent->insertBefore($document->createTextNode($author), $quote);
+			$parent->insertBefore($document->createTextNode($author_token), $quote);
+		}
+
+		if ($quote->nextSibling)
+		{
+			$parent->insertBefore($document->createTextNode($close_token), $quote->nextSibling);
+		}
+		else
+		{
+			$parent->appendChild($document->createTextNode($close_token));
+		}
+	}
+
+	/**
+	 * A placeholder made of private-use delimiters and digits, which the
+	 * renderer and the word censor leave untouched. The per-request nonce
+	 * keeps post text from forging one.
+	 */
+	protected function foe_quote_token($index, $part)
+	{
+		if ($this->foe_quote_nonce === '')
+		{
+			$this->foe_quote_nonce = (string) random_int(100000000, 999999999);
+		}
+
+		return "\u{E000}" . $this->foe_quote_nonce . '.' . (int) $index . '.' . (int) $part . "\u{E001}";
+	}
+
+	/**
+	 * Flag a topic row started by a protected foe when the notice mode is used.
+	 */
+	protected function add_foe_topic_notice(array $row, array $template_row)
+	{
+		if ($this->foe_content_mode() !== relationship_manager::FOE_CONTENT_NOTICE || empty($row['topic_poster']))
+		{
+			return $template_row;
+		}
+		$foe_identities = $this->get_foe_identities();
+		if (!isset($foe_identities[(int) $row['topic_poster']]))
+		{
+			return $template_row;
+		}
+
+		$template_row['S_ZEBRAENHANCE_FOE_TOPIC'] = true;
+		$template_row['ZEBRAENHANCE_FOE_TOPIC_NOTICE'] = $this->language->lang(
+			'ZEBRAENHANCE_FOE_TOPIC_HIDDEN',
+			get_username_string(
+				'full',
+				(int) $row['topic_poster'],
+				isset($row['topic_first_poster_name']) ? $row['topic_first_poster_name'] : '',
+				isset($row['topic_first_poster_colour']) ? $row['topic_first_poster_colour'] : ''
+			)
+		);
+
+		return $template_row;
 	}
 
 	protected function get_foe_identities()

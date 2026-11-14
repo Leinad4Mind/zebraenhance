@@ -628,12 +628,27 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 	public function test_hide_foe_content_preference_is_persisted()
 	{
-		$this->assertTrue($this->relationships->set_hide_foe_content(2, true));
+		$this->assertSame(1, $this->relationships->set_hide_foe_content(2, 1));
 		$result = $this->db->sql_query('SELECT zebra_hide_foe_content FROM phpbb_users WHERE user_id = 2');
 		$this->assertSame(1, (int) $this->db->sql_fetchfield('zebra_hide_foe_content'));
 		$this->db->sql_freeresult($result);
 
-		$this->assertFalse($this->relationships->set_hide_foe_content(2, false));
+		$this->assertSame(2, $this->relationships->set_hide_foe_content(2, 2));
+		$result = $this->db->sql_query('SELECT zebra_hide_foe_content FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(2, (int) $this->db->sql_fetchfield('zebra_hide_foe_content'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertSame(0, $this->relationships->set_hide_foe_content(2, 7));
+		$this->assertSame(0, $this->relationships->set_hide_foe_content(2, 0));
+	}
+
+	public function test_notice_mode_protects_foes_like_complete_removal()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_hide_foe_content = 2 WHERE user_id = 4');
+		$this->assertSame(array(5 => 'user5'), $this->relationships->get_foe_identities(4));
+
+		$this->config->set('zebraenhance_foe_exceptions', 0);
+		$this->assertSame(array(5), $this->relationships->get_effective_foe_ids(4, 'content'));
 	}
 
 	public function test_mute_foe_notifications_preference_is_persisted()

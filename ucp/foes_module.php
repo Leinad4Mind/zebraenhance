@@ -58,7 +58,9 @@ class foes_module
 			'FOE_SEARCH'     => $search,
 			'TOTAL_FOES'     => $total,
 			'S_GLOBAL_PM'    => !empty($user->data['zebra_block_foe_pm']),
-			'S_GLOBAL_CONTENT' => !empty($user->data['zebra_hide_foe_content']),
+			'GLOBAL_CONTENT_MODE' => \anavaro\zebraenhance\service\relationship_manager::normalize_foe_content_mode(
+				isset($user->data['zebra_hide_foe_content']) ? $user->data['zebra_hide_foe_content'] : 0
+			),
 			'S_GLOBAL_NOTIFICATIONS' => !empty($user->data['zebra_mute_foe_notifications']),
 			'S_FOE_PM_AVAILABLE' => $relationships->foe_feature_enabled('pm'),
 			'S_FOE_CONTENT_AVAILABLE' => $relationships->foe_feature_enabled('content'),

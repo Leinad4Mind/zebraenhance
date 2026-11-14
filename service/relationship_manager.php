@@ -39,6 +39,10 @@ class relationship_manager
 	const POLICY_INHERIT = 0;
 	const POLICY_ALLOW = 1;
 	const POLICY_BLOCK = 2;
+	// Values of users.zebra_hide_foe_content; 1 keeps the meaning it had in 2.5.
+	const FOE_CONTENT_SHOW = 0;
+	const FOE_CONTENT_REMOVE = 1;
+	const FOE_CONTENT_NOTICE = 2;
 	const FOE_DURATION_KEEP = -1;
 	const FOE_DURATION_PERMANENT = 0;
 	const MAX_FOE_NOTE_LENGTH = 255;
@@ -675,18 +679,34 @@ class relationship_manager
 		return $enabled;
 	}
 
-	public function set_hide_foe_content($user_id, $enabled)
+	/**
+	 * Store how content from foes is presented to a user.
+	 *
+	 * @return int One of the FOE_CONTENT_* constants
+	 */
+	public function set_hide_foe_content($user_id, $mode)
 	{
 		$user_id = (int) $user_id;
-		$enabled = (bool) $enabled;
+		$mode = self::normalize_foe_content_mode($mode);
 		if ($user_id)
 		{
 			$this->db->sql_query('UPDATE ' . $this->users_table . '
-				SET zebra_hide_foe_content = ' . (int) $enabled . '
-				WHERE user_id = ' . (int) $user_id);
+				SET zebra_hide_foe_content = ' . $mode . '
+				WHERE user_id = ' . $user_id);
 		}
 
-		return $enabled;
+		return $mode;
+	}
+
+	/**
+	 * @return int One of the FOE_CONTENT_* constants
+	 */
+	public static function normalize_foe_content_mode($mode)
+	{
+		$mode = (int) $mode;
+		return in_array($mode, array(self::FOE_CONTENT_SHOW, self::FOE_CONTENT_REMOVE, self::FOE_CONTENT_NOTICE), true)
+			? $mode
+			: self::FOE_CONTENT_SHOW;
 	}
 
 	public function set_mute_foe_notifications($user_id, $enabled)
@@ -1729,11 +1749,12 @@ class relationship_manager
 	{
 		if (!$this->foe_feature_enabled('exceptions'))
 		{
-			return $global_column . ' = 1';
+			return $global_column . ' <> 0';
 		}
+		// Content protection stores a mode, so any non-zero global value applies it.
 		return '((' . $policy_column . ' = ' . self::POLICY_BLOCK . ')
 			OR ((' . $policy_column . ' IS NULL OR ' . $policy_column . ' = ' . self::POLICY_INHERIT . ')
-				AND ' . $global_column . ' = 1))';
+				AND ' . $global_column . ' <> 0))';
 	}
 
 	protected function active_foe_sql($settings_alias, $now)

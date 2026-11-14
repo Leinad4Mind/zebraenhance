@@ -16,6 +16,7 @@ class zebra_listener_test extends \phpbb_test_case
 	protected $relationships;
 	protected $auth;
 	protected $user;
+	protected $template;
 	protected $listener;
 
 	// phpcs:ignore PhpbbCodingStandard.NamingConventions.LowercaseUnderscoredFunctions.NotAllowed -- PHPUnit API
@@ -45,13 +46,14 @@ class zebra_listener_test extends \phpbb_test_case
 			->disableOriginalConstructor()
 			->getMock();
 		$language->method('lang')->willReturnArgument(0);
+		$this->template = $this->getMockBuilder('\phpbb\template\template')->getMock();
 
 		$this->listener = new \anavaro\zebraenhance\event\zebra_listener(
 			$this->relationships,
 			$this->getMockBuilder('\phpbb\user_loader')->disableOriginalConstructor()->getMock(),
 			$this->auth,
 			$this->getMockBuilder('\phpbb\request\request_interface')->getMock(),
-			$this->getMockBuilder('\phpbb\template\template')->getMock(),
+			$this->template,
 			$this->user,
 			$language,
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
@@ -73,7 +75,12 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.viewtopic_modify_post_data',
 			'core.topic_review_modify_post_list',
 			'core.text_formatter_s9e_render_before',
+			'core.text_formatter_s9e_render_after',
+			'core.viewforum_modify_topics_data',
+			'core.viewforum_modify_topicrow',
 			'core.search_modify_rowset',
+			'core.search_modify_tpl_ary',
+			'core.page_header',
 			'core.notification_manager_add_notifications',
 			'core.delete_user_before',
 			'core.memberlist_view_profile',
@@ -261,6 +268,116 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->assertSame(array(
 			11 => array('poster_id' => 4, 'post_text' => 'visible'),
 		), $event['rowset']);
+	}
+
+	public function test_remove_mode_drops_foe_topics_from_topic_search_results()
+	{
+		$this->user->data['zebra_hide_foe_content'] = 1;
+		$this->relationships->method('get_foe_identities')->with(2)->willReturn(array(3 => 'user3'));
+		$show_results = 'topics';
+		$rowset = array(
+			20 => array('topic_poster' => 3, 'poster_id' => 4),
+			21 => array('topic_poster' => 4, 'poster_id' => 3),
+		);
+		$event = new \phpbb\event\data(compact('show_results', 'rowset'));
+
+		$this->listener->hide_foe_search_results($event);
+
+		$this->assertSame(array(21 => array('topic_poster' => 4, 'poster_id' => 3)), $event['rowset']);
+	}
+
+	public function test_remove_mode_drops_foe_topics_from_viewforum()
+	{
+		$this->user->data['zebra_hide_foe_content'] = 1;
+		$this->relationships->method('get_foe_identities')->with(2)->willReturn(array(3 => 'user3'));
+		$topic_list = array(30, 31, 32);
+		$rowset = array(
+			30 => array('topic_poster' => 4),
+			31 => array('topic_poster' => 3),
+			32 => array('topic_poster' => 5),
+		);
+		$total_topic_count = 3;
+		$event = new \phpbb\event\data(compact('topic_list', 'rowset', 'total_topic_count'));
+
+		$this->listener->hide_foe_topics($event);
+
+		$this->assertSame(array(30, 32), $event['topic_list']);
+		$this->assertSame(array(30, 32), array_keys($event['rowset']));
+	}
+
+	public function test_notice_mode_keeps_foe_posts_and_topics_for_phpbb_placeholders()
+	{
+		$this->user->data['zebra_hide_foe_content'] = 2;
+		$this->relationships->expects($this->never())->method('get_foe_identities');
+		$rowset = array(10 => array('poster_id' => 3), 11 => array('poster_id' => 4));
+		$topic_list = array(10, 11);
+		$show_results = 'posts';
+		$post_event = new \phpbb\event\data(compact('rowset'));
+		$topic_event = new \phpbb\event\data(compact('topic_list', 'rowset'));
+		$search_event = new \phpbb\event\data(compact('show_results', 'rowset'));
+
+		$this->listener->hide_foe_posts($post_event);
+		$this->listener->hide_foe_topics($topic_event);
+		$this->listener->hide_foe_search_results($search_event);
+
+		$this->assertSame($rowset, $post_event['rowset']);
+		$this->assertSame($rowset, $topic_event['rowset']);
+		$this->assertSame($rowset, $search_event['rowset']);
+	}
+
+	public function test_notice_mode_collapses_foe_quotes_behind_a_notice()
+	{
+		$this->user->data['zebra_hide_foe_content'] = 2;
+		$this->relationships->expects($this->once())
+			->method('get_foe_identities')
+			->with(2)
+			->willReturn(array(3 => 'foe user'));
+		$xml = '<r><QUOTE author="Foe User" user_id="3"><t>collapsed-modern</t></QUOTE>'
+			. '<QUOTE author="Friend" user_id="4"><t>open-friend</t></QUOTE>'
+			. '<QUOTE user_id="3"><t>collapsed-anonymous</t></QUOTE></r>';
+		$event = new \phpbb\event\data(compact('xml'));
+
+		$this->listener->hide_foe_quotes($event);
+
+		$this->assertStringContainsString('collapsed-modern', $event['xml']);
+		$this->assertStringContainsString('collapsed-anonymous', $event['xml']);
+		$this->assertStringContainsString("\u{E000}", $event['xml']);
+
+		// Stand in for the renderer: the XML text is what reaches the HTML.
+		$html = $event['xml'];
+		$render_event = new \phpbb\event\data(compact('html'));
+		$this->listener->insert_foe_quote_notices($render_event);
+		$html = $render_event['html'];
+
+		$this->assertStringNotContainsString("\u{E000}", $html);
+		$this->assertSame(2, substr_count($html, '<div class="zebraenhance-foe-quote"><details><summary>'));
+		$this->assertSame(2, substr_count($html, '</details></div>'));
+		$this->assertStringContainsString('<summary>ZEBRAENHANCE_FOE_QUOTE_HIDDEN<strong>Foe User</strong>', $html);
+		$this->assertStringContainsString('<summary>ZEBRAENHANCE_FOE_QUOTE_HIDDEN_UNKNOWN', $html);
+		$this->assertSame(1, preg_match('#<details>.*collapsed-modern.*</details></div><QUOTE author="Friend"#s', $html));
+		$this->assertStringNotContainsString('</details></div>' . "\u{E000}", $html);
+	}
+
+	public function test_quote_notices_only_replace_placeholders_from_the_current_render()
+	{
+		$html = "<p>\u{E000}123456789.0.1\u{E001}</p>";
+		$event = new \phpbb\event\data(compact('html'));
+
+		$this->listener->insert_foe_quote_notices($event);
+
+		$this->assertSame($html, $event['html']);
+	}
+
+	public function test_notice_assets_are_loaded_only_in_notice_mode()
+	{
+		$this->template->expects($this->once())
+			->method('assign_var')
+			->with('S_ZEBRAENHANCE_FOE_CONTENT_NOTICE', true);
+
+		$this->user->data['zebra_hide_foe_content'] = 1;
+		$this->listener->assign_foe_content_assets();
+		$this->user->data['zebra_hide_foe_content'] = 2;
+		$this->listener->assign_foe_content_assets();
 	}
 
 	public function test_user_content_notifications_are_filtered_by_foe_policy()

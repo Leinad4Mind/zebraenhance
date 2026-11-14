@@ -437,7 +437,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 			WHERE config_name = 'zebraenhance_foes_enhancement'");
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(0, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
-		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
+		$this->assertSame(0, $crawler->filter('select[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(0, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertStringNotContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
 		$this->logout();
@@ -447,7 +447,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 			WHERE config_name = 'zebraenhance_foe_content'");
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
-		$this->assertSame(0, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
+		$this->assertSame(0, $crawler->filter('select[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertStringContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
 		$this->logout();
@@ -463,14 +463,14 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$crawler = $this->open_friends_as('admin');
 		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
 		$this->assertSame('0', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
-		$this->assertSame(2, $crawler->filter('input[name=zebra_hide_foe_content]')->count());
-		$this->assertSame('0', $crawler->filter('input[name=zebra_hide_foe_content]:checked')->attr('value'));
+		$this->assertSame(3, $crawler->filter('select[name=zebra_hide_foe_content] option')->count());
+		$this->assertSame('0', $crawler->filter('select[name=zebra_hide_foe_content] option[selected]')->attr('value'));
 		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertSame('0', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
 
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
 		$form['zebra_block_foe_pm'] = 1;
-		$form['zebra_hide_foe_content'] = 1;
+		$form['zebra_hide_foe_content'] = 2;
 		$form['zebra_mute_foe_notifications'] = 1;
 		self::submit($form);
 
@@ -478,13 +478,13 @@ class zebraenhance_requests_test extends zebraenhance_base
 			FROM phpbb_users WHERE user_id = 2');
 		$row = $db->sql_fetchrow($result);
 		$this->assertSame(1, (int) $row['zebra_block_foe_pm']);
-		$this->assertSame(1, (int) $row['zebra_hide_foe_content']);
+		$this->assertSame(2, (int) $row['zebra_hide_foe_content']);
 		$this->assertSame(1, (int) $row['zebra_mute_foe_notifications']);
 		$db->sql_freeresult($result);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
 		$this->assertSame('1', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
-		$this->assertSame('1', $crawler->filter('input[name=zebra_hide_foe_content]:checked')->attr('value'));
+		$this->assertSame('2', $crawler->filter('select[name=zebra_hide_foe_content] option[selected]')->attr('value'));
 		$this->assertSame('1', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
 		$form['zebra_block_foe_pm'] = 0;
@@ -628,6 +628,62 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$crawler = self::request('GET', 'search.php?author_id=' . (int) $foe_id . '&sr=posts&sid=' . $this->sid);
 		$this->assertSame(0, $crawler->filter('div.search.post')->count());
+
+		$crawler = self::request('GET', 'viewforum.php?f=2&sid=' . $this->sid);
+		$this->assertStringNotContainsString('Zebra Enhance foe content topic', $crawler->filter('ul.topiclist.topics')->text());
+
+		$crawler = self::request('GET', 'search.php?author_id=' . (int) $foe_id . '&sr=topics&sid=' . $this->sid);
+		$this->assertStringNotContainsString('Zebra Enhance foe content topic', $crawler->filter('html')->text());
+		$this->logout();
+	}
+
+	public function test_notice_mode_collapses_foe_topics_and_quotes()
+	{
+		$this->enable_foe_enhancements();
+		$foe = 'zenoticefoe';
+		$viewer = 'zenoticeviewer';
+		$foe_id = $this->create_user($foe);
+		$viewer_id = $this->create_user($viewer);
+
+		$this->login($foe);
+		$topic = $this->create_topic(2, 'Zebra Enhance foe notice topic', 'zebraenhance-notice-original-body');
+		$this->logout();
+
+		$this->login();
+		$quote = '[quote=' . $foe . ' post_id=' . (int) $topic['post_id'] . ' user_id=' . (int) $foe_id . ']'
+			. 'zebraenhance-notice-quoted-body[/quote] zebraenhance-notice-reply-body';
+		$this->create_post(2, $topic['topic_id'], 'Re: Zebra Enhance foe notice topic', $quote);
+		$this->logout();
+
+		$db = $this->get_db();
+		$db->sql_query('UPDATE phpbb_users
+			SET zebra_hide_foe_content = 2
+			WHERE user_id = ' . (int) $viewer_id);
+		$db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (' . (int) $viewer_id . ', ' . (int) $foe_id . ', 0, 1, 0)');
+
+		$this->login($viewer);
+		$this->add_lang_ext('anavaro/zebraenhance', 'zebra_enchance');
+		$crawler = self::request('GET', 'viewtopic.php?t=' . (int) $topic['topic_id'] . "&sid={$this->sid}");
+		// phpBB keeps its own placeholder for the foe's post.
+		$this->assertSame(1, $crawler->filter('#p' . (int) $topic['post_id'])->count());
+		$notice = $crawler->filter('.zebraenhance-foe-quote details');
+		$this->assertSame(1, $notice->count());
+		$this->assertNull($notice->attr('open'));
+		$this->assertStringContainsString($foe, $notice->filter('summary')->text());
+		$this->assertStringContainsString('zebraenhance-notice-quoted-body', $notice->filter('blockquote')->text());
+		$this->assertStringContainsString('zebraenhance-notice-reply-body', $crawler->filter('html')->text());
+		$this->assertStringNotContainsString("\u{E000}", $crawler->html());
+
+		$crawler = self::request('GET', 'viewforum.php?f=2&sid=' . $this->sid);
+		$topic_notice = $crawler->filter('li.zebraenhance-foe-topic-notice');
+		$this->assertSame(1, $topic_notice->count());
+		$this->assertStringContainsString($foe, $topic_notice->text());
+		$this->assertStringContainsString('Zebra Enhance foe notice topic', $crawler->filter('ul.topiclist.topics')->text());
+
+		$crawler = self::request('GET', 'search.php?author_id=' . (int) $foe_id . '&sr=topics&sid=' . $this->sid);
+		$this->assertSame(1, $crawler->filter('li.zebraenhance-foe-topic-notice')->count());
 		$this->logout();
 	}
 
