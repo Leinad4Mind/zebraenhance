@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to package, for example v2.8.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Package and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        env:
+          PUSH_TAG: ${{ github.ref_name }}
+          MANUAL_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="$MANUAL_TAG"
+          else
+            tag="$PUSH_TAG"
+          fi
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tag and package metadata
+        id: metadata
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+
+          tag="$RELEASE_TAG"
+          version="${tag#v}"
+          composer_version="$(php -r '$data = json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR); echo $data["version"];')"
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag ${tag} is not a stable semantic version (vX.Y.Z)." >&2
+            exit 1
+          fi
+
+          if [[ "$tag" != "v${composer_version}" ]]; then
+            echo "Tag ${tag} does not match composer.json version ${composer_version}." >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "archive=zebraenhance-${version}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build installable phpBB package
+        shell: bash
+        env:
+          ARCHIVE: ${{ steps.metadata.outputs.archive }}
+        run: |
+          set -euo pipefail
+
+          package_root="build/anavaro/zebraenhance"
+          mkdir -p "$package_root"
+          git archive --format=tar HEAD | tar -xf - -C "$package_root"
+
+          test -f "$package_root/composer.json"
+          test -f "$package_root/ext.php"
+          test ! -e "$package_root/.github"
+          test ! -e "$package_root/tests"
+          test ! -e "$package_root/phpunit.xml.dist"
+
+          (
+            cd build
+            zip -X -r "../${ARCHIVE}" anavaro
+          )
+
+          unexpected="$(unzip -Z1 "$ARCHIVE" | grep -Ev '^anavaro/$|^anavaro/zebraenhance(/.*)?$' || true)"
+          if [[ -n "$unexpected" ]]; then
+            echo "Unexpected paths in release archive:" >&2
+            printf '%s\n' "$unexpected" >&2
+            exit 1
+          fi
+          unzip -Z1 "$ARCHIVE" | grep -Fxq 'anavaro/zebraenhance/composer.json'
+
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.tag.outputs.name }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+          ARCHIVE: ${{ steps.metadata.outputs.archive }}
+        run: |
+          set -euo pipefail
+
+          notes_file=""
+          if [[ "$RELEASE_TAG" == "v2.8.0" ]]; then
+            notes_file="$RUNNER_TEMP/zebraenhance-2.8.0.md"
+            cat > "$notes_file" <<'EOF'
+          Zebra Enhance 2.8.0 is out.
+
+          ## Since 2.4.0
+
+          - Friends' posts, topics, search results and private messages are highlighted. Close Friends get their own colour. Users can turn this off in **UCP > Friends**.
+          - Search your friends' posts from the quick links menu.
+          - Choose who can see your birthday and age.
+          - Choose who can send you private messages.
+          - Profile friend lists load 50 friends at a time.
+          - Optional foe protections: hide or collapse content from foes, mute foe notifications, temporary foes, and per-foe exceptions. They are off until an administrator enables them.
+
+          ## Upgrading from 2.4.0
+
+          Disable the extension without deleting its data, replace the files, enable it again, and purge the cache. Your settings and permissions carry over.
+
+          **Requirements:** phpBB 3.3.0 or newer (3.3.x), PHP 7.4 or newer.
+
+          [Changelog](https://github.com/Leinad4Mind/zebraenhance/blob/master/CHANGELOG.md)
+          EOF
+          fi
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            if [[ -n "$notes_file" ]]; then
+              gh release edit "$RELEASE_TAG" --title "Zebra Enhance ${VERSION}" --notes-file "$notes_file"
+            fi
+            gh release upload "$RELEASE_TAG" \
+              "$ARCHIVE#Installable phpBB extension package" \
+              "${ARCHIVE}.sha256#SHA-256 checksum" \
+              --clobber
+          elif [[ -n "$notes_file" ]]; then
+            gh release create "$RELEASE_TAG" \
+              "$ARCHIVE#Installable phpBB extension package" \
+              "${ARCHIVE}.sha256#SHA-256 checksum" \
+              --verify-tag \
+              --title "Zebra Enhance ${VERSION}" \
+              --notes-file "$notes_file"
+          else
+            gh release create "$RELEASE_TAG" \
+              "$ARCHIVE#Installable phpBB extension package" \
+              "${ARCHIVE}.sha256#SHA-256 checksum" \
+              --verify-tag \
+              --generate-notes \
+              --title "Zebra Enhance ${VERSION}"
+          fi
