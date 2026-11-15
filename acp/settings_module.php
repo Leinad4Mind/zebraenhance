@@ -40,6 +40,7 @@ class settings_module
 			$config->set('zebraenhance_decline_cooldown_days', $cooldown_days);
 			$config->set('zebraenhance_friend_posts', (int) $request->variable('zebraenhance_friend_posts', 0));
 			$config->set('zebraenhance_friend_highlight', (int) $request->variable('zebraenhance_friend_highlight', 0));
+			$config->set('zebraenhance_friend_avatars', (int) $request->variable('zebraenhance_friend_avatars', 0));
 			$foe_settings = array(
 				'zebraenhance_foes_enhancement',
 				'zebraenhance_foe_pm',
@@ -67,6 +68,7 @@ class settings_module
 			'ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS' => isset($config['zebraenhance_decline_cooldown_days']) ? (int) $config['zebraenhance_decline_cooldown_days'] : 7,
 			'S_ZEBRAENHANCE_FRIEND_POSTS' => !empty($config['zebraenhance_friend_posts']),
 			'S_ZEBRAENHANCE_FRIEND_HIGHLIGHT' => !empty($config['zebraenhance_friend_highlight']),
+			'S_ZEBRAENHANCE_FRIEND_AVATARS' => !empty($config['zebraenhance_friend_avatars']),
 			'S_ZEBRAENHANCE_FOES_ENHANCEMENT' => !empty($config['zebraenhance_foes_enhancement']),
 			'S_ZEBRAENHANCE_FOE_PM' => !empty($config['zebraenhance_foe_pm']),
 			'S_ZEBRAENHANCE_FOE_CONTENT' => !empty($config['zebraenhance_foe_content']),

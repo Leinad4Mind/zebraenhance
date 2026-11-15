@@ -2,6 +2,12 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
+## Unreleased
+
+### Added
+
+- Added friends' avatars to the friend list in UCP > Friends. An ACP setting switches them on or off; it is on by default.
+
 ## 2.8.0 - 2026-11-15
 
 ### Added

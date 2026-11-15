@@ -22,6 +22,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Each user can independently mark an accepted friend as a Close Friend.
 - Users can create up to 20 private friend circles and assign accepted friends to several circles.
 - Profiles show mutual friends only when the viewer may see that profile's friend list.
+- Friends' avatars are shown in the friend list in UCP > Friends, and an ACP setting can turn them off.
 - Posts, topics, search results and private messages from friends are highlighted, with a separate colour for Close Friends that only the viewer sees. Users can switch it off in UCP > Friends, and administrators in the ACP.
 - "View your friends' posts" in the quick links menu searches the posts of all accepted friends, and each friend in UCP > Friends has a link to search their posts. Administrators can switch both off in the ACP.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.

@@ -124,6 +124,12 @@
 	max-width: 3rem;
 }
 
+.zebraenhance-friend-avatar img {
+	max-height: 2rem;
+	max-width: 2rem;
+	vertical-align: middle;
+}
+
 .zebraenhance-friends-more {
 	align-items: center;
 	display: flex;

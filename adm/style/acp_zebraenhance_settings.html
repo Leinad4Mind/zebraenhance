@@ -33,6 +33,13 @@
 				<label><input type="radio" class="radio" name="zebraenhance_friend_highlight" value="0"{% if not S_ZEBRAENHANCE_FRIEND_HIGHLIGHT %} checked{% endif %}> {{ lang('NO') }}</label>
 			</dd>
 		</dl>
+		<dl>
+			<dt><label>{{ lang('ACP_ZEBRAENHANCE_FRIEND_AVATARS') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_FRIEND_AVATARS_EXPLAIN') }}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio" name="zebraenhance_friend_avatars" value="1"{% if S_ZEBRAENHANCE_FRIEND_AVATARS %} checked{% endif %}> {{ lang('YES') }}</label>
+				<label><input type="radio" class="radio" name="zebraenhance_friend_avatars" value="0"{% if not S_ZEBRAENHANCE_FRIEND_AVATARS %} checked{% endif %}> {{ lang('NO') }}</label>
+			</dd>
+		</dl>
 	</fieldset>
 
 	<fieldset>

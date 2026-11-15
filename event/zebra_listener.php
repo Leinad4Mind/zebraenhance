@@ -442,6 +442,9 @@ class zebra_listener implements EventSubscriberInterface
 			$this->template->assign_block_vars('pretty_zebra', array(
 				'USER_ID'       => $friend_id,
 				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
+				'USER_AVATAR'   => !empty($this->config['zebraenhance_friend_avatars'])
+					? $this->user_loader->get_avatar($friend_id, false, true)
+					: '',
 				'U_CANCEL'      => $this->ucp_friend_url('remove=1&usernames[]=' . $friend_id),
 				'U_CLOSE_ADD'   => $this->controller_helper->route('anavaro_zebraenhance_close_friend', array(
 					'userid' => $friend_id,

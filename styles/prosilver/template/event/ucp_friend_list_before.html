@@ -79,6 +79,7 @@
 			{% endif %}
 				<a href="{{ friend.U_CANCEL }}" data-ajax="true" data-refresh="true" title="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}" aria-label="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}"><i class="icon fa-user-times fa-fw" aria-hidden="true"></i></a>
 			</span>
+			{% if friend.USER_AVATAR %}<span class="zebraenhance-friend-avatar">{{ friend.USER_AVATAR }}</span>{% endif %}
 			<span class="zebraenhance-friend-name">{{ friend.USERNAME_FULL }}</span>
 		{% if friend.circles|length %}
 			<span class="zebraenhance-circle-assignment">
