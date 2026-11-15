@@ -2,7 +2,7 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
-## Unreleased
+## 2.8.0 - 2026-11-15
 
 ### Added
 
