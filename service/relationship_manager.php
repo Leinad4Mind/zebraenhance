@@ -113,6 +113,9 @@ class relationship_manager
 	/** @var array Viewer user ID => their standing with each owner */
 	protected $standing_cache = array();
 
+	/** @var array Owner user ID => array(friend user ID => is a Close Friend) */
+	protected $friend_flags_cache = array();
+
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
 		\phpbb\db\tools\tools_interface $db_tools,
@@ -1614,6 +1617,20 @@ class relationship_manager
 		return $is_close;
 	}
 
+	public function set_highlight_friends($user_id, $enabled)
+	{
+		$user_id = (int) $user_id;
+		$enabled = (bool) $enabled;
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_highlight_friends = ' . (int) $enabled . '
+				WHERE user_id = ' . $user_id);
+		}
+
+		return $enabled;
+	}
+
 	/**
 	 * Store who may see a user's birthday and age (a visibility value 0 through 5).
 	 */
@@ -1749,6 +1766,36 @@ class relationship_manager
 		}
 
 		return $this->is_close_friend($owner_id, $viewer_id);
+	}
+
+	/**
+	 * Return a user's accepted friends and whether the user marked each one as
+	 * a Close Friend. Cached per request.
+	 *
+	 * @return array Friend user ID => bool
+	 */
+	public function get_friend_flags($owner_id)
+	{
+		$owner_id = (int) $owner_id;
+		if (isset($this->friend_flags_cache[$owner_id]))
+		{
+			return $this->friend_flags_cache[$owner_id];
+		}
+
+		$sql = 'SELECT zebra_id, bff
+			FROM ' . $this->zebra_table . '
+			WHERE user_id = ' . $owner_id . '
+				AND friend = 1
+				AND foe = 0';
+		$result = $this->db->sql_query($sql);
+		$flags = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$flags[(int) $row['zebra_id']] = (bool) $row['bff'];
+		}
+		$this->db->sql_freeresult($result);
+
+		return $this->friend_flags_cache[$owner_id] = $flags;
 	}
 
 	/**

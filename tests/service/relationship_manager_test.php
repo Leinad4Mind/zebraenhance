@@ -116,6 +116,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'zebra_birthday_show', array('TINT:1', 0));
 		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_highlight_friends'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_highlight_friends', array('BOOL', 1));
+		}
 	}
 
 	public function test_same_direction_request_is_idempotent()
@@ -619,6 +623,28 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$result = $this->db->sql_query('SELECT zebra_request_policy FROM phpbb_users WHERE user_id = 2');
 		$this->assertSame(2, (int) $this->db->sql_fetchfield('zebra_request_policy'));
 		$this->db->sql_freeresult($result);
+	}
+
+	public function test_friend_flags_tell_close_friends_apart()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 3, 1, 0, 1)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 52, 1, 0, 0)');
+
+		$flags = $this->relationships->get_friend_flags(4);
+		ksort($flags);
+
+		// User 5 is user 4's foe in the fixture.
+		$this->assertSame(array(3 => true, 52 => false), $flags);
+	}
+
+	public function test_highlight_friends_preference_is_persisted()
+	{
+		$this->assertFalse($this->relationships->set_highlight_friends(2, 0));
+		$result = $this->db->sql_query('SELECT zebra_highlight_friends FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(0, (int) $this->db->sql_fetchfield('zebra_highlight_friends'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertTrue($this->relationships->set_highlight_friends(2, 1));
 	}
 
 	public function test_friend_ids_include_only_accepted_friends()

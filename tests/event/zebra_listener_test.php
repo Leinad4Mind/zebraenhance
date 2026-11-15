@@ -63,6 +63,7 @@ class zebra_listener_test extends \phpbb_test_case
 				'allow_birthdays' => 1,
 				'load_search' => 1,
 				'zebraenhance_friend_posts' => 1,
+				'zebraenhance_friend_highlight' => 1,
 			)),
 			'./',
 			'php'
@@ -101,6 +102,7 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.index_modify_birthdays_sql',
 			'core.index_modify_birthdays_list',
 			'core.index_modify_page_title',
+			'core.ucp_pm_view_message',
 		), array_keys(\anavaro\zebraenhance\event\zebra_listener::getSubscribedEvents()));
 	}
 
@@ -464,6 +466,89 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->listener->assign_friend_posts_link();
 		$this->config->set('load_search', 1);
 		$this->listener->assign_friend_posts_link();
+	}
+
+	public function test_content_from_friends_is_marked_everywhere()
+	{
+		$this->auth->method('acl_get')->with('u_zebraenhance_use_friend_requests')->willReturn(true);
+		// The service caches the friend list for the request.
+		$this->relationships->method('get_friend_flags')
+			->with(2)
+			->willReturn(array(5 => false, 6 => true));
+
+		$poster_id = 5;
+		$post_row = array('POST_ID' => 1);
+		$event = new \phpbb\event\data(compact('poster_id', 'post_row'));
+		$this->listener->mark_friend_post($event);
+		$this->assertSame(array(
+			'POST_ID' => 1,
+			'ZEBRAENHANCE_FRIEND_MARK' => 'ZEBRAENHANCE_FRIEND_MARK',
+			'S_ZEBRAENHANCE_CLOSE_FRIEND' => false,
+		), $event['post_row']);
+
+		$row = array('topic_poster' => 6);
+		$topic_row = array();
+		$event = new \phpbb\event\data(compact('row', 'topic_row'));
+		$this->listener->mark_friend_topic_row($event);
+		$this->assertSame('ZEBRAENHANCE_CLOSE_FRIEND_MARK', $event['topic_row']['ZEBRAENHANCE_FRIEND_MARK']);
+		$this->assertTrue($event['topic_row']['S_ZEBRAENHANCE_CLOSE_FRIEND']);
+
+		$show_results = 'posts';
+		$row = array('poster_id' => 5, 'topic_poster' => 7);
+		$tpl_ary = array();
+		$event = new \phpbb\event\data(compact('show_results', 'row', 'tpl_ary'));
+		$this->listener->mark_friend_search_row($event);
+		$this->assertFalse($event['tpl_ary']['S_ZEBRAENHANCE_CLOSE_FRIEND']);
+
+		$show_results = 'topics';
+		$tpl_ary = array();
+		$event = new \phpbb\event\data(compact('show_results', 'row', 'tpl_ary'));
+		$this->listener->mark_friend_search_row($event);
+		$this->assertSame(array(), $event['tpl_ary'], 'User 7 started the topic and is not a friend.');
+
+		$message_row = array('author_id' => 6);
+		$msg_data = array('MESSAGE_ID' => 3);
+		$event = new \phpbb\event\data(compact('message_row', 'msg_data'));
+		$this->listener->mark_friend_pm($event);
+		$this->assertTrue($event['msg_data']['S_ZEBRAENHANCE_CLOSE_FRIEND']);
+	}
+
+	public function test_friend_marks_respect_the_board_and_user_settings()
+	{
+		$this->auth->method('acl_get')->willReturn(true);
+		$this->relationships->expects($this->never())->method('get_friend_flags');
+		$poster_id = 5;
+		$post_row = array();
+
+		$this->user->data['zebra_highlight_friends'] = 0;
+		$event = new \phpbb\event\data(compact('poster_id', 'post_row'));
+		$this->listener->mark_friend_post($event);
+		$this->assertSame(array(), $event['post_row']);
+	}
+
+	public function test_friend_marks_are_off_when_the_board_disables_them()
+	{
+		$this->auth->method('acl_get')->willReturn(true);
+		$this->relationships->expects($this->never())->method('get_friend_flags');
+		$this->config->set('zebraenhance_friend_highlight', 0);
+		$this->template->expects($this->never())->method('assign_var');
+
+		$this->listener->assign_friend_highlight_assets();
+		$message_row = array('author_id' => 6);
+		$msg_data = array();
+		$event = new \phpbb\event\data(compact('message_row', 'msg_data'));
+		$this->listener->mark_friend_pm($event);
+		$this->assertSame(array(), $event['msg_data']);
+	}
+
+	public function test_highlight_styles_load_only_for_users_with_friends()
+	{
+		$this->auth->method('acl_get')->willReturn(true);
+		$this->relationships->method('get_friend_flags')->willReturnOnConsecutiveCalls(array(), array(5 => false));
+		$this->template->expects($this->once())->method('assign_var')->with('S_ZEBRAENHANCE_FRIEND_HIGHLIGHT', true);
+
+		$this->listener->assign_friend_highlight_assets();
+		$this->listener->assign_friend_highlight_assets();
 	}
 
 	protected function allow_friend_posts()

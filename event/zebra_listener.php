@@ -83,6 +83,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var bool Whether search.php is running the search for friends' posts */
 	protected $friend_posts_search = false;
 
+	/** @var bool|null Whether content from the viewer's friends is highlighted */
+	protected $friend_highlight;
+
 	/** @var array Placeholder tokens of the text being rendered, mapped to their HTML */
 	protected $foe_quote_replacements = array();
 
@@ -133,12 +136,19 @@ class zebra_listener implements EventSubscriberInterface
 			'core.text_formatter_s9e_render_before' => 'hide_foe_quotes',
 			'core.text_formatter_s9e_render_after' => 'insert_foe_quote_notices',
 			'core.viewforum_modify_topics_data' => 'hide_foe_topics',
-			'core.viewforum_modify_topicrow'  => 'mark_foe_topic_row',
+			'core.viewforum_modify_topicrow'  => array(
+				array('mark_foe_topic_row'),
+				array('mark_friend_topic_row'),
+			),
 			'core.search_modify_rowset'       => 'hide_foe_search_results',
-			'core.search_modify_tpl_ary'      => 'mark_foe_search_topic_row',
+			'core.search_modify_tpl_ary'      => array(
+				array('mark_foe_search_topic_row'),
+				array('mark_friend_search_row'),
+			),
 			'core.page_header'                => array(
 				array('assign_foe_content_assets'),
 				array('assign_friend_posts_link'),
+				array('assign_friend_highlight_assets'),
 			),
 			'core.search_modify_param_before' => 'search_friend_posts',
 			'core.search_modify_param_after'  => 'name_friend_posts_search',
@@ -149,10 +159,14 @@ class zebra_listener implements EventSubscriberInterface
 			'core.memberlist_modify_view_profile_template_vars' => 'modify_profile_template_vars',
 			'core.memberlist_prepare_profile_data' => 'hide_profile_age',
 			'core.viewtopic_cache_user_data'  => 'collect_poster_birthday_visibility',
-			'core.viewtopic_modify_post_row'  => 'hide_poster_age',
+			'core.viewtopic_modify_post_row'  => array(
+				array('hide_poster_age'),
+				array('mark_friend_post'),
+			),
 			'core.index_modify_birthdays_sql' => 'select_birthday_visibility',
 			'core.index_modify_birthdays_list' => 'hide_index_birthdays',
 			'core.index_modify_page_title'    => 'rebuild_birthday_list',
+			'core.ucp_pm_view_message'        => 'mark_friend_pm',
 		);
 	}
 
@@ -227,6 +241,7 @@ class zebra_listener implements EventSubscriberInterface
 			|| $this->request->is_set_post('zebra_request_policy')
 			|| $this->request->is_set_post('zebra_pm_policy')
 			|| $this->request->is_set_post('zebra_birthday_show')
+			|| $this->request->is_set_post('zebra_highlight_friends')
 			|| $this->request->is_set_post('zebra_hide_foe_content')
 			|| $this->request->is_set_post('zebra_mute_foe_notifications'))
 		{
@@ -258,6 +273,15 @@ class zebra_listener implements EventSubscriberInterface
 					$user_id,
 					$this->request->variable('zebra_pm_policy', 0)
 				);
+			}
+			if (!empty($this->config['zebraenhance_friend_highlight'])
+				&& $this->request->is_set_post('zebra_highlight_friends'))
+			{
+				$this->user->data['zebra_highlight_friends'] = $this->relationships->set_highlight_friends(
+					$user_id,
+					$this->request->variable('zebra_highlight_friends', 1)
+				);
+				$this->friend_highlight = null;
 			}
 			if (!empty($this->config['allow_birthdays'])
 				&& $this->request->is_set_post('zebra_birthday_show'))
@@ -296,6 +320,8 @@ class zebra_listener implements EventSubscriberInterface
 			),
 			'ZEBRA_BIRTHDAY_SHOW' => isset($this->user->data['zebra_birthday_show']) ? (int) $this->user->data['zebra_birthday_show'] : 0,
 			'S_ZEBRAENHANCE_BIRTHDAY_PRIVACY_AVAILABLE' => !empty($this->config['allow_birthdays']),
+			'S_ZEBRAENHANCE_FRIEND_HIGHLIGHT_AVAILABLE' => !empty($this->config['zebraenhance_friend_highlight']),
+			'S_ZEBRA_HIGHLIGHT_FRIENDS' => !isset($this->user->data['zebra_highlight_friends']) || !empty($this->user->data['zebra_highlight_friends']),
 			'ZEBRA_FOE_CONTENT_MODE' => relationship_manager::normalize_foe_content_mode(
 				isset($this->user->data['zebra_hide_foe_content']) ? $this->user->data['zebra_hide_foe_content'] : 0
 			),
@@ -972,6 +998,57 @@ class zebra_listener implements EventSubscriberInterface
 	}
 
 	/**
+	 * Load the highlight styles only for users whose friends' content is marked.
+	 */
+	public function assign_friend_highlight_assets()
+	{
+		if ($this->friend_highlight_enabled() && $this->relationships->get_friend_flags((int) $this->user->data['user_id']))
+		{
+			$this->template->assign_var('S_ZEBRAENHANCE_FRIEND_HIGHLIGHT', true);
+		}
+	}
+
+	public function mark_friend_post($event)
+	{
+		$mark = $this->friend_mark((int) $event['poster_id']);
+		if ($mark)
+		{
+			$event['post_row'] = array_merge($event['post_row'], $mark);
+		}
+	}
+
+	public function mark_friend_topic_row($event)
+	{
+		$row = $event['row'];
+		$mark = $this->friend_mark(isset($row['topic_poster']) ? (int) $row['topic_poster'] : 0);
+		if ($mark)
+		{
+			$event['topic_row'] = array_merge($event['topic_row'], $mark);
+		}
+	}
+
+	public function mark_friend_search_row($event)
+	{
+		$row = $event['row'];
+		$author_field = $event['show_results'] === 'topics' ? 'topic_poster' : 'poster_id';
+		$mark = $this->friend_mark(isset($row[$author_field]) ? (int) $row[$author_field] : 0);
+		if ($mark)
+		{
+			$event['tpl_ary'] = array_merge($event['tpl_ary'], $mark);
+		}
+	}
+
+	public function mark_friend_pm($event)
+	{
+		$message_row = $event['message_row'];
+		$mark = $this->friend_mark(isset($message_row['author_id']) ? (int) $message_row['author_id'] : 0);
+		if ($mark)
+		{
+			$event['msg_data'] = array_merge($event['msg_data'], $mark);
+		}
+	}
+
+	/**
 	 * Offer "View your friends' posts" in the quick links menu.
 	 */
 	public function assign_friend_posts_link()
@@ -1306,6 +1383,43 @@ class zebra_listener implements EventSubscriberInterface
 	protected function can_see_private_details()
 	{
 		return $this->auth->acl_get('a_user') || $this->auth->acl_get('m_zebraenhance_view_private_friendlists');
+	}
+
+	/**
+	 * Template variables that mark content by one of the viewer's friends.
+	 *
+	 * @return array Empty when the author is not a friend or highlighting is off
+	 */
+	protected function friend_mark($author_id)
+	{
+		if (!$author_id || !$this->friend_highlight_enabled())
+		{
+			return array();
+		}
+		$friends = $this->relationships->get_friend_flags((int) $this->user->data['user_id']);
+		if (!isset($friends[$author_id]))
+		{
+			return array();
+		}
+
+		$is_close = $friends[$author_id];
+		return array(
+			'ZEBRAENHANCE_FRIEND_MARK'    => $this->language->lang($is_close ? 'ZEBRAENHANCE_CLOSE_FRIEND_MARK' : 'ZEBRAENHANCE_FRIEND_MARK'),
+			'S_ZEBRAENHANCE_CLOSE_FRIEND' => $is_close,
+		);
+	}
+
+	protected function friend_highlight_enabled()
+	{
+		if ($this->friend_highlight === null)
+		{
+			$this->friend_highlight = !empty($this->config['zebraenhance_friend_highlight'])
+				&& $this->viewer_is_registered()
+				&& (!isset($this->user->data['zebra_highlight_friends']) || !empty($this->user->data['zebra_highlight_friends']))
+				&& (bool) $this->auth->acl_get('u_zebraenhance_use_friend_requests');
+		}
+
+		return $this->friend_highlight;
 	}
 
 	protected function friend_posts_available()

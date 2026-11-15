@@ -1,0 +1,39 @@
+/**
+ * @copyright (c) 2026 Leinad4Mind
+ * @license GNU General Public License, version 2 (GPL-2.0-only)
+ */
+
+:root {
+	--zebraenhance-friend-colour: #2e8b57;
+	--zebraenhance-close-friend-colour: #c58b00;
+}
+
+.zebraenhance-friend-mark {
+	color: var(--zebraenhance-friend-colour);
+	white-space: nowrap;
+}
+
+.zebraenhance-friend-mark-close {
+	color: var(--zebraenhance-close-friend-colour);
+}
+
+/* A coloured edge on the post, topic row, search result or private message. */
+.post:has(.zebraenhance-friend-mark),
+li.row:has(.zebraenhance-friend-mark) {
+	box-shadow: inset 4px 0 0 var(--zebraenhance-friend-colour);
+}
+
+.post:has(.zebraenhance-friend-mark-close),
+li.row:has(.zebraenhance-friend-mark-close) {
+	box-shadow: inset 4px 0 0 var(--zebraenhance-close-friend-colour);
+}
+
+.rtl .post:has(.zebraenhance-friend-mark),
+.rtl li.row:has(.zebraenhance-friend-mark) {
+	box-shadow: inset -4px 0 0 var(--zebraenhance-friend-colour);
+}
+
+.rtl .post:has(.zebraenhance-friend-mark-close),
+.rtl li.row:has(.zebraenhance-friend-mark-close) {
+	box-shadow: inset -4px 0 0 var(--zebraenhance-close-friend-colour);
+}

@@ -2,6 +2,12 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
+## Unreleased
+
+### Added
+
+- Highlighted posts, topics, search results and private messages from friends with a coloured edge and a mark next to the author, in a separate colour for Close Friends. Each user can switch it off in UCP > Friends, and an ACP setting switches it off for the board; both are on by default.
+
 ## 2.7.0 - 2026-11-15
 
 ### Added

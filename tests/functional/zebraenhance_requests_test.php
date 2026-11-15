@@ -689,6 +689,42 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$this->logout();
 	}
 
+	public function test_content_from_friends_is_highlighted_until_switched_off()
+	{
+		$friend = 'zehighlightfriend';
+		$viewer = 'zehighlightviewer';
+		$friend_id = $this->create_user($friend);
+		$viewer_id = $this->create_user($viewer);
+
+		$this->login($friend);
+		$topic = $this->create_topic(2, 'Zebra Enhance friend highlight topic', 'zebraenhance-highlight-body');
+		$this->logout();
+
+		$db = $this->get_db();
+		$db->sql_query('INSERT INTO phpbb_zebra
+			(user_id, zebra_id, friend, foe, bff)
+			VALUES (' . (int) $viewer_id . ', ' . (int) $friend_id . ', 1, 0, 1)');
+
+		$this->login($viewer);
+		$crawler = self::request('GET', 'viewtopic.php?t=' . (int) $topic['topic_id'] . "&sid={$this->sid}");
+		$this->assertSame(1, $crawler->filter('.post .zebraenhance-friend-mark.zebraenhance-friend-mark-close')->count());
+
+		$crawler = self::request('GET', 'viewforum.php?f=2&sid=' . $this->sid);
+		$this->assertSame(1, $crawler->filter('li.row .zebraenhance-friend-mark')->count());
+
+		$crawler = self::request('GET', 'search.php?author_id=' . (int) $friend_id . '&sr=posts&sid=' . $this->sid);
+		$this->assertSame(1, $crawler->filter('div.search.post .zebraenhance-friend-mark')->count());
+
+		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
+		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
+		$form['zebra_highlight_friends'] = 0;
+		self::submit($form);
+
+		$crawler = self::request('GET', 'viewtopic.php?t=' . (int) $topic['topic_id'] . "&sid={$this->sid}");
+		$this->assertSame(0, $crawler->filter('.zebraenhance-friend-mark')->count());
+		$this->logout();
+	}
+
 	public function test_acp_request_limits_can_be_saved()
 	{
 		$this->login();

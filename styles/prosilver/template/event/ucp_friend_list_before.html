@@ -208,6 +208,15 @@
 		<option value="5"{% if ZEBRA_ACL == 5 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NOBODY') }}</option>
 	</select></dd>
 </dl>
+{% if S_ZEBRAENHANCE_FRIEND_HIGHLIGHT_AVAILABLE %}
+<dl>
+	<dt><label>{{ lang('ZEBRAENHANCE_HIGHLIGHT_FRIENDS') }}</label><br><span>{{ lang('ZEBRAENHANCE_HIGHLIGHT_FRIENDS_EXPLAIN') }}</span></dt>
+	<dd>
+		<label><input type="radio" class="radio" name="zebra_highlight_friends" value="1"{% if S_ZEBRA_HIGHLIGHT_FRIENDS %} checked{% endif %}> {{ lang('YES') }}</label>
+		<label><input type="radio" class="radio" name="zebra_highlight_friends" value="0"{% if not S_ZEBRA_HIGHLIGHT_FRIENDS %} checked{% endif %}> {{ lang('NO') }}</label>
+	</dd>
+</dl>
+{% endif %}
 {% if S_ZEBRAENHANCE_BIRTHDAY_PRIVACY_AVAILABLE %}
 <dl>
 	<dt><label for="zebra_birthday_show">{{ lang('ZEBRAENHANCE_BIRTHDAY_VISIBILITY') }}</label><br><span>{{ lang('ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN') }}</span></dt>
