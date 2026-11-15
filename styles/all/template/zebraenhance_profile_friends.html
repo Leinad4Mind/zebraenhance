@@ -1,0 +1,6 @@
+{% for friend in zebra_friendslist %}
+<li>
+	<a href="{{ friend.U_PROFILE }}" class="header-avatar">{{ friend.USER_AVATAR }}</a>
+	{{ friend.USERNAME_FULL }}
+</li>
+{% endfor %}

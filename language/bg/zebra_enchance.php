@@ -87,6 +87,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Добавете кратко лично съобщение (незадължително)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Общи приятели',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'Показани %2$d от %1$d приятел',
+		2 => 'Показани %2$d от %1$d приятели',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Покажи още',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Не можаха да се заредят още приятели.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Блокиране на лични съобщения от врагове',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Когато е включено, потребителите от списъка ви с врагове не могат да ви изпращат лични съобщения. Групово лично съобщение от враг, което включва и вас, се отхвърля за цялата група.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Съдържание от врагове',

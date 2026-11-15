@@ -89,6 +89,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Kurze persönliche Nachricht hinzufügen (optional)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Gemeinsame Freunde',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => '%2$d von %1$d Freund angezeigt',
+		2 => '%2$d von %1$d Freunden angezeigt',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Mehr anzeigen',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Weitere Freunde konnten nicht geladen werden.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Private Nachrichten von Feinden blockieren',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Wenn aktiviert, können dir Benutzer auf deiner Feindesliste keine privaten Nachrichten senden. Eine Gruppennachricht eines Feindes, die dich einschließt, wird für die ganze Gruppe abgelehnt.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Inhalte von Feinden',

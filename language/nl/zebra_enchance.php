@@ -88,6 +88,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Voeg een kort persoonlijk bericht toe (optioneel)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Gemeenschappelijke vrienden',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => '%2$d van %1$d vriend weergegeven',
+		2 => '%2$d van %1$d vrienden weergegeven',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Meer tonen',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Meer vrienden konden niet worden geladen.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Privéberichten van vijanden blokkeren',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Als dit is ingeschakeld, kunnen gebruikers op je vijandenlijst je geen privéberichten sturen. Een groepsbericht van een vijand waarin jij staat, wordt voor de hele groep geweigerd.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Inhoud van vijanden',

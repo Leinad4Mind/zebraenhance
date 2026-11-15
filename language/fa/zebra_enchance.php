@@ -77,6 +77,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'یک پیام شخصی کوتاه اضافه کنید (اختیاری)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'دوستان مشترک',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'نمایش %2$d از %1$d دوست',
+		2 => 'نمایش %2$d از %1$d دوست',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'نمایش بیشتر',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'بارگذاری دوستان بیشتر ممکن نشد.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'مسدود کردن پیام‌های خصوصی دشمنان',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'در صورت فعال بودن، کاربرانی که در فهرست دشمنان شما هستند نمی‌توانند برای شما پیام خصوصی بفرستند. پیام خصوصی گروهی از یک دشمن که شما را هم شامل شود، برای کل گروه رد می‌شود.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'محتوای دشمنان',

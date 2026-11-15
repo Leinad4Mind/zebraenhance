@@ -19,14 +19,18 @@
 			</ul>
 		</section>
 		{% endif %}
-		<ul class="zebraenhance-profile-friends">
-		{% for friend in zebra_friendslist %}
-			<li>
-				<a href="{{ friend.U_PROFILE }}" class="header-avatar">{{ friend.USER_AVATAR }}</a>
-				{{ friend.USERNAME_FULL }}
-			</li>
-		{% endfor %}
+		<ul class="zebraenhance-profile-friends js-zebraenhance-friends">
+			{% include '@anavaro_zebraenhance/zebraenhance_profile_friends.html' %}
 		</ul>
+		{% if ZEBRAENHANCE_FRIENDS_SHOWN %}
+		<div class="zebraenhance-friends-more" data-error-title="{{ lang('ERROR') }}" data-request-failed="{{ lang('ZEBRAENHANCE_FRIENDS_LOAD_FAILED') }}">
+			<span class="js-zebraenhance-friends-shown" aria-live="polite">{{ ZEBRAENHANCE_FRIENDS_SHOWN }}</span>
+			{% if U_ZEBRAENHANCE_MORE_FRIENDS %}
+			{% INCLUDEJS '@anavaro_zebraenhance/zebraenhance_profile_friends.js' %}
+			<a href="{{ U_ZEBRAENHANCE_MORE_FRIENDS }}" class="button button-secondary js-zebraenhance-more-friends" role="button">{{ lang('ZEBRAENHANCE_SHOW_MORE_FRIENDS') }}</a>
+			{% endif %}
+		</div>
+		{% endif %}
 		{% else %}
 		<p>{{ lang('ZEBRAENHANCE_NO_FRIENDS') }}</p>
 		{% endif %}

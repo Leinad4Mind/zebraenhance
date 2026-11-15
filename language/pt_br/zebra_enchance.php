@@ -88,6 +88,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Adicione uma mensagem pessoal curta (opcional)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Amigos em comum',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'Mostrando %2$d de %1$d amigo',
+		2 => 'Mostrando %2$d de %1$d amigos',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Ver mais',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Não foi possível carregar mais amigos.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Bloquear mensagens privadas de inimigos',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Quando ativado, os usuários da sua lista de inimigos não podem enviar mensagens privadas para você. Uma MP em grupo de um inimigo que inclua você é rejeitada para o grupo inteiro.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Conteúdo de inimigos',

@@ -24,6 +24,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Profiles show mutual friends only when the viewer may see that profile's friend list.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
+- Profile friend lists show 50 friends at a time; "Show more" loads the next 50 in place through the same profile page and privacy checks.
 - Users can optionally block private messages from people on their foe list.
 - Users choose whether content from foes is shown, hidden behind a notice, or removed completely. The choice covers their posts (in topics, reply reviews, and post searches), the topics they started (in forum lists and topic searches), and identifiable quotes of their posts wherever phpBB renders them. A notice can be opened to reveal what it hides; for posts it is phpBB's own placeholder.
 - Users can suppress quote, mention, reply, topic, and bookmark notifications created by foes.

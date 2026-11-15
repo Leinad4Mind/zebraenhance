@@ -17,6 +17,9 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 class zebra_listener implements EventSubscriberInterface
 {
+	/** Friends shown on a profile at once, and loaded by each "Show more" */
+	const PROFILE_FRIENDS_PAGE_SIZE = 50;
+
 	/** @var \anavaro\zebraenhance\service\relationship_manager */
 	protected $relationships;
 
@@ -662,10 +665,11 @@ class zebra_listener implements EventSubscriberInterface
 		$viewer_registered = (bool) $this->user->data['is_registered']
 			&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE);
 		$can_use = $this->auth->acl_get('u_zebraenhance_use_friend_requests');
+		$friends_page_request = $this->request->is_ajax() && $this->request->is_set('zebraenhance_friends_start');
 		$this->profile_context_ready = true;
 		$this->profile_hide_native_add = !$can_use || !$viewer_registered;
 
-		if ($can_use && $viewer_registered && $viewer_id !== $owner_id)
+		if (!$friends_page_request && $can_use && $viewer_registered && $viewer_id !== $owner_id)
 		{
 			$request = $this->relationships->get_pending_request_between($viewer_id, $owner_id);
 			$friend = isset($event['friend']) && (bool) $event['friend'];
@@ -694,6 +698,10 @@ class zebra_listener implements EventSubscriberInterface
 
 		if (!$can_use)
 		{
+			if ($friends_page_request)
+			{
+				$this->send_friends_page_error('FRIENDLIST_ERROR_ACCESS', 403);
+			}
 			return;
 		}
 
@@ -706,6 +714,17 @@ class zebra_listener implements EventSubscriberInterface
 			$viewer_registered
 		);
 
+		if ($friends_page_request)
+		{
+			if (!$can_view)
+			{
+				$this->send_friends_page_error('FRIENDLIST_ERROR_ACCESS', 403);
+				return;
+			}
+			$this->send_friends_page($owner_id, max(0, (int) $this->request->variable('zebraenhance_friends_start', 0)));
+			return;
+		}
+
 		$this->template->assign_vars(array(
 			'FRIENDLIST'              => true,
 			'FRIENDLIST_ERROR_ACCESS' => !$can_view,
@@ -715,41 +734,35 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$friends = $this->relationships->get_friends($owner_id, 100);
-		if (!$friends)
+		$total = $this->relationships->count_friends($owner_id);
+		if (!$total)
 		{
 			return;
 		}
+
+		// Without JavaScript, "Show more" reloads the profile with every friend up to the next page.
+		$start = min(max(0, (int) $this->request->variable('zebraenhance_friends_start', 0)), $total);
+		$friends = $this->relationships->get_friends($owner_id, $start + self::PROFILE_FRIENDS_PAGE_SIZE);
 		$mutual_friends = $viewer_registered && $viewer_id !== $owner_id
 			? $this->relationships->get_mutual_friends($owner_id, $viewer_id)
 			: array();
 
-		$user_ids = array_map(function ($row)
-		{
-			return (int) $row['zebra_id'];
-		}, array_merge($friends, $mutual_friends));
-		$user_ids = array_values(array_unique($user_ids));
-		$this->user_loader->load_users($user_ids);
+		$this->load_profile_friends(array_merge($friends, $mutual_friends));
 		foreach ($mutual_friends as $row)
 		{
-			$friend_id = (int) $row['zebra_id'];
-			$this->template->assign_block_vars('zebra_mutual_friends', array(
-				'USER_ID'       => $friend_id,
-				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
-				'U_PROFILE'     => $this->profile_url($friend_id),
-				'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
-			));
+			$this->template->assign_block_vars('zebra_mutual_friends', $this->profile_friend_row((int) $row['zebra_id']));
 		}
 		foreach ($friends as $row)
 		{
-			$friend_id = (int) $row['zebra_id'];
-			$this->template->assign_block_vars('zebra_friendslist', array(
-				'USER_ID'       => $friend_id,
-				'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
-				'U_PROFILE'     => $this->profile_url($friend_id),
-				'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
-			));
+			$this->template->assign_block_vars('zebra_friendslist', $this->profile_friend_row((int) $row['zebra_id']));
 		}
+
+		$shown = count($friends);
+		$this->template->assign_vars(array(
+			'ZEBRAENHANCE_FRIENDS_TOTAL' => $total,
+			'ZEBRAENHANCE_FRIENDS_SHOWN' => $total > self::PROFILE_FRIENDS_PAGE_SIZE ? $this->language->lang('ZEBRAENHANCE_FRIENDS_SHOWN', $total, $shown) : '',
+			'U_ZEBRAENHANCE_MORE_FRIENDS' => $shown < $total ? $this->more_friends_url($owner_id, $shown) : '',
+		));
 	}
 
 	public function modify_profile_template_vars($event)
@@ -925,6 +938,85 @@ class zebra_listener implements EventSubscriberInterface
 		}
 
 		return $this->foe_identities;
+	}
+
+	/**
+	 * Answer a "Show more" request with the next page of the profile friend list, then exit.
+	 */
+	protected function send_friends_page($owner_id, $start)
+	{
+		$total = $this->relationships->count_friends($owner_id);
+		$friends = $start < $total
+			? $this->relationships->get_friends($owner_id, self::PROFILE_FRIENDS_PAGE_SIZE, $start)
+			: array();
+
+		$this->load_profile_friends($friends);
+		foreach ($friends as $row)
+		{
+			$this->template->assign_block_vars('zebra_friendslist', $this->profile_friend_row((int) $row['zebra_id']));
+		}
+		$this->template->set_filenames(array(
+			'zebraenhance_profile_friends' => '@anavaro_zebraenhance/zebraenhance_profile_friends.html',
+		));
+
+		$shown = min($total, $start + count($friends));
+		$this->send_json(array(
+			'success'    => true,
+			'html'       => $friends ? $this->template->assign_display('zebraenhance_profile_friends') : '',
+			'shown'      => $this->language->lang('ZEBRAENHANCE_FRIENDS_SHOWN', $total, $shown),
+			'next_start' => $friends && $shown < $total ? $shown : 0,
+		));
+	}
+
+	protected function send_friends_page_error($language_key, $status_code)
+	{
+		$this->send_json(array(
+			'success' => false,
+			'message' => $this->language->lang($language_key),
+		), $status_code);
+	}
+
+	/**
+	 * Send a JSON response and end the request (overridden in tests).
+	 */
+	protected function send_json(array $data, $status_code = 200)
+	{
+		if ($status_code !== 200)
+		{
+			send_status_line($status_code, $status_code === 403 ? 'Forbidden' : 'Bad Request');
+		}
+		$response = new \phpbb\json_response();
+		$response->send($data);
+	}
+
+	protected function load_profile_friends(array $rows)
+	{
+		$user_ids = array_values(array_unique(array_map(function ($row)
+		{
+			return (int) $row['zebra_id'];
+		}, $rows)));
+		if ($user_ids)
+		{
+			$this->user_loader->load_users($user_ids);
+		}
+	}
+
+	protected function profile_friend_row($friend_id)
+	{
+		return array(
+			'USER_ID'       => $friend_id,
+			'USERNAME_FULL' => $this->user_loader->get_username($friend_id, 'full'),
+			'U_PROFILE'     => $this->profile_url($friend_id),
+			'USER_AVATAR'   => $this->user_loader->get_avatar($friend_id, false, true),
+		);
+	}
+
+	protected function more_friends_url($owner_id, $start)
+	{
+		return append_sid(
+			$this->root_path . 'memberlist.' . $this->php_ext,
+			'mode=viewprofile&u=' . (int) $owner_id . '&zebraenhance_friends_start=' . (int) $start
+		) . '#zebraenhance-friend-list';
 	}
 
 	protected function profile_url($user_id)

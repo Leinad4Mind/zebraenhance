@@ -124,6 +124,15 @@
 	max-width: 3rem;
 }
 
+.zebraenhance-friends-more {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: .75rem;
+	justify-content: space-between;
+	margin-top: 1rem;
+}
+
 .zebraenhance-mutual-friends {
 	border-bottom: 1px solid #ccc;
 	margin-bottom: 1rem;

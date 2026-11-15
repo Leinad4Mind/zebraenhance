@@ -89,6 +89,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Lägg till ett kort personligt meddelande (valfritt)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Gemensamma vänner',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'Visar %2$d av %1$d vän',
+		2 => 'Visar %2$d av %1$d vänner',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Visa fler',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Det gick inte att läsa in fler vänner.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Blockera privata meddelanden från ignorerade användare',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'När detta är aktiverat kan användare som du ignorerar inte skicka privata meddelanden till dig. Ett gruppmeddelande från en ignorerad användare som inkluderar dig avvisas för hela gruppen.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Innehåll från ignorerade användare',

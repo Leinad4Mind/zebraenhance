@@ -421,4 +421,198 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->assertSame('', $event['template_ary']['U_ADD_FRIEND']);
 		$this->assertSame('./ucp.php?mode=foes', $event['template_ary']['U_ADD_FOE']);
 	}
+
+	public function test_profile_friend_list_shows_the_first_page_and_a_show_more_link()
+	{
+		$listener = $this->profile_listener(false, 0, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(true);
+		$this->relationships->method('count_friends')->with(5)->willReturn(120);
+		$this->relationships->expects($this->once())
+			->method('get_friends')
+			->with(5, 50)
+			->willReturn($this->friend_rows(10, 50));
+		$this->relationships->method('get_mutual_friends')->willReturn(array());
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame(120, $assigned['ZEBRAENHANCE_FRIENDS_TOTAL']);
+		$this->assertSame('ZEBRAENHANCE_FRIENDS_SHOWN|120|50', $assigned['ZEBRAENHANCE_FRIENDS_SHOWN']);
+		$this->assertStringContainsString('zebraenhance_friends_start=50#zebraenhance-friend-list', $assigned['U_ZEBRAENHANCE_MORE_FRIENDS']);
+		$this->assertNull($listener->sent);
+	}
+
+	public function test_profile_friend_list_without_javascript_keeps_earlier_friends()
+	{
+		$listener = $this->profile_listener(false, 50, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(true);
+		$this->relationships->method('count_friends')->willReturn(70);
+		$this->relationships->expects($this->once())
+			->method('get_friends')
+			->with(5, 100)
+			->willReturn($this->friend_rows(10, 70));
+		$this->relationships->method('get_mutual_friends')->willReturn(array());
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame('ZEBRAENHANCE_FRIENDS_SHOWN|70|70', $assigned['ZEBRAENHANCE_FRIENDS_SHOWN']);
+		$this->assertSame('', $assigned['U_ZEBRAENHANCE_MORE_FRIENDS']);
+	}
+
+	public function test_short_profile_friend_list_has_no_counter()
+	{
+		$listener = $this->profile_listener(false, 0, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(true);
+		$this->relationships->method('count_friends')->willReturn(3);
+		$this->relationships->method('get_friends')->willReturn($this->friend_rows(10, 3));
+		$this->relationships->method('get_mutual_friends')->willReturn(array());
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame('', $assigned['ZEBRAENHANCE_FRIENDS_SHOWN']);
+		$this->assertSame('', $assigned['U_ZEBRAENHANCE_MORE_FRIENDS']);
+	}
+
+	public function test_show_more_returns_the_next_page_as_json()
+	{
+		$listener = $this->profile_listener(true, 50, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(true);
+		$this->relationships->method('count_friends')->willReturn(120);
+		$this->relationships->expects($this->once())
+			->method('get_friends')
+			->with(5, 50, 50)
+			->willReturn($this->friend_rows(60, 50));
+		$this->relationships->expects($this->never())->method('get_mutual_friends');
+		$this->template->expects($this->once())->method('set_filenames');
+		$this->template->expects($this->once())
+			->method('assign_display')
+			->with('zebraenhance_profile_friends')
+			->willReturn('<li>friend</li>');
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame(array(array(
+			'success'    => true,
+			'html'       => '<li>friend</li>',
+			'shown'      => 'ZEBRAENHANCE_FRIENDS_SHOWN|120|100',
+			'next_start' => 100,
+		), 200), $listener->sent);
+		$this->assertSame(array(), $assigned);
+	}
+
+	public function test_show_more_reports_the_last_page()
+	{
+		$listener = $this->profile_listener(true, 100, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(true);
+		$this->relationships->method('count_friends')->willReturn(120);
+		$this->relationships->method('get_friends')->with(5, 50, 100)->willReturn($this->friend_rows(110, 20));
+		$this->template->method('assign_display')->willReturn('<li>friend</li>');
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame('ZEBRAENHANCE_FRIENDS_SHOWN|120|120', $listener->sent[0]['shown']);
+		$this->assertSame(0, $listener->sent[0]['next_start']);
+	}
+
+	public function test_show_more_respects_friend_list_privacy()
+	{
+		$listener = $this->profile_listener(true, 50, $assigned);
+		$this->relationships->method('can_view_friend_list')->willReturn(false);
+		$this->relationships->expects($this->never())->method('get_friends');
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame(array(array(
+			'success' => false,
+			'message' => 'FRIENDLIST_ERROR_ACCESS',
+		), 403), $listener->sent);
+	}
+
+	public function test_show_more_requires_the_friend_permission()
+	{
+		$listener = $this->profile_listener(true, 50, $assigned, false);
+		$this->relationships->expects($this->never())->method('can_view_friend_list');
+		$this->relationships->expects($this->never())->method('get_friends');
+
+		$listener->prepare_friends($this->profile_event());
+
+		$this->assertSame(403, $listener->sent[1]);
+	}
+
+	protected function profile_listener($ajax, $start, &$assigned, $can_use = true)
+	{
+		global $phpbb_dispatcher;
+		$phpbb_dispatcher = new \phpbb_mock_event_dispatcher();
+		$assigned = array();
+		$this->auth->method('acl_get')->willReturnCallback(function ($option) use ($can_use)
+		{
+			return $option === 'u_zebraenhance_use_friend_requests' && $can_use;
+		});
+		$request = $this->getMockBuilder('\phpbb\request\request_interface')->getMock();
+		$request->method('is_ajax')->willReturn($ajax);
+		$request->method('is_set')->willReturnCallback(function ($name) use ($ajax)
+		{
+			return $ajax && $name === 'zebraenhance_friends_start';
+		});
+		$request->method('variable')->willReturnCallback(function ($name, $default) use ($start)
+		{
+			return $name === 'zebraenhance_friends_start' ? $start : $default;
+		});
+		$language = $this->getMockBuilder('\phpbb\language\language')
+			->disableOriginalConstructor()
+			->getMock();
+		$language->method('lang')->willReturnCallback(function ()
+		{
+			return implode('|', func_get_args());
+		});
+		$user_loader = $this->getMockBuilder('\phpbb\user_loader')->disableOriginalConstructor()->getMock();
+		$user_loader->method('get_username')->willReturn('friend');
+		$user_loader->method('get_avatar')->willReturn('');
+		$this->template->method('assign_vars')->willReturnCallback(function ($vars) use (&$assigned)
+		{
+			$assigned = array_merge($assigned, $vars);
+		});
+
+		return new class(
+			$this->relationships,
+			$user_loader,
+			$this->auth,
+			$request,
+			$this->template,
+			$this->user,
+			$language,
+			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
+			$this->getMockBuilder('\phpbb\pagination')->disableOriginalConstructor()->getMock(),
+			'./',
+			'php'
+		) extends \anavaro\zebraenhance\event\zebra_listener
+		{
+			public $sent;
+
+			protected function send_json(array $data, $status_code = 200)
+			{
+				$this->sent = array($data, $status_code);
+			}
+		};
+	}
+
+	protected function profile_event()
+	{
+		// The viewer is already a friend, so no request controls are prepared.
+		$member = array('user_id' => 5, 'profile_friend_show' => 0);
+		$friend = true;
+		$foe = false;
+
+		return new \phpbb\event\data(compact('member', 'friend', 'foe'));
+	}
+
+	protected function friend_rows($first_id, $count)
+	{
+		$rows = array();
+		for ($i = 0; $i < $count; $i++)
+		{
+			$rows[] = array('zebra_id' => $first_id + $i, 'bff' => 0, 'username' => 'u' . $i, 'user_colour' => '');
+		}
+
+		return $rows;
+	}
 }

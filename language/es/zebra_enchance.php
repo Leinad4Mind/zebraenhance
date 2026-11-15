@@ -88,6 +88,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Añade un mensaje personal breve (opcional)',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Amigos en común',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'Mostrando %2$d de %1$d amigo',
+		2 => 'Mostrando %2$d de %1$d amigos',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Ver más',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'No se pudieron cargar más amigos.',
 	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Bloquear mensajes privados de usuarios ignorados',
 	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Si se activa, los usuarios de tu lista de ignorados no pueden enviarte mensajes privados. Un MP de grupo de un usuario ignorado que te incluya se rechaza para todo el grupo.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Contenido de usuarios ignorados',

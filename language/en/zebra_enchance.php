@@ -102,6 +102,12 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED'             => 'One or more recipients do not accept private messages from you.',
 
 	'ZEBRAENHANCE_MUTUAL_FRIENDS'        => 'Mutual friends',
+	'ZEBRAENHANCE_FRIENDS_SHOWN'          => array(
+		1 => 'Showing %2$d of %1$d friend',
+		2 => 'Showing %2$d of %1$d friends',
+	),
+	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Show more',
+	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'More friends could not be loaded.',
 	'ZEBRAENHANCE_FRIEND_SUGGESTIONS'         => 'People you may know',
 	'ZEBRAENHANCE_FRIEND_SUGGESTIONS_EXPLAIN' => 'Friends of friends whose privacy and request settings allow a suggestion.',
 	'ZEBRAENHANCE_SEND_FRIEND_REQUEST'        => 'Send friend request',
