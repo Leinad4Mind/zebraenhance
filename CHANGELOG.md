@@ -20,6 +20,7 @@ All notable changes to Zebra Enhance are documented in this file.
 
 ### Fixed
 
+- Upgrading from 2.4.0 now carries over the permissions, their group and role settings, and the request limits that were renamed after that release; without this, friend features disappeared for everyone after the upgrade.
 - Profile friend lists no longer stop silently at the first 100 friends.
 - Completed the Bulgarian, Dutch, Farsi, German, Portuguese (Brazil), Spanish, and Swedish translations, and corrected inconsistent terms and forms of address in them.
 
