@@ -45,6 +45,8 @@ $lang = array_merge($lang, array(
 
 	'ZEBRAENHANCE_FRIENDLIST'	=>	'Vriendenlijst',
 	'ZEBRAENHANCE_FRIENDLIST_EXPLAIN'	=>	'Wie kan je vriendenlijst zien?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY'         => 'Wie mag je verjaardag en leeftijd zien?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN' => 'Wie geen toestemming heeft, ziet je leeftijd niet op je profiel of naast je berichten, en je naam niet in de verjaardagslijst op de forumindex. Beheerders en moderators kunnen ze altijd zien.',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Je hebt geen toegang tot de vriendenlijst van deze gebruiker.',
 
@@ -94,8 +96,8 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Meer tonen',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Meer vrienden konden niet worden geladen.',
-	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Privéberichten van vijanden blokkeren',
-	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Als dit is ingeschakeld, kunnen gebruikers op je vijandenlijst je geen privéberichten sturen. Een groepsbericht van een vijand waarin jij staat, wordt voor de hele groep geweigerd.',
+	'ZEBRAENHANCE_PM_POLICY'                      => 'Wie mag je privéberichten sturen?',
+	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Beheerders en moderators kunnen je altijd privéberichten sturen. Een groepsbericht wordt voor de hele groep geweigerd als je het van de afzender niet zou accepteren.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Inhoud van vijanden',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN'          => 'Geldt voor hun berichten, de onderwerpen die ze zijn begonnen en de citaten van hun berichten die herkend kunnen worden. Een mededeling houdt de inhoud ingeklapt, maar je kunt die nog steeds openen; bij berichten is dat de eigen mededeling van phpBB. Oudere of handmatig toegeschreven citaten worden niet altijd herkend.',
 	'ZEBRAENHANCE_FOE_CONTENT_SHOW'                  => 'Niet verbergen',

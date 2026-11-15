@@ -58,6 +58,7 @@ class zebra_listener_test extends \phpbb_test_case
 			$language,
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
 			$this->getMockBuilder('\phpbb\pagination')->disableOriginalConstructor()->getMock(),
+			new \phpbb\config\config(array('allow_birthdays' => 1)),
 			'./',
 			'php'
 		);
@@ -85,6 +86,12 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.delete_user_before',
 			'core.memberlist_view_profile',
 			'core.memberlist_modify_view_profile_template_vars',
+			'core.memberlist_prepare_profile_data',
+			'core.viewtopic_cache_user_data',
+			'core.viewtopic_modify_post_row',
+			'core.index_modify_birthdays_sql',
+			'core.index_modify_birthdays_list',
+			'core.index_modify_page_title',
 		), array_keys(\anavaro\zebraenhance\event\zebra_listener::getSubscribedEvents()));
 	}
 
@@ -538,6 +545,112 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->assertSame(403, $listener->sent[1]);
 	}
 
+	public function test_profile_age_is_hidden_when_the_birthday_is_not_visible()
+	{
+		$this->relationships->expects($this->once())
+			->method('filter_visible_owners')
+			->with(2, array(5 => 3), false, true)
+			->willReturn(array());
+		$data = array('user_id' => 5, 'zebra_birthday_show' => 3);
+		$template_data = array('AGE' => 30, 'USERNAME' => 'user5');
+		$event = new \phpbb\event\data(compact('data', 'template_data'));
+
+		$this->listener->hide_profile_age($event);
+
+		$this->assertSame('', $event['template_data']['AGE']);
+		$this->assertSame('user5', $event['template_data']['USERNAME']);
+	}
+
+	public function test_profile_age_stays_when_the_birthday_is_visible_or_public()
+	{
+		$this->relationships->expects($this->once())
+			->method('filter_visible_owners')
+			->willReturn(array(5));
+		$template_data = array('AGE' => 30);
+
+		$data = array('user_id' => 5, 'zebra_birthday_show' => 1);
+		$event = new \phpbb\event\data(compact('data', 'template_data'));
+		$this->listener->hide_profile_age($event);
+		$this->assertSame(30, $event['template_data']['AGE']);
+
+		$data = array('user_id' => 6, 'zebra_birthday_show' => 0);
+		$event = new \phpbb\event\data(compact('data', 'template_data'));
+		$this->listener->hide_profile_age($event);
+		$this->assertSame(30, $event['template_data']['AGE']);
+	}
+
+	public function test_poster_ages_are_checked_once_per_page()
+	{
+		foreach (array(5 => 3, 6 => 2, 7 => 0) as $poster_id => $visibility)
+		{
+			$row = array('zebra_birthday_show' => $visibility);
+			$user_cache_data = array();
+			$this->listener->collect_poster_birthday_visibility(new \phpbb\event\data(compact('user_cache_data', 'poster_id', 'row')));
+		}
+		$this->relationships->expects($this->once())
+			->method('filter_visible_owners')
+			->with(2, array(5 => 3, 6 => 2))
+			->willReturn(array(6));
+
+		$ages = array();
+		foreach (array(5, 6, 7, 5) as $poster_id)
+		{
+			$post_row = array('POSTER_AGE' => 40);
+			$event = new \phpbb\event\data(compact('poster_id', 'post_row'));
+			$this->listener->hide_poster_age($event);
+			$ages[] = $event['post_row']['POSTER_AGE'];
+		}
+
+		$this->assertSame(array('', 40, 40, ''), $ages);
+	}
+
+	public function test_index_birthday_list_leaves_out_hidden_birthdays()
+	{
+		$sql_ary = array('SELECT' => 'u.user_id, u.username, u.user_colour, u.user_birthday');
+		$event = new \phpbb\event\data(compact('sql_ary'));
+		$this->listener->select_birthday_visibility($event);
+		$this->assertSame('u.user_id, u.username, u.user_colour, u.user_birthday, u.zebra_birthday_show', $event['sql_ary']['SELECT']);
+
+		$this->relationships->expects($this->once())
+			->method('filter_visible_owners')
+			->with(2, array(4 => 3, 5 => 5))
+			->willReturn(array(4));
+		$rows = array(
+			array('user_id' => 3, 'zebra_birthday_show' => 0),
+			array('user_id' => 4, 'zebra_birthday_show' => 3),
+			array('user_id' => 5, 'zebra_birthday_show' => 5),
+		);
+		$birthdays = array(
+			array('USERNAME' => 'user3', 'AGE' => 20),
+			array('USERNAME' => 'user4', 'AGE' => ''),
+			array('USERNAME' => 'user5', 'AGE' => 40),
+		);
+		$event = new \phpbb\event\data(compact('birthdays', 'rows'));
+		$this->listener->hide_index_birthdays($event);
+
+		$this->assertSame(array(3, 4), array_column($event['rows'], 'user_id'));
+		$this->assertSame(array('user3', 'user4'), array_column($event['birthdays'], 'USERNAME'));
+
+		$this->template->expects($this->once())
+			->method('assign_var')
+			->with('BIRTHDAY_LIST', 'user3 (20)COMMA_SEPARATORuser4');
+		$this->listener->rebuild_birthday_list();
+	}
+
+	public function test_index_birthday_list_is_untouched_without_restrictions()
+	{
+		$this->relationships->expects($this->never())->method('filter_visible_owners');
+		$this->template->expects($this->never())->method('assign_var');
+		$rows = array(array('user_id' => 3, 'zebra_birthday_show' => 0));
+		$birthdays = array(array('USERNAME' => 'user3', 'AGE' => 20));
+		$event = new \phpbb\event\data(compact('birthdays', 'rows'));
+
+		$this->listener->hide_index_birthdays($event);
+		$this->listener->rebuild_birthday_list();
+
+		$this->assertSame($rows, $event['rows']);
+	}
+
 	protected function profile_listener($ajax, $start, &$assigned, $can_use = true)
 	{
 		global $phpbb_dispatcher;
@@ -582,6 +695,7 @@ class zebra_listener_test extends \phpbb_test_case
 			$language,
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
 			$this->getMockBuilder('\phpbb\pagination')->disableOriginalConstructor()->getMock(),
+			new \phpbb\config\config(array('allow_birthdays' => 1)),
 			'./',
 			'php'
 		) extends \anavaro\zebraenhance\event\zebra_listener

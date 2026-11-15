@@ -6,6 +6,7 @@ All notable changes to Zebra Enhance are documented in this file.
 
 ### Added
 
+- Added a UCP choice for who can see a user's birthday and age, with the same visibility levels as the friend list. Hidden birthdays disappear from profiles, the member list, posts and the board index birthday list; the private friend list permission also shows them.
 - Added a notice mode for content from foes: their quotes collapse into a notice that can be opened, and the topics they started are replaced by a notice row with a button that shows them.
 - Topics started by foes are removed from forum lists and topic searches when content from foes is removed completely.
 
@@ -15,6 +16,7 @@ All notable changes to Zebra Enhance are documented in this file.
 
 ### Changed
 
+- The UCP setting that blocked private messages from foes now chooses who can send private messages: everyone, everyone except foes, friends only, or Close Friends only. Existing choices carry over, and administrators and moderators are no longer filtered.
 - Profile friend lists show 50 friends at a time with a "Show more" button that loads the next 50 in place, and say how many of the total are shown. Without JavaScript the button reloads the profile with more friends.
 - The UCP setting for content from foes now offers three choices: do not hide, hide behind a notice, or remove completely. Existing users who enabled it keep the complete removal.
 

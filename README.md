@@ -25,7 +25,8 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Profile friend lists show 50 friends at a time; "Show more" loads the next 50 in place through the same profile page and privacy checks.
-- Users can optionally block private messages from people on their foe list.
+- Users choose who can send them private messages: everyone, everyone except foes, friends only, or Close Friends only. Administrators and moderators can always send them; a group message is rejected for the whole group when any member would not accept it.
+- Users choose who can see their birthday and age with the same visibility levels as their friend list. A hidden birthday removes the age from profiles, the member list and posts, and leaves the user out of the board index birthday list.
 - Users choose whether content from foes is shown, hidden behind a notice, or removed completely. The choice covers their posts (in topics, reply reviews, and post searches), the topics they started (in forum lists and topic searches), and identifiable quotes of their posts wherever phpBB renders them. A notice can be opened to reveal what it hides; for posts it is phpBB's own placeholder.
 - Users can suppress quote, mention, reply, topic, and bookmark notifications created by foes.
 - Foes can expire automatically after 24 hours, 7 days, or 30 days, or remain permanent.
@@ -47,7 +48,7 @@ The 2.0 migration adds these ACP permissions:
 
 - `u_zebraenhance_use_friend_requests` — use friend requests and enhanced friend lists
 - `u_zebraenhance_manage_close_friends` — manage Close Friends
-- `m_zebraenhance_view_private_friendlists` — view private profile friend lists
+- `m_zebraenhance_view_private_friendlists` — view private profile friend lists, birthdays and ages
 
 The two user permissions are granted to the standard registered-user groups during upgrade. The moderator override is granted to Global Moderators.
 

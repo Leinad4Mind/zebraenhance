@@ -46,6 +46,8 @@ $lang = array_merge($lang, array(
 
 	'ZEBRAENHANCE_FRIENDLIST'	=>	'Vänlista',
 	'ZEBRAENHANCE_FRIENDLIST_EXPLAIN'	=>	'Vem kan se din vänlista?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY'         => 'Vem får se din födelsedag och ålder?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN' => 'Den som inte har tillåtelse ser inte din ålder i din profil eller bredvid dina inlägg, och inte ditt namn i födelsedagslistan på forumets index. Administratörer och moderatorer kan alltid se dem.',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Du har inte behörighet att se den här användarens vänlista.',
 
@@ -95,8 +97,8 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Visa fler',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Det gick inte att läsa in fler vänner.',
-	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Blockera privata meddelanden från ignorerade användare',
-	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'När detta är aktiverat kan användare som du ignorerar inte skicka privata meddelanden till dig. Ett gruppmeddelande från en ignorerad användare som inkluderar dig avvisas för hela gruppen.',
+	'ZEBRAENHANCE_PM_POLICY'                      => 'Vem får skicka privata meddelanden till dig?',
+	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Administratörer och moderatorer kan alltid skicka privata meddelanden till dig. Ett gruppmeddelande avvisas för hela gruppen om du inte skulle ta emot det från avsändaren.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Innehåll från ignorerade användare',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN'          => 'Gäller deras inlägg, de ämnen de har startat och de citat av deras inlägg som kan identifieras. Ett meddelande håller innehållet hopfällt, men du kan fortfarande öppna det; för inlägg är det phpBB:s egen platshållare. Äldre eller manuellt tillskrivna citat kan inte alltid identifieras.',
 	'ZEBRAENHANCE_FOE_CONTENT_SHOW'                  => 'Dölj inte',

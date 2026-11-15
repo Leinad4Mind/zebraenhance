@@ -45,6 +45,8 @@ $lang = array_merge($lang, array(
 
 	'ZEBRAENHANCE_FRIENDLIST'	=>	'Lista de amigos',
 	'ZEBRAENHANCE_FRIENDLIST_EXPLAIN'	=>	'Quem pode ver sua lista de amigos?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY'         => 'Quem pode ver seu aniversário e sua idade?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN' => 'Quem não tiver permissão não verá sua idade no seu perfil nem ao lado das suas mensagens, nem seu nome na lista de aniversariantes do índice do fórum. Administradores e moderadores sempre podem vê-los.',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'Você não tem acesso para ver a lista de amigos do usuário.',
 
@@ -94,8 +96,8 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Ver mais',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Não foi possível carregar mais amigos.',
-	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Bloquear mensagens privadas de inimigos',
-	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Quando ativado, os usuários da sua lista de inimigos não podem enviar mensagens privadas para você. Uma MP em grupo de um inimigo que inclua você é rejeitada para o grupo inteiro.',
+	'ZEBRAENHANCE_PM_POLICY'                      => 'Quem pode enviar mensagens privadas para você?',
+	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Administradores e moderadores sempre podem enviar mensagens privadas para você. Uma mensagem em grupo é rejeitada para o grupo inteiro quando você não a aceitaria do remetente.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Conteúdo de inimigos',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN'          => 'Aplica-se às mensagens deles, aos tópicos que eles criaram e às citações das mensagens deles que podem ser identificadas. O aviso mantém o conteúdo recolhido, mas você ainda pode abri-lo; nas mensagens, é o próprio aviso do phpBB. Citações antigas ou atribuídas manualmente nem sempre podem ser identificadas.',
 	'ZEBRAENHANCE_FOE_CONTENT_SHOW'                  => 'Não ocultar',

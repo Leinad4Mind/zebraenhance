@@ -436,7 +436,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
 			WHERE config_name = 'zebraenhance_foes_enhancement'");
 		$crawler = $this->open_friends_as('admin');
-		$this->assertSame(0, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
+		$this->assertSame(0, $crawler->filter('select[name=zebra_pm_policy]')->count());
 		$this->assertSame(0, $crawler->filter('select[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(0, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertStringNotContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
@@ -446,7 +446,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$db->sql_query("UPDATE phpbb_config SET config_value = '0', is_dynamic = 1
 			WHERE config_name = 'zebraenhance_foe_content'");
 		$crawler = $this->open_friends_as('admin');
-		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
+		$this->assertSame(4, $crawler->filter('select[name=zebra_pm_policy] option')->count());
 		$this->assertSame(0, $crawler->filter('select[name=zebra_hide_foe_content]')->count());
 		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertStringContainsString($this->lang('ZEBRAENHANCE_UCP_FOE_MANAGER'), $crawler->filter('html')->text());
@@ -461,15 +461,15 @@ class zebraenhance_requests_test extends zebraenhance_base
 			SET zebra_block_foe_pm = 0, zebra_hide_foe_content = 0, zebra_mute_foe_notifications = 0
 			WHERE user_id = 2');
 		$crawler = $this->open_friends_as('admin');
-		$this->assertSame(2, $crawler->filter('input[name=zebra_block_foe_pm]')->count());
-		$this->assertSame('0', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
+		$this->assertSame(4, $crawler->filter('select[name=zebra_pm_policy] option')->count());
+		$this->assertSame('0', $crawler->filter('select[name=zebra_pm_policy] option[selected]')->attr('value'));
 		$this->assertSame(3, $crawler->filter('select[name=zebra_hide_foe_content] option')->count());
 		$this->assertSame('0', $crawler->filter('select[name=zebra_hide_foe_content] option[selected]')->attr('value'));
 		$this->assertSame(2, $crawler->filter('input[name=zebra_mute_foe_notifications]')->count());
 		$this->assertSame('0', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
 
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
-		$form['zebra_block_foe_pm'] = 1;
+		$form['zebra_pm_policy'] = 2;
 		$form['zebra_hide_foe_content'] = 2;
 		$form['zebra_mute_foe_notifications'] = 1;
 		self::submit($form);
@@ -477,17 +477,17 @@ class zebraenhance_requests_test extends zebraenhance_base
 		$result = $db->sql_query('SELECT zebra_block_foe_pm, zebra_hide_foe_content, zebra_mute_foe_notifications
 			FROM phpbb_users WHERE user_id = 2');
 		$row = $db->sql_fetchrow($result);
-		$this->assertSame(1, (int) $row['zebra_block_foe_pm']);
+		$this->assertSame(2, (int) $row['zebra_block_foe_pm']);
 		$this->assertSame(2, (int) $row['zebra_hide_foe_content']);
 		$this->assertSame(1, (int) $row['zebra_mute_foe_notifications']);
 		$db->sql_freeresult($result);
 
 		$crawler = self::request('GET', "ucp.php?i=ucp_zebra&mode=friends&sid={$this->sid}");
-		$this->assertSame('1', $crawler->filter('input[name=zebra_block_foe_pm]:checked')->attr('value'));
+		$this->assertSame('2', $crawler->filter('select[name=zebra_pm_policy] option[selected]')->attr('value'));
 		$this->assertSame('2', $crawler->filter('select[name=zebra_hide_foe_content] option[selected]')->attr('value'));
 		$this->assertSame('1', $crawler->filter('input[name=zebra_mute_foe_notifications]:checked')->attr('value'));
 		$form = $crawler->selectButton($this->lang('SUBMIT'))->form();
-		$form['zebra_block_foe_pm'] = 0;
+		$form['zebra_pm_policy'] = 0;
 		$form['zebra_hide_foe_content'] = 0;
 		$form['zebra_mute_foe_notifications'] = 0;
 		self::submit($form);

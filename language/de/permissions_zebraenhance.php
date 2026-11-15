@@ -22,5 +22,5 @@ if (empty($lang) || !is_array($lang))
 $lang = array_merge($lang, array(
 	'ACL_U_ZEBRAENHANCE_USE_FRIEND_REQUESTS'       => 'Kann Freundschaftsanfragen und erweiterte Freundeslisten verwenden',
 	'ACL_U_ZEBRAENHANCE_MANAGE_CLOSE_FRIENDS'      => 'Kann enge Freunde verwalten',
-	'ACL_M_ZEBRAENHANCE_VIEW_PRIVATE_FRIENDLISTS'  => 'Kann private Freundeslisten sehen',
+	'ACL_M_ZEBRAENHANCE_VIEW_PRIVATE_FRIENDLISTS'  => 'Kann private Freundeslisten, Geburtstage und Altersangaben sehen',
 ));

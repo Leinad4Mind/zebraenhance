@@ -46,6 +46,8 @@ $lang = array_merge($lang, array(
 
 	'ZEBRAENHANCE_FRIENDLIST'							=> 'Freundesliste',
 	'ZEBRAENHANCE_FRIENDLIST_EXPLAIN'					=> 'Wer kann deine Freundesliste sehen?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY'         => 'Wer darf deinen Geburtstag und dein Alter sehen?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN' => 'Wer keine Erlaubnis hat, sieht dein Alter weder in deinem Profil noch neben deinen Beiträgen und deinen Namen nicht in der Geburtstagsliste auf der Startseite. Administratoren und Moderatoren können beides immer sehen.',
 
 	'FRIENDLIST_ERROR_ACCESS'				=> 'Du hast keine Berechtigung, die Freundesliste dieses Benutzers zu sehen.',
 
@@ -95,8 +97,8 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Mehr anzeigen',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Weitere Freunde konnten nicht geladen werden.',
-	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Private Nachrichten von Feinden blockieren',
-	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'Wenn aktiviert, können dir Benutzer auf deiner Feindesliste keine privaten Nachrichten senden. Eine Gruppennachricht eines Feindes, die dich einschließt, wird für die ganze Gruppe abgelehnt.',
+	'ZEBRAENHANCE_PM_POLICY'                      => 'Wer darf dir private Nachrichten senden?',
+	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Administratoren und Moderatoren können dir immer private Nachrichten senden. Eine Gruppennachricht wird für die ganze Gruppe abgelehnt, wenn du sie vom Absender nicht annehmen würdest.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Inhalte von Feinden',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN'          => 'Gilt für ihre Beiträge, die von ihnen erstellten Themen und die Zitate ihrer Beiträge, die erkannt werden können. Ein Hinweis hält den Inhalt eingeklappt, du kannst ihn aber trotzdem öffnen; bei Beiträgen ist das der Hinweis von phpBB selbst. Ältere oder manuell zugeordnete Zitate werden nicht immer erkannt.',
 	'ZEBRAENHANCE_FOE_CONTENT_SHOW'                  => 'Nicht ausblenden',

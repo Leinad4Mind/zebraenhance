@@ -161,11 +161,13 @@
 
 {% if S_ZEBRAENHANCE_FOE_PM_AVAILABLE %}
 <dl>
-	<dt><label>{{ lang('ZEBRAENHANCE_BLOCK_FOE_PM') }}</label><br><span>{{ lang('ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN') }}</span></dt>
-	<dd>
-		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="1"{% if S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('YES') }}</label>
-		<label><input type="radio" class="radio" name="zebra_block_foe_pm" value="0"{% if not S_ZEBRA_BLOCK_FOE_PM %} checked{% endif %}> {{ lang('NO') }}</label>
-	</dd>
+	<dt><label for="zebra_pm_policy">{{ lang('ZEBRAENHANCE_PM_POLICY') }}</label><br><span>{{ lang('ZEBRAENHANCE_PM_POLICY_EXPLAIN') }}</span></dt>
+	<dd><select id="zebra_pm_policy" name="zebra_pm_policy">
+		<option value="0"{% if ZEBRA_PM_POLICY == 0 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_EVERYONE') }}</option>
+		<option value="1"{% if ZEBRA_PM_POLICY == 1 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NON_FOES') }}</option>
+		<option value="2"{% if ZEBRA_PM_POLICY == 2 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_FRIENDS') }}</option>
+		<option value="3"{% if ZEBRA_PM_POLICY == 3 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_CLOSE_FRIENDS') }}</option>
+	</select></dd>
 </dl>
 {% endif %}
 
@@ -203,5 +205,18 @@
 		<option value="5"{% if ZEBRA_ACL == 5 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NOBODY') }}</option>
 	</select></dd>
 </dl>
+{% if S_ZEBRAENHANCE_BIRTHDAY_PRIVACY_AVAILABLE %}
+<dl>
+	<dt><label for="zebra_birthday_show">{{ lang('ZEBRAENHANCE_BIRTHDAY_VISIBILITY') }}</label><br><span>{{ lang('ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN') }}</span></dt>
+	<dd><select id="zebra_birthday_show" name="zebra_birthday_show">
+		<option value="0"{% if ZEBRA_BIRTHDAY_SHOW == 0 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_EVERYONE') }}</option>
+		<option value="1"{% if ZEBRA_BIRTHDAY_SHOW == 1 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_REGISTERED') }}</option>
+		<option value="2"{% if ZEBRA_BIRTHDAY_SHOW == 2 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NON_FOES') }}</option>
+		<option value="3"{% if ZEBRA_BIRTHDAY_SHOW == 3 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_FRIENDS') }}</option>
+		<option value="4"{% if ZEBRA_BIRTHDAY_SHOW == 4 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_CLOSE_FRIENDS') }}</option>
+		<option value="5"{% if ZEBRA_BIRTHDAY_SHOW == 5 %} selected{% endif %}>{{ lang('ZEBRAENHANCE_VIS_NOBODY') }}</option>
+	</select></dd>
+</dl>
+{% endif %}
 </div>
 {% endif %}

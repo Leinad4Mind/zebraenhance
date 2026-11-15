@@ -43,6 +43,10 @@ class relationship_manager
 	const FOE_CONTENT_SHOW = 0;
 	const FOE_CONTENT_REMOVE = 1;
 	const FOE_CONTENT_NOTICE = 2;
+	const PM_POLICY_EVERYONE = 0;
+	const PM_POLICY_NON_FOES = 1;
+	const PM_POLICY_FRIENDS = 2;
+	const PM_POLICY_CLOSE_FRIENDS = 3;
 	const FOE_DURATION_KEEP = -1;
 	const FOE_DURATION_PERMANENT = 0;
 	const MAX_FOE_NOTE_LENGTH = 255;
@@ -102,6 +106,9 @@ class relationship_manager
 
 	/** @var string */
 	protected $foe_settings_table;
+
+	/** @var array Viewer user ID => their standing with each owner */
+	protected $standing_cache = array();
 
 	public function __construct(
 		\phpbb\db\driver\driver_interface $db,
@@ -665,18 +672,34 @@ class relationship_manager
 		return $policy;
 	}
 
-	public function set_block_foe_pm($user_id, $enabled)
+	/**
+	 * Store who may send a user private messages.
+	 *
+	 * The zebra_block_foe_pm column keeps its name: 0 and 1 still mean
+	 * "everyone" and "everyone except foes", as before.
+	 *
+	 * @return int One of the PM_POLICY_* constants
+	 */
+	public function set_pm_policy($user_id, $policy)
 	{
 		$user_id = (int) $user_id;
-		$enabled = (bool) $enabled;
+		$policy = self::normalize_pm_policy($policy);
 		if ($user_id)
 		{
 			$this->db->sql_query('UPDATE ' . $this->users_table . '
-				SET zebra_block_foe_pm = ' . (int) $enabled . '
-				WHERE user_id = ' . (int) $user_id);
+				SET zebra_block_foe_pm = ' . $policy . '
+				WHERE user_id = ' . $user_id);
 		}
 
-		return $enabled;
+		return $policy;
+	}
+
+	public static function normalize_pm_policy($policy)
+	{
+		$policy = (int) $policy;
+		return $policy >= self::PM_POLICY_EVERYONE && $policy <= self::PM_POLICY_CLOSE_FRIENDS
+			? $policy
+			: self::PM_POLICY_EVERYONE;
 	}
 
 	/**
@@ -1030,9 +1053,13 @@ class relationship_manager
 	}
 
 	/**
-	 * Remove users who opted to reject PMs from foes from a PM address list.
+	 * Remove users who would not accept a PM from the sender from a PM address list.
 	 *
-	 * A group is removed as a whole when any active member would block the
+	 * A recipient rejects the sender when the sender is a foe they block, or
+	 * when they accept PMs only from friends or Close Friends and the sender
+	 * is not one. Administrators and moderators are never filtered.
+	 *
+	 * A group is removed as a whole when any active member would reject the
 	 * sender. phpBB expands group recipients only after its last filter event,
 	 * so partial group delivery would otherwise bypass the preference.
 	 */
@@ -1043,28 +1070,27 @@ class relationship_manager
 			return $address_list;
 		}
 		$sender_id = (int) $sender_id;
-		if (!$sender_id)
+		if (!$sender_id || $this->auth->acl_gets('a_', 'm_') || $this->auth->acl_getf_global('m_'))
 		{
 			return $address_list;
 		}
+
+		$now = time();
+		$relationship_join = '
+				LEFT JOIN ' . $this->zebra_table . ' z
+					ON z.user_id = u.user_id AND z.zebra_id = ' . $sender_id . '
+				LEFT JOIN ' . $this->foe_settings_table . ' fs
+					ON fs.owner_id = u.user_id AND fs.foe_id = ' . $sender_id;
 
 		$user_ids = !empty($address_list['u'])
 			? array_values(array_filter(array_map('intval', array_keys($address_list['u']))))
 			: array();
 		if ($user_ids)
 		{
-			$now = time();
-			$sql = 'SELECT z.user_id AS recipient_id
-				FROM ' . $this->zebra_table . ' z
-				INNER JOIN ' . $this->users_table . ' u
-					ON u.user_id = z.user_id
-				LEFT JOIN ' . $this->foe_settings_table . ' fs
-					ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
-				WHERE z.zebra_id = ' . $sender_id . '
-					AND z.foe = 1
-					' . $this->active_foe_sql('fs', $now) . '
-					AND ' . $this->effective_policy_sql('fs.pm_policy', 'u.zebra_block_foe_pm') . '
-					AND ' . $this->db->sql_in_set('z.user_id', $user_ids);
+			$sql = 'SELECT u.user_id AS recipient_id
+				FROM ' . $this->users_table . ' u' . $relationship_join . '
+				WHERE ' . $this->db->sql_in_set('u.user_id', $user_ids) . '
+					AND ' . $this->pm_rejection_sql($now);
 			$result = $this->db->sql_query($sql);
 			while (($recipient_id = $this->db->sql_fetchfield('recipient_id')) !== false)
 			{
@@ -1082,24 +1108,15 @@ class relationship_manager
 			: array();
 		if ($group_ids)
 		{
-			$sql_allow_pm = (!$this->auth->acl_gets('a_', 'm_') && !$this->auth->acl_getf_global('m_'))
-				? ' AND u.user_allow_pm = 1'
-				: '';
 			$sql = 'SELECT DISTINCT ug.group_id AS recipient_group_id
 				FROM ' . $this->user_group_table . ' ug
-				INNER JOIN ' . $this->zebra_table . ' z
-					ON z.user_id = ug.user_id
-					AND z.zebra_id = ' . $sender_id . '
-					AND z.foe = 1
 				INNER JOIN ' . $this->users_table . ' u
-					ON u.user_id = ug.user_id
-				LEFT JOIN ' . $this->foe_settings_table . ' fs
-					ON fs.owner_id = z.user_id AND fs.foe_id = z.zebra_id
+					ON u.user_id = ug.user_id' . $relationship_join . '
 				WHERE ug.user_pending = 0
-					AND u.user_type IN (' . USER_NORMAL . ', ' . USER_FOUNDER . ')' .
-					$sql_allow_pm . '
-					' . $this->active_foe_sql('fs', time()) . '
-					AND ' . $this->effective_policy_sql('fs.pm_policy', 'u.zebra_block_foe_pm') . '
+					AND u.user_id <> ' . $sender_id . '
+					AND u.user_type IN (' . USER_NORMAL . ', ' . USER_FOUNDER . ')
+					AND u.user_allow_pm = 1
+					AND ' . $this->pm_rejection_sql($now) . '
 					AND ' . $this->db->sql_in_set('ug.group_id', $group_ids);
 			$result = $this->db->sql_query($sql);
 			while (($group_id = $this->db->sql_fetchfield('recipient_group_id')) !== false)
@@ -1114,6 +1131,24 @@ class relationship_manager
 		}
 
 		return $address_list;
+	}
+
+	/**
+	 * SQL condition, over users u, zebra z and foe settings fs joined for one
+	 * sender, that is true when the recipient rejects that sender's PMs.
+	 */
+	protected function pm_rejection_sql($now)
+	{
+		$blocked_foe = '(z.foe = 1 ' . $this->active_foe_sql('fs', $now) . '
+			AND ' . $this->effective_policy_sql('fs.pm_policy', 'u.zebra_block_foe_pm') . ')';
+		$allowed_foe_exception = $this->foe_feature_enabled('exceptions')
+			? ' AND (z.foe IS NULL OR z.foe = 0 OR fs.pm_policy IS NULL OR fs.pm_policy <> ' . self::POLICY_ALLOW . ')'
+			: '';
+		$not_trusted = '(u.zebra_block_foe_pm >= ' . self::PM_POLICY_FRIENDS . $allowed_foe_exception . '
+			AND (z.friend IS NULL OR z.friend = 0
+				OR (u.zebra_block_foe_pm = ' . self::PM_POLICY_CLOSE_FRIENDS . ' AND z.bff = 0)))';
+
+		return '(' . $blocked_foe . ' OR ' . $not_trusted . ')';
 	}
 
 	/**
@@ -1501,6 +1536,103 @@ class relationship_manager
 		$this->db->sql_freeresult($result);
 
 		return $is_close;
+	}
+
+	/**
+	 * Store who may see a user's birthday and age (a visibility value 0 through 5).
+	 */
+	public function set_birthday_visibility($user_id, $visibility)
+	{
+		$user_id = (int) $user_id;
+		$visibility = max(0, min(5, (int) $visibility));
+		if ($user_id)
+		{
+			$this->db->sql_query('UPDATE ' . $this->users_table . '
+				SET zebra_birthday_show = ' . $visibility . '
+				WHERE user_id = ' . $user_id);
+		}
+
+		return $visibility;
+	}
+
+	/**
+	 * Return which owners allow the viewer to see something they protect with a
+	 * visibility value (0 through 5), such as their birthday.
+	 *
+	 * The viewer's standing with every owner is read in one query and cached,
+	 * so whole pages of users can be checked at once.
+	 *
+	 * @param array $visibilities Owner user ID => visibility value
+	 * @return array Visible owner user IDs
+	 */
+	public function filter_visible_owners($viewer_id, array $visibilities, $override = false, $viewer_registered = null)
+	{
+		$viewer_id = (int) $viewer_id;
+		$is_registered = $viewer_registered === null
+			? ($viewer_id && $viewer_id !== ANONYMOUS)
+			: (bool) $viewer_registered;
+		$standing = null;
+		$visible = array();
+		foreach ($visibilities as $owner_id => $visibility)
+		{
+			$owner_id = (int) $owner_id;
+			$visibility = max(0, min(5, (int) $visibility));
+			if ($override || $visibility === 0 || ($viewer_id && $owner_id === $viewer_id))
+			{
+				$visible[] = $owner_id;
+				continue;
+			}
+			if (!$is_registered || $visibility === 5)
+			{
+				continue;
+			}
+			if ($visibility > 1 && $standing === null)
+			{
+				$standing = $this->get_standing_with_owners($viewer_id);
+			}
+			$row = isset($standing[$owner_id]) ? $standing[$owner_id] : array('friend' => 0, 'foe' => 0, 'bff' => 0);
+			$is_friend = $row['friend'] && !$row['foe'];
+			if ($visibility === 1
+				|| ($visibility === 2 && !$row['foe'])
+				|| ($visibility === 3 && $is_friend)
+				|| ($visibility === 4 && $is_friend && $row['bff']))
+			{
+				$visible[] = $owner_id;
+			}
+		}
+
+		return $visible;
+	}
+
+	/**
+	 * How every user who listed the viewer as a friend or foe sees them.
+	 *
+	 * @return array Owner user ID => array(friend, foe, bff)
+	 */
+	protected function get_standing_with_owners($viewer_id)
+	{
+		$viewer_id = (int) $viewer_id;
+		if (isset($this->standing_cache[$viewer_id]))
+		{
+			return $this->standing_cache[$viewer_id];
+		}
+
+		$standing = array();
+		$sql = 'SELECT user_id, friend, foe, bff
+			FROM ' . $this->zebra_table . '
+			WHERE zebra_id = ' . $viewer_id;
+		$result = $this->db->sql_query($sql);
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$standing[(int) $row['user_id']] = array(
+				'friend' => (int) $row['friend'],
+				'foe'    => (int) $row['foe'],
+				'bff'    => (int) $row['bff'],
+			);
+		}
+		$this->db->sql_freeresult($result);
+
+		return $this->standing_cache[$viewer_id] = $standing;
 	}
 
 	/**

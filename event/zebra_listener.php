@@ -47,6 +47,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var \phpbb\pagination */
 	protected $pagination;
 
+	/** @var \phpbb\config\config */
+	protected $config;
+
 	/** @var string */
 	protected $root_path;
 
@@ -61,6 +64,15 @@ class zebra_listener implements EventSubscriberInterface
 
 	/** @var array|null */
 	protected $foe_identities;
+
+	/** @var array Poster user ID => birthday visibility, for posters who restrict it */
+	protected $poster_birthday_visibility = array();
+
+	/** @var array|null Poster user IDs whose age the viewer may see, as keys */
+	protected $visible_poster_birthdays;
+
+	/** @var array|null The index birthday list after hidden birthdays were removed */
+	protected $index_birthdays;
 
 	/** @var array Placeholder tokens of the text being rendered, mapped to their HTML */
 	protected $foe_quote_replacements = array();
@@ -78,6 +90,7 @@ class zebra_listener implements EventSubscriberInterface
 		\phpbb\language\language $language,
 		\phpbb\controller\helper $controller_helper,
 		\phpbb\pagination $pagination,
+		\phpbb\config\config $config,
 		$root_path,
 		$php_ext
 	)
@@ -91,6 +104,7 @@ class zebra_listener implements EventSubscriberInterface
 		$this->language = $language;
 		$this->controller_helper = $controller_helper;
 		$this->pagination = $pagination;
+		$this->config = $config;
 		$this->root_path = $root_path;
 		$this->php_ext = $php_ext;
 	}
@@ -117,6 +131,12 @@ class zebra_listener implements EventSubscriberInterface
 			'core.delete_user_before'        => 'delete_users',
 			'core.memberlist_view_profile'   => 'prepare_friends',
 			'core.memberlist_modify_view_profile_template_vars' => 'modify_profile_template_vars',
+			'core.memberlist_prepare_profile_data' => 'hide_profile_age',
+			'core.viewtopic_cache_user_data'  => 'collect_poster_birthday_visibility',
+			'core.viewtopic_modify_post_row'  => 'hide_poster_age',
+			'core.index_modify_birthdays_sql' => 'select_birthday_visibility',
+			'core.index_modify_birthdays_list' => 'hide_index_birthdays',
+			'core.index_modify_page_title'    => 'rebuild_birthday_list',
 		);
 	}
 
@@ -189,7 +209,8 @@ class zebra_listener implements EventSubscriberInterface
 		);
 		if ($this->request->is_set_post('zebra_profile_acl')
 			|| $this->request->is_set_post('zebra_request_policy')
-			|| $this->request->is_set_post('zebra_block_foe_pm')
+			|| $this->request->is_set_post('zebra_pm_policy')
+			|| $this->request->is_set_post('zebra_birthday_show')
 			|| $this->request->is_set_post('zebra_hide_foe_content')
 			|| $this->request->is_set_post('zebra_mute_foe_notifications'))
 		{
@@ -215,13 +236,20 @@ class zebra_listener implements EventSubscriberInterface
 				$this->user->data['zebra_request_policy'] = $policy;
 			}
 			if ($this->relationships->foe_feature_enabled('pm')
-				&& $this->request->is_set_post('zebra_block_foe_pm'))
+				&& $this->request->is_set_post('zebra_pm_policy'))
 			{
-				$block_foe_pm = $this->relationships->set_block_foe_pm(
+				$this->user->data['zebra_block_foe_pm'] = $this->relationships->set_pm_policy(
 					$user_id,
-					$this->request->variable('zebra_block_foe_pm', 0)
+					$this->request->variable('zebra_pm_policy', 0)
 				);
-				$this->user->data['zebra_block_foe_pm'] = $block_foe_pm;
+			}
+			if (!empty($this->config['allow_birthdays'])
+				&& $this->request->is_set_post('zebra_birthday_show'))
+			{
+				$this->user->data['zebra_birthday_show'] = $this->relationships->set_birthday_visibility(
+					$user_id,
+					$this->request->variable('zebra_birthday_show', 0)
+				);
 			}
 			if ($this->relationships->foe_feature_enabled('content')
 				&& $this->request->is_set_post('zebra_hide_foe_content'))
@@ -247,7 +275,11 @@ class zebra_listener implements EventSubscriberInterface
 			'IS_ZEBRA'           => true,
 			'ZEBRA_ACL'          => (int) $this->user->data['profile_friend_show'],
 			'ZEBRA_REQUEST_POLICY' => isset($this->user->data['zebra_request_policy']) ? (int) $this->user->data['zebra_request_policy'] : 0,
-			'S_ZEBRA_BLOCK_FOE_PM' => !empty($this->user->data['zebra_block_foe_pm']),
+			'ZEBRA_PM_POLICY'    => relationship_manager::normalize_pm_policy(
+				isset($this->user->data['zebra_block_foe_pm']) ? $this->user->data['zebra_block_foe_pm'] : 0
+			),
+			'ZEBRA_BIRTHDAY_SHOW' => isset($this->user->data['zebra_birthday_show']) ? (int) $this->user->data['zebra_birthday_show'] : 0,
+			'S_ZEBRAENHANCE_BIRTHDAY_PRIVACY_AVAILABLE' => !empty($this->config['allow_birthdays']),
 			'ZEBRA_FOE_CONTENT_MODE' => relationship_manager::normalize_foe_content_mode(
 				isset($this->user->data['zebra_hide_foe_content']) ? $this->user->data['zebra_hide_foe_content'] : 0
 			),
@@ -662,8 +694,7 @@ class zebra_listener implements EventSubscriberInterface
 		$member = $event['member'];
 		$owner_id = (int) $member['user_id'];
 		$viewer_id = (int) $this->user->data['user_id'];
-		$viewer_registered = (bool) $this->user->data['is_registered']
-			&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE);
+		$viewer_registered = $this->viewer_is_registered();
 		$can_use = $this->auth->acl_get('u_zebraenhance_use_friend_requests');
 		$friends_page_request = $this->request->is_ajax() && $this->request->is_set('zebraenhance_friends_start');
 		$this->profile_context_ready = true;
@@ -705,12 +736,11 @@ class zebra_listener implements EventSubscriberInterface
 			return;
 		}
 
-		$override = $this->auth->acl_get('a_user') || $this->auth->acl_get('m_zebraenhance_view_private_friendlists');
 		$can_view = $this->relationships->can_view_friend_list(
 			$owner_id,
 			$viewer_id,
 			(int) $member['profile_friend_show'],
-			$override,
+			$this->can_see_private_details(),
 			$viewer_registered
 		);
 
@@ -763,6 +793,131 @@ class zebra_listener implements EventSubscriberInterface
 			'ZEBRAENHANCE_FRIENDS_SHOWN' => $total > self::PROFILE_FRIENDS_PAGE_SIZE ? $this->language->lang('ZEBRAENHANCE_FRIENDS_SHOWN', $total, $shown) : '',
 			'U_ZEBRAENHANCE_MORE_FRIENDS' => $shown < $total ? $this->more_friends_url($owner_id, $shown) : '',
 		));
+	}
+
+	/**
+	 * Hide the age on profiles and in the member list from viewers the user does not allow.
+	 */
+	public function hide_profile_age($event)
+	{
+		$data = $event['data'];
+		$template_data = $event['template_data'];
+		if (!isset($template_data['AGE']) || $template_data['AGE'] === '' || empty($data['zebra_birthday_show']))
+		{
+			return;
+		}
+
+		$owner_id = (int) $data['user_id'];
+		if (!$this->visible_birthday_owners(array($owner_id => (int) $data['zebra_birthday_show'])))
+		{
+			$template_data['AGE'] = '';
+			$event['template_data'] = $template_data;
+		}
+	}
+
+	public function collect_poster_birthday_visibility($event)
+	{
+		$row = $event['row'];
+		if (!empty($row['zebra_birthday_show']))
+		{
+			$this->poster_birthday_visibility[(int) $event['poster_id']] = (int) $row['zebra_birthday_show'];
+			$this->visible_poster_birthdays = null;
+		}
+	}
+
+	/**
+	 * Hide the age next to posts, checking every poster on the page at once.
+	 */
+	public function hide_poster_age($event)
+	{
+		$poster_id = (int) $event['poster_id'];
+		if (!isset($this->poster_birthday_visibility[$poster_id]))
+		{
+			return;
+		}
+		if ($this->visible_poster_birthdays === null)
+		{
+			$this->visible_poster_birthdays = array_flip($this->visible_birthday_owners($this->poster_birthday_visibility));
+		}
+		if (isset($this->visible_poster_birthdays[$poster_id]))
+		{
+			return;
+		}
+
+		$post_row = $event['post_row'];
+		$post_row['POSTER_AGE'] = '';
+		$event['post_row'] = $post_row;
+	}
+
+	public function select_birthday_visibility($event)
+	{
+		$sql_ary = $event['sql_ary'];
+		$sql_ary['SELECT'] .= ', u.zebra_birthday_show';
+		$event['sql_ary'] = $sql_ary;
+	}
+
+	/**
+	 * Leave users out of the index birthday list when they hide their birthday from the viewer.
+	 */
+	public function hide_index_birthdays($event)
+	{
+		$rows = $event['rows'];
+		$visibilities = array();
+		foreach ($rows as $row)
+		{
+			if (!empty($row['zebra_birthday_show']))
+			{
+				$visibilities[(int) $row['user_id']] = (int) $row['zebra_birthday_show'];
+			}
+		}
+		if (!$visibilities)
+		{
+			return;
+		}
+
+		$visible = array_flip($this->visible_birthday_owners($visibilities));
+		$birthdays = $event['birthdays'];
+		$kept_rows = $kept_birthdays = array();
+		foreach (array_values($rows) as $index => $row)
+		{
+			$user_id = (int) $row['user_id'];
+			if (isset($visibilities[$user_id]) && !isset($visible[$user_id]))
+			{
+				continue;
+			}
+			$kept_rows[] = $row;
+			if (isset($birthdays[$index]))
+			{
+				$kept_birthdays[] = $birthdays[$index];
+			}
+		}
+		if (count($kept_rows) === count($rows))
+		{
+			return;
+		}
+
+		$event['rows'] = $kept_rows;
+		$event['birthdays'] = $kept_birthdays;
+		$this->index_birthdays = $kept_birthdays;
+	}
+
+	/**
+	 * phpBB builds the old BIRTHDAY_LIST variable before the birthday list event
+	 * can change it, so rebuild it from the filtered list.
+	 */
+	public function rebuild_birthday_list()
+	{
+		if ($this->index_birthdays === null)
+		{
+			return;
+		}
+
+		$list = array();
+		foreach ($this->index_birthdays as $birthday)
+		{
+			$list[] = $birthday['USERNAME'] . (!empty($birthday['AGE']) ? ' (' . $birthday['AGE'] . ')' : '');
+		}
+		$this->template->assign_var('BIRTHDAY_LIST', implode($this->language->lang('COMMA_SEPARATOR'), $list));
 	}
 
 	public function modify_profile_template_vars($event)
@@ -1017,6 +1172,34 @@ class zebra_listener implements EventSubscriberInterface
 			$this->root_path . 'memberlist.' . $this->php_ext,
 			'mode=viewprofile&u=' . (int) $owner_id . '&zebraenhance_friends_start=' . (int) $start
 		) . '#zebraenhance-friend-list';
+	}
+
+	/**
+	 * @param array $visibilities Owner user ID => birthday visibility
+	 * @return array Owner user IDs whose birthday the viewer may see
+	 */
+	protected function visible_birthday_owners(array $visibilities)
+	{
+		return $this->relationships->filter_visible_owners(
+			(int) $this->user->data['user_id'],
+			$visibilities,
+			$this->can_see_private_details(),
+			$this->viewer_is_registered()
+		);
+	}
+
+	/**
+	 * Administrators and moderators who may see private friend lists may also see hidden birthdays.
+	 */
+	protected function can_see_private_details()
+	{
+		return $this->auth->acl_get('a_user') || $this->auth->acl_get('m_zebraenhance_view_private_friendlists');
+	}
+
+	protected function viewer_is_registered()
+	{
+		return !empty($this->user->data['is_registered'])
+			&& (!isset($this->user->data['user_type']) || (int) $this->user->data['user_type'] !== USER_IGNORE);
 	}
 
 	protected function profile_url($user_id)

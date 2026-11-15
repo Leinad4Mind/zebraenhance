@@ -111,6 +111,10 @@ class relationship_manager_test extends \phpbb_database_test_case
 		{
 			$this->db_tools->sql_column_add('phpbb_users', 'zebra_mute_foe_notifications', array('BOOL', 0));
 		}
+		if (!$this->db_tools->sql_column_exists('phpbb_users', 'zebra_birthday_show'))
+		{
+			$this->db_tools->sql_column_add('phpbb_users', 'zebra_birthday_show', array('TINT:1', 0));
+		}
 	}
 
 	public function test_same_direction_request_is_idempotent()
@@ -616,14 +620,68 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 	}
 
-	public function test_block_foe_pm_preference_is_persisted()
+	public function test_pm_policy_is_persisted_and_normalized()
 	{
-		$this->assertTrue($this->relationships->set_block_foe_pm(2, true));
+		$this->assertSame(3, $this->relationships->set_pm_policy(2, 3));
 		$result = $this->db->sql_query('SELECT zebra_block_foe_pm FROM phpbb_users WHERE user_id = 2');
-		$this->assertSame(1, (int) $this->db->sql_fetchfield('zebra_block_foe_pm'));
+		$this->assertSame(3, (int) $this->db->sql_fetchfield('zebra_block_foe_pm'));
 		$this->db->sql_freeresult($result);
 
-		$this->assertFalse($this->relationships->set_block_foe_pm(2, false));
+		$this->assertSame(1, $this->relationships->set_pm_policy(2, 1));
+		$this->assertSame(0, $this->relationships->set_pm_policy(2, 9));
+		$this->assertSame(0, $this->relationships->set_pm_policy(2, -1));
+	}
+
+	public function test_birthday_visibility_is_clamped_and_persisted()
+	{
+		$this->assertSame(4, $this->relationships->set_birthday_visibility(2, 4));
+		$result = $this->db->sql_query('SELECT zebra_birthday_show FROM phpbb_users WHERE user_id = 2');
+		$this->assertSame(4, (int) $this->db->sql_fetchfield('zebra_birthday_show'));
+		$this->db->sql_freeresult($result);
+
+		$this->assertSame(5, $this->relationships->set_birthday_visibility(2, 99));
+		$this->assertSame(0, $this->relationships->set_birthday_visibility(2, -3));
+	}
+
+	/**
+	 * @dataProvider visible_owner_cases
+	 */
+	public function test_visible_owners_follow_each_visibility_level($owner_id, $visibility, $viewer_id, $registered, $override, $expected)
+	{
+		// Owner 4 lists viewer 5 as a foe (fixture); owner 3 lists 5 as an ordinary friend.
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (3, 5, 1, 0, 0)');
+
+		$this->assertSame(
+			$expected ? array($owner_id) : array(),
+			$this->relationships->filter_visible_owners($viewer_id, array($owner_id => $visibility), $override, $registered)
+		);
+	}
+
+	public function visible_owner_cases()
+	{
+		return array(
+			'everyone, guest'              => array(52, 0, ANONYMOUS, false, false, true),
+			'registered, guest'            => array(52, 1, ANONYMOUS, false, false, false),
+			'registered, member'           => array(4, 1, 5, true, false, true),
+			'non-foes, foe'                => array(4, 2, 5, true, false, false),
+			'non-foes, stranger'           => array(52, 2, 5, true, false, true),
+			'friends, friend'              => array(3, 3, 5, true, false, true),
+			'friends, stranger'            => array(52, 3, 5, true, false, false),
+			'close friends, friend'        => array(3, 4, 5, true, false, false),
+			'nobody, friend'               => array(3, 5, 5, true, false, false),
+			'nobody, owner'                => array(5, 5, 5, true, false, true),
+			'nobody, moderator override'   => array(3, 5, 5, true, true, true),
+		);
+	}
+
+	public function test_visible_owners_check_several_owners_at_once()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (3, 5, 1, 0, 1)');
+
+		$this->assertSame(
+			array(3, 52),
+			$this->relationships->filter_visible_owners(5, array(3 => 4, 4 => 2, 52 => 2), false, true)
+		);
 	}
 
 	public function test_hide_foe_content_preference_is_persisted()
@@ -799,6 +857,69 @@ class relationship_manager_test extends \phpbb_database_test_case
 			'u' => array(5 => 'bcc'),
 			'g' => array(5 => 'bcc'),
 		), $this->relationships->filter_pm_address_list(3, $address_list));
+	}
+
+	public function test_pm_filter_accepts_only_friends_when_asked()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 2 WHERE user_id = 4');
+		$address_list = array('u' => array(4 => 'to', 5 => 'to'));
+
+		$this->assertSame(array('u' => array(5 => 'to')), $this->relationships->filter_pm_address_list(3, $address_list));
+
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 3, 1, 0, 0)');
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
+	}
+
+	public function test_pm_filter_accepts_only_close_friends_when_asked()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 3 WHERE user_id = 4');
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 3, 1, 0, 0)');
+		$address_list = array('u' => array(4 => 'to'));
+
+		$this->assertSame(array(), $this->relationships->filter_pm_address_list(3, $address_list));
+
+		$this->db->sql_query('UPDATE phpbb_zebra SET bff = 1 WHERE user_id = 4 AND zebra_id = 3');
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
+	}
+
+	public function test_pm_filter_lets_an_allowed_foe_through_friends_only()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 2 WHERE user_id = 4');
+		$this->db->sql_multi_insert('phpbb_zebra_foe_settings', array(array(
+			'owner_id'            => 4,
+			'foe_id'              => 5,
+			'added_at'            => 0,
+			'expires_at'          => 0,
+			'foe_note'            => '',
+			'pm_policy'           => 1,
+			'content_policy'      => 0,
+			'notification_policy' => 0,
+		)));
+		$address_list = array('u' => array(4 => 'to'));
+
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(5, $address_list));
+
+		$this->config->set('zebraenhance_foe_exceptions', 0);
+		$this->assertSame(array(), $this->relationships->filter_pm_address_list(5, $address_list));
+	}
+
+	public function test_pm_filter_rejects_a_group_with_a_friends_only_member()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 2 WHERE user_id = 52');
+		$address_list = array('g' => array(2 => 'to', 5 => 'to'));
+
+		$this->assertSame(array('g' => array(5 => 'to')), $this->relationships->filter_pm_address_list(3, $address_list));
+		// A sender is not rejected by their own setting when they belong to the group.
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(52, $address_list));
+	}
+
+	public function test_pm_filter_never_applies_to_administrators_and_moderators()
+	{
+		$this->auth->method('acl_gets')->with('a_', 'm_')->willReturn(true);
+		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 3 WHERE user_id = 4');
+		$address_list = array('u' => array(4 => 'to'), 'g' => array(2 => 'to'));
+
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
 	}
 
 	public function test_pm_filter_does_not_apply_without_recipient_opt_in()

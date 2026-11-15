@@ -45,6 +45,8 @@ $lang = array_merge($lang, array(
 
 	'ZEBRAENHANCE_FRIENDLIST'	=>	'Friendlist',
 	'ZEBRAENHANCE_FRIENDLIST_EXPLAIN'	=>	'Who can see your friendlist?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY'         => 'Who can see your birthday and age?',
+	'ZEBRAENHANCE_BIRTHDAY_VISIBILITY_EXPLAIN' => 'Anyone not allowed does not see your age on your profile or next to your posts, nor your name in the birthday list on the board index. Administrators and moderators can always see them.',
 
 	'FRIENDLIST_ERROR_ACCESS'	=>	'You do not have access to see user\'s friendlist.',
 
@@ -85,8 +87,8 @@ $lang = array_merge($lang, array(
 	'ZEBRAENHANCE_REQUEST_POLICY_NOBODY'             => 'Nobody',
 	'ZEBRAENHANCE_REQUEST_MESSAGE'                   => 'Optional message',
 	'ZEBRAENHANCE_REQUEST_MESSAGE_PLACEHOLDER'       => 'Add a short personal message (optional)',
-	'ZEBRAENHANCE_BLOCK_FOE_PM'                      => 'Block private messages from foes',
-	'ZEBRAENHANCE_BLOCK_FOE_PM_EXPLAIN'              => 'When enabled, users on your foe list cannot send you private messages. A group PM from a foe that includes you is rejected for the whole group.',
+	'ZEBRAENHANCE_PM_POLICY'                      => 'Who can send you private messages?',
+	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Administrators and moderators can always send you private messages. A group message is rejected for the whole group when you would not accept it from the sender.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Content from foes',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT_EXPLAIN'          => 'Applies to their posts, the topics they started and the quotes of their posts that can be identified. A notice keeps the content collapsed so you can still open it; for posts this is phpBB’s own placeholder. Older or manually attributed quotes may not always be identifiable.',
 	'ZEBRAENHANCE_FOE_CONTENT_SHOW'                  => 'Do not hide',
