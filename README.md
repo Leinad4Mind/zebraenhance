@@ -1,6 +1,6 @@
 # Zebra Enhance
 
-Zebra Enhance adds confirmed friend requests, directional Close Friends, custom friend circles, notifications, and profile friend-list privacy controls to phpBB's Zebra module.
+Zebra Enhance adds confirmed friend requests, directional Close Friends, custom friend circles, notifications, privacy controls for friend lists, birthdays, and private messages, and optional foe protections to phpBB's Zebra module.
 
 ## Requirements
 
@@ -22,6 +22,7 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Each user can independently mark an accepted friend as a Close Friend.
 - Users can create up to 20 private friend circles and assign accepted friends to several circles.
 - Profiles show mutual friends only when the viewer may see that profile's friend list.
+- "View your friends' posts" in the quick links menu searches the posts of all accepted friends, and each friend in UCP > Friends has a link to search their posts. Administrators can switch both off in the ACP.
 - UCP suggestions show privacy-eligible friends of friends and exclude existing, blocked, or pending relationships.
 - Profile friend lists can be visible to everyone, registered users, non-foes, friends, Close Friends, or nobody.
 - Profile friend lists show 50 friends at a time; "Show more" loads the next 50 in place through the same profile page and privacy checks.
@@ -42,6 +43,10 @@ The 2.x line is for phpBB 3.3 and will refuse to enable on phpBB 4.x.
 - Close Friends changes use an ACL-checked, CSRF-protected POST endpoint. Its JavaScript is loaded only on UCP > Friends.
 - Vendor-prefixed [integration events](docs/events.md) let other extensions react to relationship changes.
 
+## Languages
+
+Bulgarian, Dutch, English, Farsi, German, Portuguese (Brazil), Spanish, and Swedish are included.
+
 ## Permissions
 
 The 2.0 migration adds these ACP permissions:
@@ -56,7 +61,9 @@ The two user permissions are granted to the standard registered-user groups duri
 
 Copy the extension to `ext/anavaro/zebraenhance`, then enable **Zebra Enhance** in ACP > Customise > Manage extensions.
 
-Board-wide request limits and foe feature availability are configured in ACP > Customise > Zebra Enhance. Foe enhancements are disabled by default until an administrator enables them. Global relationship privacy is then available in UCP > Friends, and per-user foe settings are available in UCP > Friends & Foes > Enhanced foe management.
+Board-wide request limits, the friends' posts search, and foe feature availability are configured in ACP > Customise > Zebra Enhance. Foe enhancements are disabled by default until an administrator enables them.
+
+Friend list and birthday privacy are available in UCP > Friends. Once foe enhancements are enabled, the private message, foe content, and foe notification choices appear there too, and per-user foe settings are available in UCP > Friends & Foes > Enhanced foe management.
 
 ## Upgrade from 1.x
 
@@ -65,6 +72,8 @@ Board-wide request limits and foe feature availability are configured in ACP > C
 3. Replace the files in `ext/anavaro/zebraenhance` with the current 2.x files.
 4. Enable the extension again and let phpBB run its migrations.
 5. Purge phpBB's cache.
+
+Upgrades within 2.x follow the same steps. Upgrading to 2.7.0 keeps each user's private message choice and leaves birthdays visible to everyone until users restrict them.
 
 The migration copies valid rows from the legacy `zebra_confirm` table into the new uniquely keyed request table. The legacy table remains available for downgrade safety and is removed only when the extension is purged. Existing 1.x notifications are discarded because their user-based item IDs are incompatible with the unique request IDs used by 2.0.
 

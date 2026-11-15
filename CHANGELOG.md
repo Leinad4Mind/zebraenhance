@@ -2,17 +2,14 @@
 
 All notable changes to Zebra Enhance are documented in this file.
 
-## Unreleased
+## 2.7.0 - 2026-11-15
 
 ### Added
 
+- Added "View your friends' posts" to the quick links menu, a search over the posts of all accepted friends that respects forum permissions, and a link to search each friend's posts in UCP > Friends. An ACP setting switches both on or off; it is on by default.
 - Added a UCP choice for who can see a user's birthday and age, with the same visibility levels as the friend list. Hidden birthdays disappear from profiles, the member list, posts and the board index birthday list; the private friend list permission also shows them.
 - Added a notice mode for content from foes: their quotes collapse into a notice that can be opened, and the topics they started are replaced by a notice row with a button that shows them.
 - Topics started by foes are removed from forum lists and topic searches when content from foes is removed completely.
-
-### Fixed
-
-- Profile friend lists no longer stop silently at the first 100 friends.
 
 ### Changed
 
@@ -20,6 +17,11 @@ All notable changes to Zebra Enhance are documented in this file.
 - A group message no longer fails for the whole group when one member would not accept it from the sender: only that member is left out, and the others receive it.
 - Profile friend lists show 50 friends at a time with a "Show more" button that loads the next 50 in place, and say how many of the total are shown. Without JavaScript the button reloads the profile with more friends.
 - The UCP setting for content from foes now offers three choices: do not hide, hide behind a notice, or remove completely. Existing users who enabled it keep the complete removal.
+
+### Fixed
+
+- Profile friend lists no longer stop silently at the first 100 friends.
+- Completed the Bulgarian, Dutch, Farsi, German, Portuguese (Brazil), Spanish, and Swedish translations, and corrected inconsistent terms and forms of address in them.
 
 ## 2.6.0 - 2026-08-25
 
