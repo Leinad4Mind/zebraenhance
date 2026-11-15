@@ -602,6 +602,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$this->login($foe);
 		$topic = $this->create_topic(2, 'Zebra Enhance foe content topic', 'zebraenhance-foe-original-body');
+		$topic['post_id'] = $this->first_post_id($topic['topic_id']);
 		$this->logout();
 
 		$this->login();
@@ -647,6 +648,7 @@ class zebraenhance_requests_test extends zebraenhance_base
 
 		$this->login($foe);
 		$topic = $this->create_topic(2, 'Zebra Enhance foe notice topic', 'zebraenhance-notice-original-body');
+		$topic['post_id'] = $this->first_post_id($topic['topic_id']);
 		$this->logout();
 
 		$this->login();
@@ -773,6 +775,24 @@ class zebraenhance_requests_test extends zebraenhance_base
 		}
 
 		$this->logout();
+	}
+
+	/**
+	 * phpBB 3.3.0's create_topic() reads the post ID from a redirect that does
+	 * not carry it, so look it up instead.
+	 */
+	protected function first_post_id($topic_id)
+	{
+		$db = $this->get_db();
+		$result = $db->sql_query_limit('SELECT post_id
+			FROM phpbb_posts
+			WHERE topic_id = ' . (int) $topic_id . '
+			ORDER BY post_id ASC', 1);
+		$post_id = (int) $db->sql_fetchfield('post_id');
+		$db->sql_freeresult($result);
+		$this->assertGreaterThan(0, $post_id);
+
+		return $post_id;
 	}
 
 	protected function enable_foe_enhancements()
