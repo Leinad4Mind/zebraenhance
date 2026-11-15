@@ -20,6 +20,7 @@ services:
             - '%core.table_prefix%notification_emails'
             - '%core.table_prefix%notification_types'
             - '%core.table_prefix%zebra_foe_settings'
+            - '%core.table_prefix%privmsgs_to'
 
     anavaro.zebraenhance.cron.expire_foes:
         class: anavaro\zebraenhance\cron\task\expire_foes

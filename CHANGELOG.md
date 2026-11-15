@@ -17,6 +17,7 @@ All notable changes to Zebra Enhance are documented in this file.
 ### Changed
 
 - The UCP setting that blocked private messages from foes now chooses who can send private messages: everyone, everyone except foes, friends only, or Close Friends only. Existing choices carry over, and administrators and moderators are no longer filtered.
+- A group message no longer fails for the whole group when one member would not accept it from the sender: only that member is left out, and the others receive it.
 - Profile friend lists show 50 friends at a time with a "Show more" button that loads the next 50 in place, and say how many of the total are shown. Without JavaScript the button reloads the profile with more friends.
 - The UCP setting for content from foes now offers three choices: do not hide, hide behind a notice, or remove completely. Existing users who enabled it keep the complete removal.
 

@@ -107,6 +107,9 @@ class relationship_manager
 	/** @var string */
 	protected $foe_settings_table;
 
+	/** @var string */
+	protected $privmsgs_to_table;
+
 	/** @var array Viewer user ID => their standing with each owner */
 	protected $standing_cache = array();
 
@@ -128,7 +131,8 @@ class relationship_manager
 		$notifications_table,
 		$notification_emails_table,
 		$notification_types_table,
-		$foe_settings_table
+		$foe_settings_table,
+		$privmsgs_to_table
 	)
 	{
 		$this->db = $db;
@@ -149,6 +153,7 @@ class relationship_manager
 		$this->notification_emails_table = $notification_emails_table;
 		$this->notification_types_table = $notification_types_table;
 		$this->foe_settings_table = $foe_settings_table;
+		$this->privmsgs_to_table = $privmsgs_to_table;
 	}
 
 	/**
@@ -1059,78 +1064,149 @@ class relationship_manager
 	 * when they accept PMs only from friends or Close Friends and the sender
 	 * is not one. Administrators and moderators are never filtered.
 	 *
-	 * A group is removed as a whole when any active member would reject the
-	 * sender. phpBB expands group recipients only after its last filter event,
-	 * so partial group delivery would otherwise bypass the preference.
+	 * Groups stay in the list: their members who reject the sender are found
+	 * with get_group_pm_rejections() and left out once the PM is sent.
 	 */
 	public function filter_pm_address_list($sender_id, array $address_list)
 	{
-		if (!$this->foe_feature_enabled('pm'))
-		{
-			return $address_list;
-		}
-		$sender_id = (int) $sender_id;
-		if (!$sender_id || $this->auth->acl_gets('a_', 'm_') || $this->auth->acl_getf_global('m_'))
-		{
-			return $address_list;
-		}
-
-		$now = time();
-		$relationship_join = '
-				LEFT JOIN ' . $this->zebra_table . ' z
-					ON z.user_id = u.user_id AND z.zebra_id = ' . $sender_id . '
-				LEFT JOIN ' . $this->foe_settings_table . ' fs
-					ON fs.owner_id = u.user_id AND fs.foe_id = ' . $sender_id;
-
 		$user_ids = !empty($address_list['u'])
 			? array_values(array_filter(array_map('intval', array_keys($address_list['u']))))
 			: array();
-		if ($user_ids)
+		if (!$user_ids || !$this->pm_filter_applies($sender_id))
 		{
-			$sql = 'SELECT u.user_id AS recipient_id
-				FROM ' . $this->users_table . ' u' . $relationship_join . '
-				WHERE ' . $this->db->sql_in_set('u.user_id', $user_ids) . '
-					AND ' . $this->pm_rejection_sql($now);
-			$result = $this->db->sql_query($sql);
-			while (($recipient_id = $this->db->sql_fetchfield('recipient_id')) !== false)
-			{
-				unset($address_list['u'][(int) $recipient_id]);
-			}
-			$this->db->sql_freeresult($result);
-			if (empty($address_list['u']))
-			{
-				unset($address_list['u']);
-			}
+			return $address_list;
 		}
 
-		$group_ids = !empty($address_list['g'])
-			? array_values(array_filter(array_map('intval', array_keys($address_list['g']))))
-			: array();
-		if ($group_ids)
+		$sql = 'SELECT u.user_id AS recipient_id
+			FROM ' . $this->users_table . ' u' . $this->pm_relationship_join($sender_id) . '
+			WHERE ' . $this->db->sql_in_set('u.user_id', $user_ids) . '
+				AND ' . $this->pm_rejection_sql(time());
+		$result = $this->db->sql_query($sql);
+		while (($recipient_id = $this->db->sql_fetchfield('recipient_id')) !== false)
 		{
-			$sql = 'SELECT DISTINCT ug.group_id AS recipient_group_id
-				FROM ' . $this->user_group_table . ' ug
-				INNER JOIN ' . $this->users_table . ' u
-					ON u.user_id = ug.user_id' . $relationship_join . '
-				WHERE ug.user_pending = 0
-					AND u.user_id <> ' . $sender_id . '
-					AND u.user_type IN (' . USER_NORMAL . ', ' . USER_FOUNDER . ')
-					AND u.user_allow_pm = 1
-					AND ' . $this->pm_rejection_sql($now) . '
-					AND ' . $this->db->sql_in_set('ug.group_id', $group_ids);
-			$result = $this->db->sql_query($sql);
-			while (($group_id = $this->db->sql_fetchfield('recipient_group_id')) !== false)
-			{
-				unset($address_list['g'][(int) $group_id]);
-			}
-			$this->db->sql_freeresult($result);
-			if (empty($address_list['g']))
-			{
-				unset($address_list['g']);
-			}
+			unset($address_list['u'][(int) $recipient_id]);
+		}
+		$this->db->sql_freeresult($result);
+		if (empty($address_list['u']))
+		{
+			unset($address_list['u']);
 		}
 
 		return $address_list;
+	}
+
+	/**
+	 * Return the members of the addressed groups who would not accept a PM
+	 * from the sender, so that only they are left out of a group message.
+	 *
+	 * phpBB expands groups into members only while it stores the PM, after
+	 * its last filter event, so these members are removed afterwards with
+	 * withdraw_pm().
+	 *
+	 * @return array User IDs
+	 */
+	public function get_group_pm_rejections($sender_id, array $address_list)
+	{
+		$group_ids = !empty($address_list['g'])
+			? array_values(array_filter(array_map('intval', array_keys($address_list['g']))))
+			: array();
+		if (!$group_ids || !$this->pm_filter_applies($sender_id))
+		{
+			return array();
+		}
+
+		$sender_id = (int) $sender_id;
+		$sql = 'SELECT DISTINCT ug.user_id AS recipient_id
+			FROM ' . $this->user_group_table . ' ug
+			INNER JOIN ' . $this->users_table . ' u
+				ON u.user_id = ug.user_id' . $this->pm_relationship_join($sender_id) . '
+			WHERE ' . $this->db->sql_in_set('ug.group_id', $group_ids) . '
+				AND ug.user_pending = 0
+				AND u.user_id <> ' . $sender_id . '
+				AND ' . $this->pm_rejection_sql(time());
+		$result = $this->db->sql_query($sql);
+		$user_ids = array();
+		while (($recipient_id = $this->db->sql_fetchfield('recipient_id')) !== false)
+		{
+			$user_ids[] = (int) $recipient_id;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $user_ids;
+	}
+
+	/**
+	 * Take a PM that was just delivered back from the given recipients and
+	 * correct their new and unread message counters.
+	 *
+	 * Only copies still waiting to be sorted into a folder are taken back.
+	 *
+	 * @return int Number of recipients the PM was taken back from
+	 */
+	public function withdraw_pm($msg_id, array $user_ids)
+	{
+		$msg_id = (int) $msg_id;
+		$user_ids = array_values(array_filter(array_map('intval', $user_ids)));
+		if (!$msg_id || !$user_ids)
+		{
+			return 0;
+		}
+
+		$sql = 'SELECT user_id
+			FROM ' . $this->privmsgs_to_table . '
+			WHERE msg_id = ' . $msg_id . '
+				AND folder_id = ' . PRIVMSGS_NO_BOX . '
+				AND pm_new = 1
+				AND ' . $this->db->sql_in_set('user_id', $user_ids);
+		$result = $this->db->sql_query($sql);
+		$withdrawn = array();
+		while (($user_id = $this->db->sql_fetchfield('user_id')) !== false)
+		{
+			$withdrawn[] = (int) $user_id;
+		}
+		$this->db->sql_freeresult($result);
+		if (!$withdrawn)
+		{
+			return 0;
+		}
+
+		$this->db->sql_transaction('begin');
+		$this->db->sql_query('DELETE FROM ' . $this->privmsgs_to_table . '
+			WHERE msg_id = ' . $msg_id . '
+				AND folder_id = ' . PRIVMSGS_NO_BOX . '
+				AND ' . $this->db->sql_in_set('user_id', $withdrawn));
+		$this->db->sql_query('UPDATE ' . $this->users_table . '
+			SET user_new_privmsg = user_new_privmsg - 1
+			WHERE user_new_privmsg > 0
+				AND ' . $this->db->sql_in_set('user_id', $withdrawn));
+		$this->db->sql_query('UPDATE ' . $this->users_table . '
+			SET user_unread_privmsg = user_unread_privmsg - 1
+			WHERE user_unread_privmsg > 0
+				AND ' . $this->db->sql_in_set('user_id', $withdrawn));
+		$this->db->sql_transaction('commit');
+
+		return count($withdrawn);
+	}
+
+	/**
+	 * Administrators and moderators are never filtered, as phpBB also lets
+	 * them message users who disabled private messages.
+	 */
+	protected function pm_filter_applies($sender_id)
+	{
+		return (int) $sender_id
+			&& $this->foe_feature_enabled('pm')
+			&& !$this->auth->acl_gets('a_', 'm_')
+			&& !$this->auth->acl_getf_global('m_');
+	}
+
+	protected function pm_relationship_join($sender_id)
+	{
+		return '
+			LEFT JOIN ' . $this->zebra_table . ' z
+				ON z.user_id = u.user_id AND z.zebra_id = ' . (int) $sender_id . '
+			LEFT JOIN ' . $this->foe_settings_table . ' fs
+				ON fs.owner_id = u.user_id AND fs.foe_id = ' . (int) $sender_id;
 	}
 
 	/**

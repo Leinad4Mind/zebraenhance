@@ -77,7 +77,8 @@ class relationship_manager_test extends \phpbb_database_test_case
 			'phpbb_notifications',
 			'phpbb_notification_emails',
 			'phpbb_notification_types',
-			'phpbb_zebra_foe_settings'
+			'phpbb_zebra_foe_settings',
+			'phpbb_privmsgs_to'
 		);
 	}
 
@@ -839,7 +840,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 	}
 
-	public function test_pm_filter_removes_opted_in_foes_and_affected_groups()
+	public function test_pm_filter_removes_opted_in_foes_but_keeps_their_groups()
 	{
 		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 1 WHERE user_id = 4');
 		$this->db->sql_query('INSERT INTO phpbb_zebra
@@ -855,8 +856,9 @@ class relationship_manager_test extends \phpbb_database_test_case
 
 		$this->assertSame(array(
 			'u' => array(5 => 'bcc'),
-			'g' => array(5 => 'bcc'),
+			'g' => array(2 => 'to', 5 => 'bcc'),
 		), $this->relationships->filter_pm_address_list(3, $address_list));
+		$this->assertSame(array(4), $this->relationships->get_group_pm_rejections(3, $address_list));
 	}
 
 	public function test_pm_filter_accepts_only_friends_when_asked()
@@ -903,14 +905,49 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->assertSame(array(), $this->relationships->filter_pm_address_list(5, $address_list));
 	}
 
-	public function test_pm_filter_rejects_a_group_with_a_friends_only_member()
+	public function test_group_pm_leaves_out_only_the_members_who_reject_the_sender()
 	{
 		$this->db->sql_query('UPDATE phpbb_users SET zebra_block_foe_pm = 2 WHERE user_id = 52');
+		$this->db->sql_query('INSERT INTO phpbb_user_group
+			(group_id, user_id, group_leader, user_pending)
+			VALUES (2, 4, 0, 0)');
 		$address_list = array('g' => array(2 => 'to', 5 => 'to'));
 
-		$this->assertSame(array('g' => array(5 => 'to')), $this->relationships->filter_pm_address_list(3, $address_list));
+		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
+		$this->assertSame(array(52), $this->relationships->get_group_pm_rejections(3, $address_list));
 		// A sender is not rejected by their own setting when they belong to the group.
-		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(52, $address_list));
+		$this->assertSame(array(), $this->relationships->get_group_pm_rejections(52, $address_list));
+		$this->assertSame(array(), $this->relationships->get_group_pm_rejections(3, array('u' => array(52 => 'to'))));
+	}
+
+	public function test_withdrawn_pm_leaves_the_rest_of_the_group_and_fixes_counters()
+	{
+		$this->db->sql_query('UPDATE phpbb_users SET user_new_privmsg = 1, user_unread_privmsg = 1 WHERE user_id IN (4, 52)');
+		$rows = array();
+		foreach (array(4, 52) as $user_id)
+		{
+			$rows[] = array('msg_id' => 7, 'user_id' => $user_id, 'author_id' => 3, 'folder_id' => PRIVMSGS_NO_BOX, 'pm_new' => 1, 'pm_unread' => 1);
+		}
+		$rows[] = array('msg_id' => 7, 'user_id' => 3, 'author_id' => 3, 'folder_id' => PRIVMSGS_OUTBOX, 'pm_new' => 1, 'pm_unread' => 1);
+		$this->db->sql_multi_insert('phpbb_privmsgs_to', $rows);
+
+		$this->assertSame(1, $this->relationships->withdraw_pm(7, array(52, 3)));
+		$this->assertSame(0, $this->relationships->withdraw_pm(7, array(52)));
+
+		$result = $this->db->sql_query('SELECT user_id FROM phpbb_privmsgs_to WHERE msg_id = 7 ORDER BY user_id');
+		$this->assertSame(array(array('user_id' => '3'), array('user_id' => '4')), array_map(function ($row)
+		{
+			return array('user_id' => (string) $row['user_id']);
+		}, $this->db->sql_fetchrowset($result)));
+		$this->db->sql_freeresult($result);
+		$result = $this->db->sql_query('SELECT user_id, user_new_privmsg, user_unread_privmsg FROM phpbb_users WHERE user_id IN (4, 52) ORDER BY user_id');
+		$counters = array();
+		while ($row = $this->db->sql_fetchrow($result))
+		{
+			$counters[(int) $row['user_id']] = array((int) $row['user_new_privmsg'], (int) $row['user_unread_privmsg']);
+		}
+		$this->db->sql_freeresult($result);
+		$this->assertSame(array(4 => array(1, 1), 52 => array(0, 0)), $counters);
 	}
 
 	public function test_pm_filter_never_applies_to_administrators_and_moderators()
@@ -920,6 +957,7 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$address_list = array('u' => array(4 => 'to'), 'g' => array(2 => 'to'));
 
 		$this->assertSame($address_list, $this->relationships->filter_pm_address_list(3, $address_list));
+		$this->assertSame(array(), $this->relationships->get_group_pm_rejections(3, $address_list));
 	}
 
 	public function test_pm_filter_does_not_apply_without_recipient_opt_in()

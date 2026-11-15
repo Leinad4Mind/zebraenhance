@@ -74,6 +74,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var array|null The index birthday list after hidden birthdays were removed */
 	protected $index_birthdays;
 
+	/** @var array Members of the addressed groups who reject the PM being sent */
+	protected $pm_group_rejections = array();
+
 	/** @var array Placeholder tokens of the text being rendered, mapped to their HTML */
 	protected $foe_quote_replacements = array();
 
@@ -118,6 +121,7 @@ class zebra_listener implements EventSubscriberInterface
 			'core.ucp_display_module_before' => 'module_display',
 			'core.message_list_actions'       => 'block_foe_pm_recipients',
 			'core.submit_pm_before'           => 'guard_foe_pm_submission',
+			'core.submit_pm_after'            => 'withdraw_rejected_group_pm',
 			'core.viewtopic_modify_post_data' => 'hide_foe_posts',
 			'core.topic_review_modify_post_list' => 'hide_foe_posts',
 			'core.text_formatter_s9e_render_before' => 'hide_foe_quotes',
@@ -460,6 +464,29 @@ class zebra_listener implements EventSubscriberInterface
 		{
 			trigger_error('ZEBRAENHANCE_PM_RECIPIENTS_BLOCKED');
 		}
+		$this->pm_group_rejections = $this->relationships->get_group_pm_rejections(
+			(int) $this->user->data['user_id'],
+			$address_list
+		);
+	}
+
+	/**
+	 * Leave out of a group message the members who reject its sender; the rest
+	 * of the group keeps it. Their notification was already withheld.
+	 */
+	public function withdraw_rejected_group_pm($event)
+	{
+		if (!$this->pm_group_rejections)
+		{
+			return;
+		}
+
+		$pm_data = $event['pm_data'];
+		if (!empty($pm_data['msg_id']))
+		{
+			$this->relationships->withdraw_pm((int) $pm_data['msg_id'], $this->pm_group_rejections);
+		}
+		$this->pm_group_rejections = array();
 	}
 
 	public function hide_foe_posts($event)
@@ -661,6 +688,15 @@ class zebra_listener implements EventSubscriberInterface
 
 	public function mute_foe_notifications($event)
 	{
+		if ($event['notification_type_name'] === 'notification.type.pm')
+		{
+			if ($this->pm_group_rejections)
+			{
+				$event['notify_users'] = array_diff_key($event['notify_users'], array_flip($this->pm_group_rejections));
+			}
+			return;
+		}
+
 		$notification_types = array(
 			'notification.type.quote',
 			'notification.type.post',

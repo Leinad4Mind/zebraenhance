@@ -73,6 +73,7 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.ucp_display_module_before',
 			'core.message_list_actions',
 			'core.submit_pm_before',
+			'core.submit_pm_after',
 			'core.viewtopic_modify_post_data',
 			'core.topic_review_modify_post_list',
 			'core.text_formatter_s9e_render_before',
@@ -543,6 +544,45 @@ class zebra_listener_test extends \phpbb_test_case
 		$listener->prepare_friends($this->profile_event());
 
 		$this->assertSame(403, $listener->sent[1]);
+	}
+
+	public function test_group_members_who_reject_the_sender_lose_only_their_copy()
+	{
+		$address_list = array('g' => array(7 => 'to'));
+		$this->relationships->method('filter_pm_address_list')->willReturnArgument(1);
+		$this->relationships->expects($this->once())
+			->method('get_group_pm_rejections')
+			->with(2, $address_list)
+			->willReturn(array(5));
+		$mode = 'post';
+		$data = array('address_list' => $address_list);
+		$this->listener->guard_foe_pm_submission(new \phpbb\event\data(compact('mode', 'data')));
+
+		$notification_type_name = 'notification.type.pm';
+		$notify_users = array(4 => array('notification.method.board'), 5 => array('notification.method.board'));
+		$data = array('msg_id' => 9);
+		$event = new \phpbb\event\data(compact('notification_type_name', 'data', 'notify_users'));
+		$this->listener->mute_foe_notifications($event);
+		$this->assertSame(array(4 => array('notification.method.board')), $event['notify_users']);
+
+		$this->relationships->expects($this->once())->method('withdraw_pm')->with(9, array(5));
+		$pm_data = array('msg_id' => 9);
+		$this->listener->withdraw_rejected_group_pm(new \phpbb\event\data(compact('mode', 'pm_data')));
+		// The next PM starts clean.
+		$this->listener->withdraw_rejected_group_pm(new \phpbb\event\data(compact('mode', 'pm_data')));
+	}
+
+	public function test_pm_notifications_are_untouched_without_group_rejections()
+	{
+		$this->relationships->expects($this->never())->method('filter_foe_notification_recipients');
+		$notification_type_name = 'notification.type.pm';
+		$notify_users = array(5 => array('notification.method.board'));
+		$data = array('msg_id' => 9);
+		$event = new \phpbb\event\data(compact('notification_type_name', 'data', 'notify_users'));
+
+		$this->listener->mute_foe_notifications($event);
+
+		$this->assertSame($notify_users, $event['notify_users']);
 	}
 
 	public function test_profile_age_is_hidden_when_the_birthday_is_not_visible()
