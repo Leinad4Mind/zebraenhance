@@ -55,6 +55,7 @@ class release_2_7_0 extends \phpbb\db\migration\migration
 	public function update_data()
 	{
 		return array(
+			array('config.add', array('zebraenhance_friend_posts', 1)),
 			array('config.update', array('zebra_enhance_version', '2.7.0')),
 		);
 	}

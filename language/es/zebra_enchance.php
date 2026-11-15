@@ -96,6 +96,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Ver más',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'No se pudieron cargar más amigos.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'Ver los mensajes de tus amigos',
 	'ZEBRAENHANCE_PM_POLICY'                      => '¿Quién puede enviarte mensajes privados?',
 	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Los administradores y moderadores siempre pueden enviarte mensajes privados. Cuando alguien a quien no aceptarías envía un mensaje a un grupo al que perteneces, tú quedas fuera y el resto del grupo lo recibe igualmente.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Contenido de usuarios ignorados',

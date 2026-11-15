@@ -85,6 +85,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'نمایش بیشتر',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'بارگذاری دوستان بیشتر ممکن نشد.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'دیدن ارسال‌های دوستان شما',
 	'ZEBRAENHANCE_PM_POLICY'                      => 'چه کسانی می‌توانند برای شما پیام خصوصی بفرستند؟',
 	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'مدیران و ناظران همیشه می‌توانند برای شما پیام خصوصی بفرستند. وقتی کسی که پیامش را نمی‌پذیرید به گروهی که شما عضو آن هستید پیام بفرستد، شما کنار گذاشته می‌شوید و بقیه گروه پیام را دریافت می‌کنند.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'محتوای دشمنان',

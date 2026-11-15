@@ -621,6 +621,19 @@ class relationship_manager_test extends \phpbb_database_test_case
 		$this->db->sql_freeresult($result);
 	}
 
+	public function test_friend_ids_include_only_accepted_friends()
+	{
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 3, 1, 0, 1)');
+		$this->db->sql_query('INSERT INTO phpbb_zebra (user_id, zebra_id, friend, foe, bff) VALUES (4, 52, 1, 0, 0)');
+
+		$friend_ids = $this->relationships->get_friend_ids(4);
+		sort($friend_ids);
+
+		// User 5 is user 4's foe in the fixture.
+		$this->assertSame(array(3, 52), $friend_ids);
+		$this->assertSame(array(), $this->relationships->get_friend_ids(3));
+	}
+
 	public function test_pm_policy_is_persisted_and_normalized()
 	{
 		$this->assertSame(3, $this->relationships->set_pm_policy(2, 3));

@@ -17,6 +17,7 @@ class zebra_listener_test extends \phpbb_test_case
 	protected $auth;
 	protected $user;
 	protected $template;
+	protected $config;
 	protected $listener;
 
 	// phpcs:ignore PhpbbCodingStandard.NamingConventions.LowercaseUnderscoredFunctions.NotAllowed -- PHPUnit API
@@ -58,7 +59,11 @@ class zebra_listener_test extends \phpbb_test_case
 			$language,
 			$this->getMockBuilder('\phpbb\controller\helper')->disableOriginalConstructor()->getMock(),
 			$this->getMockBuilder('\phpbb\pagination')->disableOriginalConstructor()->getMock(),
-			new \phpbb\config\config(array('allow_birthdays' => 1)),
+			$this->config = new \phpbb\config\config(array(
+				'allow_birthdays' => 1,
+				'load_search' => 1,
+				'zebraenhance_friend_posts' => 1,
+			)),
 			'./',
 			'php'
 		);
@@ -83,6 +88,9 @@ class zebra_listener_test extends \phpbb_test_case
 			'core.search_modify_rowset',
 			'core.search_modify_tpl_ary',
 			'core.page_header',
+			'core.search_modify_param_before',
+			'core.search_modify_param_after',
+			'core.search_modify_url_parameters',
 			'core.notification_manager_add_notifications',
 			'core.delete_user_before',
 			'core.memberlist_view_profile',
@@ -374,6 +382,97 @@ class zebra_listener_test extends \phpbb_test_case
 		$this->listener->insert_foe_quote_notices($event);
 
 		$this->assertSame($html, $event['html']);
+	}
+
+	public function test_friend_posts_search_covers_accepted_friends()
+	{
+		global $phpbb_dispatcher;
+		$phpbb_dispatcher = new \phpbb_mock_event_dispatcher();
+		$this->allow_friend_posts();
+		$this->relationships->expects($this->once())->method('get_friend_ids')->with(2)->willReturn(array(3, 4));
+
+		$search_id = 'friendposts';
+		$author_id_ary = array();
+		$event = new \phpbb\event\data(compact('search_id', 'author_id_ary'));
+		$this->listener->search_friend_posts($event);
+		$this->assertSame(array(3, 4), $event['author_id_ary']);
+
+		$this->template->expects($this->once())
+			->method('alter_block_array')
+			->with('navlinks', array('BREADCRUMB_NAME' => 'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'), true, 'change');
+		$l_search_title = '';
+		$event = new \phpbb\event\data(compact('l_search_title', 'search_id'));
+		$this->listener->name_friend_posts_search($event);
+		$this->assertSame('ZEBRAENHANCE_SEARCH_FRIEND_POSTS', $event['l_search_title']);
+
+		$u_search = './search.php?sr=posts';
+		$search_id = '';
+		$event = new \phpbb\event\data(compact('u_search', 'search_id'));
+		$this->listener->keep_friend_posts_search_url($event);
+		$this->assertSame('./search.php?sr=posts&amp;search_id=friendposts', $event['u_search']);
+	}
+
+	public function test_friend_posts_search_without_friends_finds_nothing()
+	{
+		$this->allow_friend_posts();
+		$this->relationships->method('get_friend_ids')->willReturn(array());
+		$search_id = 'friendposts';
+		$author_id_ary = array();
+		$event = new \phpbb\event\data(compact('search_id', 'author_id_ary'));
+
+		$this->listener->search_friend_posts($event);
+
+		$this->assertSame(array(0), $event['author_id_ary']);
+	}
+
+	public function test_other_searches_and_disabled_friend_posts_are_untouched()
+	{
+		$this->allow_friend_posts();
+		$this->relationships->expects($this->never())->method('get_friend_ids');
+		$this->template->expects($this->never())->method('alter_block_array');
+
+		$search_id = 'egosearch';
+		$author_id_ary = array(2);
+		$event = new \phpbb\event\data(compact('search_id', 'author_id_ary'));
+		$this->listener->search_friend_posts($event);
+		$this->assertSame(array(2), $event['author_id_ary']);
+
+		$this->config->set('zebraenhance_friend_posts', 0);
+		$search_id = 'friendposts';
+		$event = new \phpbb\event\data(compact('search_id', 'author_id_ary'));
+		$this->listener->search_friend_posts($event);
+		$l_search_title = '';
+		$this->listener->name_friend_posts_search(new \phpbb\event\data(compact('l_search_title', 'search_id')));
+		$this->assertSame(array(2), $event['author_id_ary']);
+	}
+
+	public function test_friend_posts_link_needs_the_setting_and_search_permission()
+	{
+		global $phpbb_dispatcher;
+		$phpbb_dispatcher = new \phpbb_mock_event_dispatcher();
+		$this->template->expects($this->once())
+			->method('assign_vars')
+			->with($this->callback(function ($vars)
+			{
+				return $vars['S_ZEBRAENHANCE_FRIEND_POSTS'] === true
+					&& strpos($vars['U_ZEBRAENHANCE_FRIEND_POSTS'], 'search_id=friendposts') !== false;
+			}));
+
+		$this->listener->assign_friend_posts_link();
+		$this->allow_friend_posts();
+		$this->config->set('load_search', 0);
+		$this->listener->assign_friend_posts_link();
+		$this->config->set('load_search', 1);
+		$this->listener->assign_friend_posts_link();
+	}
+
+	protected function allow_friend_posts()
+	{
+		$this->auth->method('acl_get')->willReturnCallback(function ($option)
+		{
+			return in_array($option, array('u_zebraenhance_use_friend_requests', 'u_search'), true);
+		});
+		$this->auth->method('acl_getf_global')->with('f_search')->willReturn(true);
 	}
 
 	public function test_notice_assets_are_loaded_only_in_notice_mode()

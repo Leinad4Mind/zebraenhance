@@ -38,6 +38,7 @@ class settings_module
 			$cooldown_days = max(0, min(3650, $request->variable('zebraenhance_decline_cooldown_days', 7)));
 			$config->set('zebraenhance_max_pending_requests', $max_pending);
 			$config->set('zebraenhance_decline_cooldown_days', $cooldown_days);
+			$config->set('zebraenhance_friend_posts', (int) $request->variable('zebraenhance_friend_posts', 0));
 			$foe_settings = array(
 				'zebraenhance_foes_enhancement',
 				'zebraenhance_foe_pm',
@@ -63,6 +64,7 @@ class settings_module
 		$template->assign_vars(array(
 			'ZEBRAENHANCE_MAX_PENDING_REQUESTS' => isset($config['zebraenhance_max_pending_requests']) ? (int) $config['zebraenhance_max_pending_requests'] : 100,
 			'ZEBRAENHANCE_DECLINE_COOLDOWN_DAYS' => isset($config['zebraenhance_decline_cooldown_days']) ? (int) $config['zebraenhance_decline_cooldown_days'] : 7,
+			'S_ZEBRAENHANCE_FRIEND_POSTS' => !empty($config['zebraenhance_friend_posts']),
 			'S_ZEBRAENHANCE_FOES_ENHANCEMENT' => !empty($config['zebraenhance_foes_enhancement']),
 			'S_ZEBRAENHANCE_FOE_PM' => !empty($config['zebraenhance_foe_pm']),
 			'S_ZEBRAENHANCE_FOE_CONTENT' => !empty($config['zebraenhance_foe_content']),

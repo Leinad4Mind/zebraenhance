@@ -1752,6 +1752,29 @@ class relationship_manager
 	}
 
 	/**
+	 * Return the user IDs of a user's accepted friends.
+	 *
+	 * @return array User IDs
+	 */
+	public function get_friend_ids($owner_id)
+	{
+		$sql = 'SELECT zebra_id
+			FROM ' . $this->zebra_table . '
+			WHERE user_id = ' . (int) $owner_id . '
+				AND friend = 1
+				AND foe = 0';
+		$result = $this->db->sql_query($sql);
+		$friend_ids = array();
+		while (($friend_id = $this->db->sql_fetchfield('zebra_id')) !== false)
+		{
+			$friend_ids[] = (int) $friend_id;
+		}
+		$this->db->sql_freeresult($result);
+
+		return $friend_ids;
+	}
+
+	/**
 	 * Return friend rows for UCP or profile display.
 	 */
 	public function get_friends($owner_id, $limit = 0, $offset = 0, $search = '')

@@ -18,6 +18,17 @@
 	</fieldset>
 
 	<fieldset>
+		<legend>{{ lang('ACP_ZEBRA_ENHANCE_FRIENDS') }}</legend>
+		<dl>
+			<dt><label>{{ lang('ACP_ZEBRAENHANCE_FRIEND_POSTS') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_FRIEND_POSTS_EXPLAIN') }}</span></dt>
+			<dd>
+				<label><input type="radio" class="radio" name="zebraenhance_friend_posts" value="1"{% if S_ZEBRAENHANCE_FRIEND_POSTS %} checked{% endif %}> {{ lang('YES') }}</label>
+				<label><input type="radio" class="radio" name="zebraenhance_friend_posts" value="0"{% if not S_ZEBRAENHANCE_FRIEND_POSTS %} checked{% endif %}> {{ lang('NO') }}</label>
+			</dd>
+		</dl>
+	</fieldset>
+
+	<fieldset>
 		<legend>{{ lang('ACP_ZEBRA_ENHANCE_FOES') }}</legend>
 		<dl>
 			<dt><label>{{ lang('ACP_ZEBRAENHANCE_FOES_ENHANCEMENT') }}</label><br><span>{{ lang('ACP_ZEBRAENHANCE_FOES_ENHANCEMENT_EXPLAIN') }}</span></dt>

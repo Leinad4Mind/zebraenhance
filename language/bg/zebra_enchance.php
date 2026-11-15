@@ -95,6 +95,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Покажи още',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Не можаха да се заредят още приятели.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'Мнения на приятелите ви',
 	'ZEBRAENHANCE_PM_POLICY'                      => 'Кой може да ви изпраща лични съобщения?',
 	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Администраторите и модераторите винаги могат да ви изпращат лични съобщения. Когато някой, от когото не бихте приели съобщение, пише на група, в която членувате, вие се пропускате, а останалите от групата го получават.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Съдържание от врагове',

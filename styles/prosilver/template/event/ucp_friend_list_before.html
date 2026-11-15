@@ -74,6 +74,9 @@
 			{% if S_CAN_CLOSE_FRIENDS %}
 				<button type="button" class="button button-secondary zebraenhance-icon-button js-zebraenhance-close-friend" data-add-url="{{ friend.U_CLOSE_ADD }}" data-remove-url="{{ friend.U_CLOSE_REMOVE }}" data-url="{{ friend.S_CLOSE ? friend.U_CLOSE_REMOVE : friend.U_CLOSE_ADD }}" aria-pressed="{{ friend.S_CLOSE ? 'true' : 'false' }}" title="{{ friend.L_CLOSE_ACTION }}" aria-label="{{ friend.L_CLOSE_ACTION }}"><i class="icon {{ friend.S_CLOSE ? 'fa-star' : 'fa-star-o' }} fa-fw" aria-hidden="true"></i></button>
 			{% endif %}
+			{% if friend.U_SEARCH_POSTS %}
+				<a href="{{ friend.U_SEARCH_POSTS }}" title="{{ lang('SEARCH_USER_POSTS') }}" aria-label="{{ lang('SEARCH_USER_POSTS') }}"><i class="icon fa-search fa-fw" aria-hidden="true"></i></a>
+			{% endif %}
 				<a href="{{ friend.U_CANCEL }}" data-ajax="true" data-refresh="true" title="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}" aria-label="{{ lang('ZEBRAENHANCE_REMOVE_FRIEND') }}"><i class="icon fa-user-times fa-fw" aria-hidden="true"></i></a>
 			</span>
 			<span class="zebraenhance-friend-name">{{ friend.USERNAME_FULL }}</span>

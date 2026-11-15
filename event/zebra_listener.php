@@ -20,6 +20,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** Friends shown on a profile at once, and loaded by each "Show more" */
 	const PROFILE_FRIENDS_PAGE_SIZE = 50;
 
+	/** search.php?search_id= value of the search for friends' posts */
+	const FRIEND_POSTS_SEARCH_ID = 'friendposts';
+
 	/** @var \anavaro\zebraenhance\service\relationship_manager */
 	protected $relationships;
 
@@ -77,6 +80,9 @@ class zebra_listener implements EventSubscriberInterface
 	/** @var array Members of the addressed groups who reject the PM being sent */
 	protected $pm_group_rejections = array();
 
+	/** @var bool Whether search.php is running the search for friends' posts */
+	protected $friend_posts_search = false;
+
 	/** @var array Placeholder tokens of the text being rendered, mapped to their HTML */
 	protected $foe_quote_replacements = array();
 
@@ -130,7 +136,13 @@ class zebra_listener implements EventSubscriberInterface
 			'core.viewforum_modify_topicrow'  => 'mark_foe_topic_row',
 			'core.search_modify_rowset'       => 'hide_foe_search_results',
 			'core.search_modify_tpl_ary'      => 'mark_foe_search_topic_row',
-			'core.page_header'                => 'assign_foe_content_assets',
+			'core.page_header'                => array(
+				array('assign_foe_content_assets'),
+				array('assign_friend_posts_link'),
+			),
+			'core.search_modify_param_before' => 'search_friend_posts',
+			'core.search_modify_param_after'  => 'name_friend_posts_search',
+			'core.search_modify_url_parameters' => 'keep_friend_posts_search_url',
 			'core.notification_manager_add_notifications' => 'mute_foe_notifications',
 			'core.delete_user_before'        => 'delete_users',
 			'core.memberlist_view_profile'   => 'prepare_friends',
@@ -418,6 +430,9 @@ class zebra_listener implements EventSubscriberInterface
 				'U_CIRCLES'      => $this->controller_helper->route('anavaro_zebraenhance_friend_circles', array(
 					'userid' => $friend_id,
 				)),
+				'U_SEARCH_POSTS' => $this->friend_posts_available()
+					? append_sid($this->root_path . 'search.' . $this->php_ext, 'author_id=' . $friend_id . '&amp;sr=posts')
+					: '',
 			));
 			$selected_circle_ids = isset($circle_memberships[$friend_id]) ? $circle_memberships[$friend_id] : array();
 			foreach ($circles as $circle)
@@ -956,6 +971,67 @@ class zebra_listener implements EventSubscriberInterface
 		$this->template->assign_var('BIRTHDAY_LIST', implode($this->language->lang('COMMA_SEPARATOR'), $list));
 	}
 
+	/**
+	 * Offer "View your friends' posts" in the quick links menu.
+	 */
+	public function assign_friend_posts_link()
+	{
+		if (!$this->friend_posts_available())
+		{
+			return;
+		}
+
+		$this->template->assign_vars(array(
+			'S_ZEBRAENHANCE_FRIEND_POSTS' => true,
+			'U_ZEBRAENHANCE_FRIEND_POSTS' => append_sid(
+				$this->root_path . 'search.' . $this->php_ext,
+				'search_id=' . self::FRIEND_POSTS_SEARCH_ID
+			),
+		));
+	}
+
+	/**
+	 * Run search.php?search_id=friendposts as an author search over the viewer's friends.
+	 */
+	public function search_friend_posts($event)
+	{
+		if ($event['search_id'] !== self::FRIEND_POSTS_SEARCH_ID || !$this->friend_posts_available())
+		{
+			return;
+		}
+
+		$this->friend_posts_search = true;
+		$friend_ids = $this->relationships->get_friend_ids((int) $this->user->data['user_id']);
+		// No user has ID 0, so a user without friends gets an empty result page.
+		$event['author_id_ary'] = $friend_ids ?: array(0);
+	}
+
+	public function name_friend_posts_search($event)
+	{
+		if (!$this->friend_posts_search)
+		{
+			return;
+		}
+
+		$title = $this->language->lang('ZEBRAENHANCE_SEARCH_FRIEND_POSTS');
+		$event['l_search_title'] = $title;
+		// phpBB adds the breadcrumb before this event, with the title it knew then.
+		$this->template->alter_block_array('navlinks', array('BREADCRUMB_NAME' => $title), true, 'change');
+	}
+
+	/**
+	 * phpBB forgets search IDs it does not know before building the pagination links.
+	 */
+	public function keep_friend_posts_search_url($event)
+	{
+		if (!$this->friend_posts_search || strpos($event['u_search'], 'search_id=') !== false)
+		{
+			return;
+		}
+
+		$event['u_search'] .= '&amp;search_id=' . self::FRIEND_POSTS_SEARCH_ID;
+	}
+
 	public function modify_profile_template_vars($event)
 	{
 		if (!$this->profile_context_ready || !$this->profile_hide_native_add)
@@ -1230,6 +1306,16 @@ class zebra_listener implements EventSubscriberInterface
 	protected function can_see_private_details()
 	{
 		return $this->auth->acl_get('a_user') || $this->auth->acl_get('m_zebraenhance_view_private_friendlists');
+	}
+
+	protected function friend_posts_available()
+	{
+		return !empty($this->config['zebraenhance_friend_posts'])
+			&& !empty($this->config['load_search'])
+			&& $this->viewer_is_registered()
+			&& $this->auth->acl_get('u_zebraenhance_use_friend_requests')
+			&& $this->auth->acl_get('u_search')
+			&& $this->auth->acl_getf_global('f_search');
 	}
 
 	protected function viewer_is_registered()

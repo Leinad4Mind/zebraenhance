@@ -96,6 +96,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Meer tonen',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Meer vrienden konden niet worden geladen.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'Berichten van je vrienden bekijken',
 	'ZEBRAENHANCE_PM_POLICY'                      => 'Wie mag je privéberichten sturen?',
 	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Beheerders en moderators kunnen je altijd privéberichten sturen. Als iemand die je niet zou accepteren een bericht naar een groep stuurt waar je lid van bent, word je overgeslagen en ontvangt de rest van de groep het gewoon.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Inhoud van vijanden',

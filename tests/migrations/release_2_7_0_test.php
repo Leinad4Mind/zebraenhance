@@ -33,10 +33,13 @@ class release_2_7_0_test extends \phpbb_test_case
 		$this->assertSame(array('zebra_birthday_show'), $revert['drop_columns']['phpbb_users']);
 	}
 
-	public function test_data_records_the_version()
+	public function test_data_enables_friend_posts_and_records_the_version()
 	{
 		$this->assertSame(
-			array(array('config.update', array('zebra_enhance_version', '2.7.0'))),
+			array(
+				array('config.add', array('zebraenhance_friend_posts', 1)),
+				array('config.update', array('zebra_enhance_version', '2.7.0')),
+			),
 			$this->migration()->update_data()
 		);
 		$this->assertSame(

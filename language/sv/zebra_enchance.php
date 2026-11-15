@@ -97,6 +97,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Visa fler',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'Det gick inte att läsa in fler vänner.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'Visa dina vänners inlägg',
 	'ZEBRAENHANCE_PM_POLICY'                      => 'Vem får skicka privata meddelanden till dig?',
 	'ZEBRAENHANCE_PM_POLICY_EXPLAIN'              => 'Administratörer och moderatorer kan alltid skicka privata meddelanden till dig. När någon du inte skulle ta emot meddelanden från skriver till en grupp du tillhör hoppas du över, och resten av gruppen får meddelandet ändå.',
 	'ZEBRAENHANCE_HIDE_FOE_CONTENT'                  => 'Innehåll från ignorerade användare',

@@ -110,6 +110,7 @@ $lang = array_merge($lang, array(
 	),
 	'ZEBRAENHANCE_SHOW_MORE_FRIENDS'      => 'Show more',
 	'ZEBRAENHANCE_FRIENDS_LOAD_FAILED'    => 'More friends could not be loaded.',
+	'ZEBRAENHANCE_SEARCH_FRIEND_POSTS'    => 'View your friends’ posts',
 	'ZEBRAENHANCE_FRIEND_SUGGESTIONS'         => 'People you may know',
 	'ZEBRAENHANCE_FRIEND_SUGGESTIONS_EXPLAIN' => 'Friends of friends whose privacy and request settings allow a suggestion.',
 	'ZEBRAENHANCE_SEND_FRIEND_REQUEST'        => 'Send friend request',
